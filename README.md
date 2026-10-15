@@ -1,12 +1,45 @@
-# GOULU v12 — Le trou noir affamé
+# GOULU — Le trou noir affamé
 
-Ouvrir `main.html` dans un navigateur récent (WebGL2 recommandé ; sans WebGL2, un rendu 2D de secours prend le relais).
-Test du repli : `main.html?nogl`.
+![GOULU](assets/og-image.jpg)
+
+**[▶ Jouer maintenant](https://david2400749.github.io/goulu/)** · gratuit · sans installation · mobile et ordinateur
+
+Tu es un trou noir. Tu as faim.
+
+- **Maintiens** (clic, doigt ou ESPACE) pour aspirer la poussière d'étoiles.
+- **Relâche** pour déclencher une onde de choc qui détruit l'antimatière.
+- Relâche **au dernier moment** pour un *parry*, et **sur le battement** de la musique pour un *pulse*.
+
+Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous,
+5 modes de jeu, des boss, des mutations à chaque vague, des skins et un arbre d'évolution permanent.
+Partage ton score : le lien envoyé met tes amis au défi de le battre.
+
+Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'écran d'accueil »).
+
+---
+
+## Développement
+
+Ouvrir `index.html` dans un navigateur récent (WebGL2 recommandé ; sans WebGL2, un rendu 2D de secours prend le relais).
+Test du repli : `index.html?nogl`. L'ancienne adresse `main.html` redirige vers `index.html`.
+
+Publication : GitHub Pages publie automatiquement la branche `main`.
+
+Tests de fumée (navigateur sans écran, lancés aussi par GitHub Actions sur chaque pull request) :
+
+```
+npm install
+npx playwright install chromium
+npm test
+```
 
 ## Structure
 
 ```
-main.html          markup (HUD, menus, écrans) + ordre de chargement des scripts
+index.html         markup (HUD, menus, écrans), balises de partage + ordre de chargement des scripts
+main.html          redirection vers index.html (ancienne adresse)
+manifest.webmanifest, assets/   icônes, image d'aperçu (partage), installation sur l'écran d'accueil
+tests/smoke.js     tests de fumée Playwright (CI)
 css/style.css      interface « instruments de bord »
 js/
   util.js          dates, PRNG, graine
