@@ -277,8 +277,8 @@ function update(dt){
     if(e.bossPart && boss){
       if(boss.type.id==='swarm'){
         e.swarmAngle += gdt * 0.8;
-        if(attract) e.swarmR = Math.max(bh.r + 12, e.swarmR - gdt * 70);
-        else e.swarmR = Math.min(e.swarmR0, e.swarmR + gdt * 30);
+        if(attract) e.swarmR = Math.max(bh.r + 12, e.swarmR - gdt * 70 * PHYS);
+        else e.swarmR = Math.min(e.swarmR0, e.swarmR + gdt * 30 * PHYS);
         e.x = bh.x + Math.cos(e.swarmAngle) * e.swarmR;
         e.y = bh.y + Math.sin(e.swarmAngle) * e.swarmR;
       } else if(boss.type.id==='eye' && e.isMain){
@@ -287,7 +287,7 @@ function update(dt){
           e.shootTimer = 2.6;
           const a = Math.atan2(bh.y-e.y, bh.x-e.x);
           for(let k=-1;k<=1;k+=2){
-            const ang=a+k*0.2; const spd=160;
+            const ang=a+k*0.2; const spd=160*PHYS;
             entities.push({ x:e.x, y:e.y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, r:9, type:'anti', isProjectile:true, phase:rng()*Math.PI*2, trail:[] });
           }
           blip(220,0.2,'sawtooth',0.1,110);
@@ -297,28 +297,29 @@ function update(dt){
 
     if(e.bossPart && boss && boss.type.id==='eye'){
       e.eyeAngle += gdt*0.35;
-      if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45);
-      else e.eyeR = Math.min(e.eyeR0, e.eyeR + gdt*30);
+      if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45*PHYS);
+      else e.eyeR = Math.min(e.eyeR0, e.eyeR + gdt*30*PHYS);
       e.x = bh.x + Math.cos(e.eyeAngle)*e.eyeR; e.y = bh.y + Math.sin(e.eyeAngle)*e.eyeR;
     } else if(!e.bossPart || (boss && boss.type.id !== 'swarm')){
-      let effectiveAttract = ATTRACT_F*mods.attractMult;
+      let effectiveAttract = ATTRACT_F*PHYS*PHYS*mods.attractMult;   // a = F/d : F ∝ PHYS² quand d ∝ PHYS
       if(specialization === 'devoreur' && e.type === 'anti') effectiveAttract *= 0.6;
       const hostileE = (e.type==='anti' || e.bossPart);
       if(attract){
-        const f=effectiveAttract/(d>MIN_D?d:MIN_D);
+        const f=effectiveAttract/Math.max(d, MIN_D*PHYS);
         e.vx+=ux*f*gdt; e.vy+=uy*f*gdt;
       } else {
         const rf = hostileE ? 0.35 : 1;
-        e.vx-=ux*REPEL_F*mods.repelMult*rf*gdt;
-        e.vy-=uy*REPEL_F*mods.repelMult*rf*gdt;
+        e.vx-=ux*REPEL_F*PHYS*mods.repelMult*rf*gdt;
+        e.vy-=uy*REPEL_F*PHYS*mods.repelMult*rf*gdt;
       }
       if(hostileE && !e.isProjectile){
-        const seek = (e.bossPart ? 60 : 120) * (profile.options.assist ? 0.55 : 1);
+        const seek = (e.bossPart ? 60 : 120) * PHYS * (profile.options.assist ? 0.55 : 1);
         e.vx+=ux*seek*gdt; e.vy+=uy*seek*gdt;
       }
       if(!e.isProjectile){ const dr=Math.pow(DRAG,gdt); e.vx*=dr; e.vy*=dr; }
       const sp2=e.vx*e.vx+e.vy*e.vy;
-      if(sp2>MAX_SPEED_SQ){ const sp=Math.sqrt(sp2); e.vx=e.vx/sp*MAX_SPEED; e.vy=e.vy/sp*MAX_SPEED; }
+      const vmax=MAX_SPEED*PHYS;
+      if(sp2>vmax*vmax){ const sp=Math.sqrt(sp2); e.vx=e.vx/sp*vmax; e.vy=e.vy/sp*vmax; }
       e.x+=e.vx*gdt; e.y+=e.vy*gdt;
     }
 
@@ -347,7 +348,7 @@ function update(dt){
           const isParry = !sw.weak && d < parryR();
           if(e.bossPart){
             damageBoss(1, e.x, e.y);
-            if(boss && boss.type.id === 'consumer'){ e.vx = -ux*420; e.vy = -uy*420; }
+            if(boss && boss.type.id === 'consumer'){ e.vx = -ux*420*PHYS; e.vy = -uy*420*PHYS; }
             if(boss && boss.type.id === 'swarm'){
               boss.parts = boss.parts.filter(p => p !== e);
               if(boss.parts.length === 0) killBoss();
@@ -362,8 +363,8 @@ function update(dt){
             }
             combo++; comboTimer=mods.chainWindow*1.2;
             if(combo>maxCombo) maxCombo=combo;
-            // Momentum Kill : antimatière détruite à plus de 800 px/s
-            if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800){
+            // Momentum Kill : antimatière détruite à plus de 800 px/s (à l'échelle de l'écran)
+            if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800*PHYS){
               runTechniques.momentum = true;
               if(mods.momentumEnabled) addScore(10 * multiplier);
               else if(!profile.techniques.momentum){

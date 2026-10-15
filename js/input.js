@@ -67,8 +67,13 @@ function onUp(){
 window.addEventListener('mousedown',onDown);
 window.addEventListener('mouseup',onUp);
 window.addEventListener('touchstart',onDown,{passive:false});
-window.addEventListener('touchend',onUp);
-window.addEventListener('touchcancel',onUp);
+/* Plusieurs doigts : l'onde ne part qu'au lever du dernier doigt (un deuxième doigt
+   qui touche puis se lève ne doit pas déclencher d'onde pendant qu'on maintient). */
+window.addEventListener('touchend', e => { if(e.touches && e.touches.length > 0) return; onUp(); });
+/* Interruption par le système (notification, geste) : on relâche sans tirer d'onde. */
+window.addEventListener('touchcancel', e => { if(e.touches && e.touches.length > 0) return; attract = false; });
+/* iOS Safari : pas de zoom au pincement pendant le jeu. */
+document.addEventListener('gesturestart', e => e.preventDefault());
 window.addEventListener('blur',()=>{ attract=false; if(state==='play') togglePause(); });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ attract=false; if(state==='play') togglePause(); } });
 window.addEventListener('contextmenu',e=>e.preventDefault());

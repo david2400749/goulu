@@ -20,7 +20,9 @@ function startTutorial(){
 function showTutStep(step){
   tutorialStep = step; tutorialSafetyTimer = 0;
   const scenes = [
-    { title:'Aspire la poussière', desc:'Maintiens le clic (ou <b>ESPACE</b>) pour <b>attirer</b> la poussière dorée.',
+    { title:'Aspire la poussière', desc: IS_TOUCH
+        ? 'Maintiens ton doigt <b>en bas de l\'écran</b> pour <b>attirer</b> la poussière dorée, sans cacher le trou noir.'
+        : 'Maintiens le clic (ou <b>ESPACE</b>) pour <b>attirer</b> la poussière dorée.',
       ready:()=>{
         spawnEntity('dust', bh.x + 120, bh.y - 80, 'gold');
         spawnEntity('dust', bh.x - 130, bh.y + 70, 'gold');

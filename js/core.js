@@ -11,6 +11,13 @@ const ctx = canvas.getContext('2d');
 const sceneCanvas = document.createElement('canvas');
 const sctx = sceneCanvas.getContext('2d');
 let W = 0, H = 0, DPR = 1, sceneScale = 1, glScale = 1;
+/* Petits écrans : les menaces partent du bord, donc bien plus près du trou sur un
+   téléphone. PHYS ralentit vitesses et forces dans la même proportion que la distance
+   (même temps de réaction que sur l'axe court d'un ordinateur). VIS_SCALE grossit le
+   dessin des entités pour qu'elles restent lisibles. Les zones (parry, onde, collisions)
+   gardent leur taille en pixels : elles sont donc plus généreuses sur téléphone. */
+let PHYS = 1, VIS_SCALE = 1;
+const IS_TOUCH = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
 let glQuality = 1;                       // 1 = plein ; réduit si la machine peine
 let useGL = false;
 
@@ -48,6 +55,8 @@ function resize(){
   glCanvas.height = Math.max(2, Math.floor(H * glScale));
   glCanvas.style.width = W + 'px'; glCanvas.style.height = H + 'px';
   bh.x = W / 2; bh.y = H / 2;
+  PHYS = Math.max(0.5, Math.min(1, Math.min(W, H) / 760));
+  VIS_SCALE = 1 + (1 - PHYS) * 0.6;
   if(typeof makeFallbackBg === 'function') makeFallbackBg();
   try{ drawSpark(); drawGhostCanvas(); }catch(e){}
 }

@@ -14,6 +14,12 @@
       new MutationObserver(()=>el.setAttribute('aria-checked', el.classList.contains('on'))).observe(el, { attributes:true, attributeFilter:['class'] });
     });
   }],
+  ['touch', ()=>{
+    if(!IS_TOUCH) return;
+    document.body.classList.add('touch');
+    hintEl.textContent = 'Pouce en bas de l\'écran · Maintiens pour aspirer · Relâche pour l\'onde';
+    $('howtoHold').innerHTML = '<b>Maintiens</b> ton doigt n\'importe où, idéalement <b>en bas de l\'écran</b> pour garder la vue dégagée : tu aspires tout.';
+  }],
   ['version', ()=>{
     const dev = /-dev$/.test(GAME_VERSION);
     $('menuVersion').textContent = 'v' + GAME_VERSION + (dev ? ' · version de développement' : '');

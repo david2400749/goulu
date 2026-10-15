@@ -309,6 +309,68 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* Téléphone : une antimatière lancée depuis le bord le plus proche doit laisser autant
+     de temps qu'au plus proche bord d'un ordinateur (axe vertical en 1366×768). */
+  const impactTime = async (vp, axis) => {
+    const { page, ctx, errors } = await open('index.html?nogl', { viewport: vp, profile: PLAYER });
+    const t = await page.evaluate(axis => {
+      startGame('classic', false); entities.length = 0; lives = 99; maxLivesRun = 99;
+      const x = axis === 'x' ? bh.x + W / 2 + 55 : bh.x, y = axis === 'y' ? bh.y - H / 2 - 55 : bh.y;
+      const ux = Math.sign(bh.x - x), uy = Math.sign(bh.y - y);
+      entities.push({ x, y, vx: ux * 37 * PHYS, vy: uy * 37 * PHYS, r: R_ANTI, type: 'anti', phase: 0, trail: [] });
+      attract = true;                                     // le cas le plus dur : on aspire
+      let t = 0;
+      while(runHits === 0 && t < 20){ antiTimer = 99; dustTimer = 99; hitstop = 0; update(1 / 60); t += 1 / 60; }
+      return t;
+    }, axis);
+    await ctx.close();
+    assert(!errors.length, errors.join('\n'));
+    return t;
+  };
+  await test('Téléphone : même temps de réaction que sur ordinateur', async () => {
+    const desk = await impactTime({ width: 1366, height: 768 }, 'y');
+    const phone = await impactTime({ width: 390, height: 844 }, 'x');
+    const small = await impactTime({ width: 360, height: 640 }, 'x');
+    const r = 'ordinateur ' + desk.toFixed(2) + ' s, téléphone ' + phone.toFixed(2) + ' s, petit tél. ' + small.toFixed(2) + ' s';
+    assert(phone >= desk * 0.85 && small >= desk * 0.85, 'réaction trop courte sur téléphone : ' + r);
+    return r;
+  });
+
+  await test('Tactile : l\'onde ne part qu\'au lever du dernier doigt', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: PLAYER, touch: true });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const touch = id => new Touch({ identifier: id, target: document.body, clientX: 100, clientY: 700 });
+      const fire = (type, remaining) => window.dispatchEvent(new TouchEvent(type, { touches: remaining.map(touch), changedTouches: [touch(9)], cancelable: true }));
+      entities.length = 0; shockCharges = 3; shockwaves.length = 0; attract = true;
+      fire('touchend', [1]);                              // un 2e doigt se lève, le 1er maintient encore
+      const afterSecond = { waves: shockwaves.length, attract };
+      fire('touchend', []);                               // le dernier doigt se lève : onde
+      const afterLast = shockwaves.length;
+      attract = true; fire('touchcancel', []);            // interruption système : pas d'onde
+      return { afterSecond, afterLast, afterCancel: shockwaves.length, attractAfterCancel: attract };
+    });
+    await ctx.close();
+    assert(r.afterSecond.waves === 0 && r.afterSecond.attract, 'onde tirée par un 2e doigt : ' + JSON.stringify(r));
+    assert(r.afterLast === 1, 'pas d\'onde au lever du dernier doigt : ' + JSON.stringify(r));
+    assert(r.afterCancel === 1 && !r.attractAfterCancel, 'touchcancel mal géré : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Petit écran : entités dessinées plus grandes, boutons de 44 px au toucher', async () => {
+    const { page, ctx } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: PLAYER, touch: true });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => ({ vis: VIS_SCALE, phys: PHYS, touch: document.body.classList.contains('touch'),
+      btn: Math.round(document.getElementById('pauseBtn').getBoundingClientRect().width) }));
+    await ctx.close();
+    const d = await open('index.html?nogl', { profile: PLAYER });
+    const desk = await d.page.evaluate(() => ({ vis: VIS_SCALE, phys: PHYS }));
+    await d.ctx.close();
+    assert(r.vis > 1.2 && r.phys < 0.6 && r.touch && r.btn === 44, 'téléphone : ' + JSON.stringify(r));
+    assert(desk.vis === 1 && desk.phys === 1, 'ordinateur modifié : ' + JSON.stringify(desk));
+    return 'téléphone : dessin ×' + r.vis.toFixed(2) + ', vitesses ×' + r.phys.toFixed(2);
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
