@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.12.2-dev';
+const GAME_VERSION = '0.12.3-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================

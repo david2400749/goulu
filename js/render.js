@@ -83,10 +83,13 @@ function drawTrail(e, rgb){
 const DUST_RGB = { gold:'255,203,90', blue:'126,200,255', red:'255,100,60', white:'235,240,255' };
 
 function drawEntity(e, t, cb){
+  const s = VIS_SCALE;   // > 1 sur petit écran : dessin agrandi autour de l'entité, collisions inchangées
+  if(s !== 1){ sctx.save(); sctx.translate(e.x, e.y); sctx.scale(s, s); sctx.translate(-e.x, -e.y); }
   if(e.type === 'dust') drawDust(e, t);
   else if(e.bossPart) drawBossPart(e, t);
   else if(e.isProjectile) drawBolt(e, t);
   else drawAnti(e, t, cb);
+  if(s !== 1) sctx.restore();
 }
 
 /* Poussière stellaire : grain incandescent, étiré (spaghettification) près du trou */

@@ -20,7 +20,7 @@ function spawnEntity(type, fx, fy, dustType){
   }
   const base=type==='dust'?24:34;
   const ang=Math.atan2(bh.y-y,bh.x-x)+(rng()-0.5)*0.9;
-  const spd=base+rng()*26;
+  const spd=(base+rng()*26)*PHYS;
   entities.push({
     x, y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
     r:type==='dust'?R_DUST:R_ANTI, type,
@@ -46,7 +46,7 @@ function spawnBossByName(bossId){
   if(type.id==='consumer'){
     const p=edgePoint();
     const ang=Math.atan2(bh.y-p.y, bh.x-p.x);
-    const e={ x:p.x, y:p.y, vx:Math.cos(ang)*30, vy:Math.sin(ang)*30, r:38, type:'boss', bossPart:true, phase:rng()*Math.PI*2, isMain:true, trail:[] };
+    const e={ x:p.x, y:p.y, vx:Math.cos(ang)*30*PHYS, vy:Math.sin(ang)*30*PHYS, r:38, type:'boss', bossPart:true, phase:rng()*Math.PI*2, isMain:true, trail:[] };
     entities.push(e); boss.parts.push(e);
   } else if(type.id==='swarm'){
     const R=Math.min(200, Math.min(W,H)*0.42);

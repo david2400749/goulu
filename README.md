@@ -20,7 +20,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.12.2-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.12.3-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
