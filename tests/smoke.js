@@ -236,7 +236,8 @@ const inView = (page, id) => page.evaluate(id => {
   });
 
   /* Règles du parry figées : onde sur antimatière, onde sur boss, contact (Pacifiste).
-     Valeurs relevées avant le regroupement des trois copies du code (lot 5). */
+     Valeurs relevées avant le regroupement des trois copies du code (lot 5), puis
+     Écho et Vampire étendus aux boss (0.12.2). */
   await test('Parry : mêmes règles pour l\'onde, le boss et le contact', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, techniques: { dashparry: true, echochain: true } } });
     const r = await page.evaluate(() => {
@@ -251,7 +252,7 @@ const inView = (page, id) => page.evaluate(id => {
       fresh('classic', true); out.shock = [];
       for(let k = 0; k < 5; k++){ anti(60); wave(); out.shock.push(score); }
       Object.assign(out, { shockCombo: combo, shockLives: lives, shockEchoes: pendingEchoes.length, shockPerfect: runPerfects, shockInv: invincibleT > 1.9 });
-      fresh('classic'); spawnBossByName('consumer'); boss.hp = boss.maxHp = 99; out.boss = [];
+      fresh('classic', true); spawnBossByName('consumer'); boss.hp = boss.maxHp = 99; out.boss = [];
       for(let k = 0; k < 4; k++){ const p = boss.parts[0]; p.x = bh.x + 70; p.y = bh.y; p.vx = p.vy = 0; wave(); out.boss.push(score); }
       Object.assign(out, { bossCombo: combo, bossLives: lives, bossEchoes: pendingEchoes.length, bossPerfect: runPerfects, bossHp: boss.hp });
       fresh('pacifist'); out.contact = [];
@@ -261,10 +262,26 @@ const inView = (page, id) => page.evaluate(id => {
     });
     await ctx.close();
     const want = { shock: [20, 60, 140, 220, 300], shockCombo: 5, shockLives: 2, shockEchoes: 5, shockPerfect: 1, shockInv: true,
-      boss: [20, 60, 140, 220], bossCombo: 0, bossLives: 1, bossEchoes: 0, bossPerfect: 1, bossHp: 95,
+      boss: [20, 60, 140, 220], bossCombo: 0, bossLives: 2, bossEchoes: 4, bossPerfect: 1, bossHp: 95,
       contact: [60, 220], contactCombo: 4, contactLives: 2, contactPerfect: 1, contactCount: 4 };
     const diff = Object.keys(want).filter(k => JSON.stringify(want[k]) !== JSON.stringify(r[k])).map(k => k + ' : attendu ' + JSON.stringify(want[k]) + ', obtenu ' + JSON.stringify(r[k]));
     assert(!diff.length, diff.join('\n'));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Écho sur un boss : pas de boucle d\'échos (l\'Œil)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      Math.random = mulberry32(7); startGame('classic', false); entities.length = 0;
+      mods.echo = true; lives = 99; spawnBossByName('eye'); boss.hp = boss.maxHp = 50;
+      const eye = boss.parts[0]; eye.eyeR = eye.eyeR0 = 85;          // l'Œil reste dans la zone de parry
+      shockCharges = 1; attract = true; onUp(); attract = true;      // un seul relâché, puis on maintient
+      const hp0 = boss.hp;
+      for(let i = 0; i < 360; i++){ hitstop = 0; antiTimer = 99; dustTimer = 99; update(1 / 60); if(!boss) break; }
+      return { lost: hp0 - (boss ? boss.hp : 0), parry: parryCount };
+    });
+    await ctx.close();
+    assert(r.lost === 2, 'un relâché doit coûter 2 PV (onde + écho), pas plus : ' + JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 

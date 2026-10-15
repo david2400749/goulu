@@ -81,9 +81,10 @@ function spawnShockwave(isEcho, pulse){
           'boss'    onde de choc sur un boss
           'contact' relâche au contact (mode Pacifiste, niveau MURMURES)
    pm   = multiplicateur de pulse (1, ou 1,5 sur le tempo)
+   fromEcho = la parade vient d'une onde d'écho (et non d'un relâché du joueur)
    Le combo reste géré par l'appelant (un parry de boss ne le fait pas monter).
    ========================================================= */
-function doParry(e, pm, kind){
+function doParry(e, pm, kind, fromEcho){
   parryChain++;
   parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
   const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
@@ -95,13 +96,14 @@ function doParry(e, pm, kind){
   vibrate(45); shake = Math.max(shake, 10);
   burst(e.x, e.y, '#ffdd44', 32, 520);
   burst(e.x, e.y, '#ffffff', 12, 380);
-  /* règles propres à chaque cas (inchangées) : l'écho ne naît que d'une onde sur
-     antimatière ; Vampire ne compte pas les parry de boss */
-  if(kind === 'shock'){
+  /* Écho : sur antimatière et sur boss (pas au contact, mode sans onde).
+     Sur un boss, seule l'onde du joueur fait naître un écho : sinon un boss resté
+     dans la zone de parry (l'Œil) serait frappé en boucle par ses propres échos. */
+  if(kind === 'shock' || (kind === 'boss' && !fromEcho)){
     if(mods.echo) pendingEchoes.push({time:0.4});
     else if(mods.echochainEnabled && (++echoParryCount % 3 === 0)) pendingEchoes.push({time:0.4});
   }
-  if(kind !== 'boss' && mods.vampire) vampireTick();
+  if(mods.vampire) vampireTick();   // Vampire compte tous les parry, boss compris
   checkTechniques();
   if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
     perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
@@ -350,7 +352,7 @@ function update(dt){
               boss.parts = boss.parts.filter(p => p !== e);
               if(boss.parts.length === 0) killBoss();
             }
-            if(isParry) doParry(e, pm, 'boss');
+            if(isParry) doParry(e, pm, 'boss', sw.isEcho);
           } else {
             if(isParry) doParry(e, pm, 'shock');
             else {
