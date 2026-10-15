@@ -51,8 +51,8 @@ function spawnBossByName(bossId){
   } else if(type.id==='swarm'){
     const R=Math.min(200, Math.min(W,H)*0.42);
     const baseAng=rng()*Math.PI*2;
-    for(let i=0;i<5;i++){
-      const a=baseAng+(i/5)*Math.PI*2;
+    for(let i=0;i<bossHp;i++){          // un éclat par PV : détruire tous les éclats tue la Nuée
+      const a=baseAng+(i/bossHp)*Math.PI*2;
       const e={ x:bh.x+Math.cos(a)*R, y:bh.y+Math.sin(a)*R, vx:0, vy:0, r:12, type:'boss', bossPart:true, phase:rng()*Math.PI*2, swarmAngle:a, swarmR:R, swarmR0:R, isMain:false, trail:[] };
       entities.push(e); boss.parts.push(e);
     }

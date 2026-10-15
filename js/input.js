@@ -40,28 +40,9 @@ function onUp(){
         const d=Math.sqrt(dx*dx+dy*dy);
         if(d >= range) continue;
         hitAny = true;
-        parryChain++;
-        parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
-        const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-        addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
+        doParry(e, pm, 'contact');
         combo++; comboTimer=mods.chainWindow*1.2;
         if(combo>maxCombo) maxCombo=combo;
-        hitstop = PARRY_HITSTOP;
-        parryCount++; parryTimes.push(performance.now());
-        if(parryTimes.length > 5) parryTimes.shift();
-        parryFlash=reduceFx()?0.25:0.6; slowmoT=0.18; timeScale=0.4;
-        vibrate(45); shake=Math.max(shake,10);
-        burst(e.x,e.y,'#ffdd44',32,520);
-        if(mods.vampire) vampireTick();
-        checkTechniques();
-        if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
-          perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
-          invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
-          slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
-          addToast('★ PERFECT CHAIN ★', '#ffffff');
-          burst(e.x, e.y, '#ffffff', 48, 780);
-          blip(880, 0.3, 'sine', 0.18, 2200);
-        }
         if(e.bossPart){
           damageBoss(1, e.x, e.y);
           if(boss && boss.type.id==='swarm'){ boss.parts = boss.parts.filter(p=>p!==e); entities.splice(i,1); }
@@ -70,8 +51,7 @@ function onUp(){
         } else entities.splice(i,1);
       }
       if(hitAny && pu) registerPulse();
-      if(hitAny) blip(880,0.18,'sine',0.16,1400);
-      else blip(180,0.12,'sine',0.05,90);
+      if(!hitAny) blip(180,0.12,'sine',0.05,90);
     } else {
       if(shockCharges > 0){
         shockCharges--;

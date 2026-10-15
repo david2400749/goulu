@@ -66,7 +66,7 @@ function migrate(p){
   if (!p.quests || p.quests.date !== todayStr()) p.quests = freshQuests(todayStr());
   if (!p.quests.elemChains) p.quests.elemChains = 0;
   if (!p.quests.bestWave) p.quests.bestWave = 0;
-  /* v12.1 : les anciennes versions pouvaient enregistrer des scores décimaux */
+  /* 0.12.1 : les anciennes versions pouvaient enregistrer des scores décimaux */
   const ri = v => (typeof v === 'number' && isFinite(v)) ? Math.round(v) : v;
   p.best = ri(p.best);
   if(p.bestRun) p.bestRun.score = ri(p.bestRun.score);

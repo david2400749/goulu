@@ -83,6 +83,16 @@ const inView = (page, id) => page.evaluate(id => {
     return s.useGL ? 'rendu WebGL2' : 'WebGL2 indisponible, repli 2D';
   });
 
+  await test('Version affichée dans le menu, identique à package.json', async () => {
+    const want = require(path.join(ROOT, 'package.json')).version;
+    const { page, ctx } = await open('index.html?nogl');
+    const r = await page.evaluate(() => ({ v: GAME_VERSION, label: document.getElementById('menuVersion').textContent }));
+    await ctx.close();
+    assert(r.v === want, 'GAME_VERSION ' + r.v + ' ≠ package.json ' + want);
+    assert(r.label.includes(want), 'libellé du menu : « ' + r.label + ' »');
+    return r.label;
+  });
+
   await test('Chargement sans erreur (rendu 2D forcé ?nogl)', async () => {
     const { page, ctx, errors } = await open('index.html?nogl');
     const s = await page.evaluate(() => ({ state, useGL }));
@@ -222,6 +232,80 @@ const inView = (page, id) => page.evaluate(id => {
     await page.evaluate(() => __lc.restoreContext());
     await page.waitForFunction(() => useGL === true && SpaceGL.ok, null, { timeout: 30000 });
     await ctx.close();
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  /* Règles du parry figées : onde sur antimatière, onde sur boss, contact (Pacifiste).
+     Valeurs relevées avant le regroupement des trois copies du code (lot 5), puis
+     Écho et Vampire étendus aux boss (0.12.2). */
+  await test('Parry : mêmes règles pour l\'onde, le boss et le contact', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, techniques: { dashparry: true, echochain: true } } });
+    const r = await page.evaluate(() => {
+      window.isOnBeat = () => false;   // le bonus de tempo dépend de l'horloge réelle
+      const fresh = (mode, echo) => {
+        Math.random = mulberry32(42); startGame(mode, false); entities.length = 0; hitstop = 0;
+        mods.vampire = true; mods.echo = !!echo; lives = 1; maxLivesRun = 5; multiplier = 1;
+      };
+      const wave = () => { shockwaves.length = 0; shockwaves.push({ r: 200, maxR: 240, life: 0.05, maxLife: 0.55, hit: new Set(), isEcho: false, pulse: false, weak: false, counted: false }); hitstop = 0; update(0.001); };
+      const anti = x => entities.push({ x: bh.x + x, y: bh.y, vx: 0, vy: 0, r: R_ANTI, type: 'anti', phase: 0, trail: [] });
+      const out = {};
+      fresh('classic', true); out.shock = [];
+      for(let k = 0; k < 5; k++){ anti(60); wave(); out.shock.push(score); }
+      Object.assign(out, { shockCombo: combo, shockLives: lives, shockEchoes: pendingEchoes.length, shockPerfect: runPerfects, shockInv: invincibleT > 1.9 });
+      fresh('classic', true); spawnBossByName('consumer'); boss.hp = boss.maxHp = 99; out.boss = [];
+      for(let k = 0; k < 4; k++){ const p = boss.parts[0]; p.x = bh.x + 70; p.y = bh.y; p.vx = p.vy = 0; wave(); out.boss.push(score); }
+      Object.assign(out, { bossCombo: combo, bossLives: lives, bossEchoes: pendingEchoes.length, bossPerfect: runPerfects, bossHp: boss.hp });
+      fresh('pacifist'); out.contact = [];
+      for(let k = 0; k < 2; k++){ anti(50); anti(-50); attract = true; onUp(); out.contact.push(score); }
+      Object.assign(out, { contactCombo: combo, contactLives: lives, contactPerfect: runPerfects, contactCount: parryCount });
+      return out;
+    });
+    await ctx.close();
+    const want = { shock: [20, 60, 140, 220, 300], shockCombo: 5, shockLives: 2, shockEchoes: 5, shockPerfect: 1, shockInv: true,
+      boss: [20, 60, 140, 220], bossCombo: 0, bossLives: 2, bossEchoes: 4, bossPerfect: 1, bossHp: 95,
+      contact: [60, 220], contactCombo: 4, contactLives: 2, contactPerfect: 1, contactCount: 4 };
+    const diff = Object.keys(want).filter(k => JSON.stringify(want[k]) !== JSON.stringify(r[k])).map(k => k + ' : attendu ' + JSON.stringify(want[k]) + ', obtenu ' + JSON.stringify(r[k]));
+    assert(!diff.length, diff.join('\n'));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Écho sur un boss : pas de boucle d\'échos (l\'Œil)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      Math.random = mulberry32(7); startGame('classic', false); entities.length = 0;
+      mods.echo = true; lives = 99; spawnBossByName('eye'); boss.hp = boss.maxHp = 50;
+      const eye = boss.parts[0]; eye.eyeR = eye.eyeR0 = 85;          // l'Œil reste dans la zone de parry
+      shockCharges = 1; attract = true; onUp(); attract = true;      // un seul relâché, puis on maintient
+      const hp0 = boss.hp;
+      for(let i = 0; i < 360; i++){ hitstop = 0; antiTimer = 99; dustTimer = 99; update(1 / 60); if(!boss) break; }
+      return { lost: hp0 - (boss ? boss.hp : 0), parry: parryCount };
+    });
+    await ctx.close();
+    assert(r.lost === 2, 'un relâché doit coûter 2 PV (onde + écho), pas plus : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('PV des boss (+1 en 0.12.2) et Nuée : un éclat par PV', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      startGame('classic', false); entities.length = 0;
+      const hp = {};
+      bossesKilled = 1;                                   // hors premier boss (le tout premier a 1 PV de moins)
+      for(const id of ['consumer', 'swarm', 'eye']){ boss = null; entities.length = 0; spawnBossByName(id); hp[id] = boss.maxHp; }
+      boss = null; entities.length = 0; spawnBossByName('swarm');
+      const shards = boss.parts.length;
+      for(const p of boss.parts.slice()){                 // détruit chaque éclat comme le fait une onde
+        damageBoss(1, p.x, p.y); if(!boss) break;
+        boss.parts = boss.parts.filter(q => q !== p); if(boss.parts.length === 0) killBoss();
+      }
+      const swarmDead = boss === null;
+      boss = null; entities.length = 0; bossesKilled = 0; spawnBossByName('consumer');
+      return { hp, shards, swarmDead, firstConsumer: boss.maxHp };
+    });
+    await ctx.close();
+    assert(JSON.stringify(r.hp) === JSON.stringify({ consumer: 4, swarm: 6, eye: 5 }), 'PV : ' + JSON.stringify(r.hp));
+    assert(r.shards === 6 && r.swarmDead, 'Nuée : ' + r.shards + ' éclats, morte : ' + r.swarmDead);
+    assert(r.firstConsumer === 3, 'premier Consommateur du mode classique : ' + r.firstConsumer + ' PV');
     assert(!errors.length, errors.join('\n'));
   });
 
