@@ -14,6 +14,10 @@
       new MutationObserver(()=>el.setAttribute('aria-checked', el.classList.contains('on'))).observe(el, { attributes:true, attributeFilter:['class'] });
     });
   }],
+  ['version', ()=>{
+    const dev = /-dev$/.test(GAME_VERSION);
+    $('menuVersion').textContent = 'v' + GAME_VERSION + (dev ? ' · version de développement' : '');
+  }],
   ['challenge', ()=>{
     challenge = parseChallenge();
     const cb = $('challengeBadge');

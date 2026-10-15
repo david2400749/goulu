@@ -83,6 +83,16 @@ const inView = (page, id) => page.evaluate(id => {
     return s.useGL ? 'rendu WebGL2' : 'WebGL2 indisponible, repli 2D';
   });
 
+  await test('Version affichée dans le menu, identique à package.json', async () => {
+    const want = require(path.join(ROOT, 'package.json')).version;
+    const { page, ctx } = await open('index.html?nogl');
+    const r = await page.evaluate(() => ({ v: GAME_VERSION, label: document.getElementById('menuVersion').textContent }));
+    await ctx.close();
+    assert(r.v === want, 'GAME_VERSION ' + r.v + ' ≠ package.json ' + want);
+    assert(r.label.includes(want), 'libellé du menu : « ' + r.label + ' »');
+    return r.label;
+  });
+
   await test('Chargement sans erreur (rendu 2D forcé ?nogl)', async () => {
     const { page, ctx, errors } = await open('index.html?nogl');
     const s = await page.evaluate(() => ({ state, useGL }));
