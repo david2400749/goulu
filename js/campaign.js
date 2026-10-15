@@ -4,7 +4,7 @@ function startTutorial(){
   state = 'tutorial'; cam.menuTarget = 0;
   entities.length=0; particles.length=0; shockwaves.length=0; toasts.length=0;
   damageNumbers.length=0;
-  score=0; combo=0; comboTimer=0; multiplier=1; lives=3; maxLivesRun=3; hurtT=0;
+  score=0; scoreFrac=0; combo=0; comboTimer=0; multiplier=1; lives=3; maxLivesRun=3; hurtT=0;
   mods=newMods(); activeAnomalies=[]; boss=null; bossesKilled=0;
   shockCharges=0; dustSinceCharge=0;
   attract=false; elapsed=0;

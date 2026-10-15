@@ -499,6 +499,10 @@ void main(){
   }
 
   function init(canvas){
+    /* (ré)initialisation complète : après une perte de contexte, les anciens objets GL sont invalides */
+    ok = false; fbW = 0; fbH = 0;
+    fboMain = fboA = fboB = fboC = fboD = skyFbo = null; skyDirty = true;
+    pendingQ = null; gpuMs = 0;
     try{
       gl = canvas.getContext('webgl2', { antialias:false, alpha:false, depth:false, stencil:false, powerPreference:'high-performance', preserveDrawingBuffer:false });
       if(!gl) return false;

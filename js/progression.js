@@ -58,7 +58,7 @@ function triggerElementalChain(type){
   runElemChains++; profile.elemChains++; saveP();
   let msg = '', color = d.color;
   switch(type){
-    case 'gold': score += 5 * multiplier * mods.scoreMult; msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
+    case 'gold': addScore(5 * multiplier * mods.scoreMult); msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
     case 'blue': overkillFreeze = 2.0; msg = '❄️ FREEZE GLOBAL'; burst(bh.x, bh.y, '#7ee7ff', 40, 500); break;
     case 'red': chainExplosion(); msg = '🔥 EXPLOSION EN CHAÎNE'; burst(bh.x, bh.y, '#ff5c2d', 50, 600); break;
     case 'white': shockCharges = Math.min(getMaxCharges()*2, shockCharges + getMaxCharges()); msg = '⚪ OVERCHARGE'; burst(bh.x, bh.y, '#ffffff', 40, 500); break;
@@ -81,7 +81,7 @@ function chainExplosion(){
   }
   for(const e of toKill){
     burst(e.x, e.y, '#ff5c2d', 15, 400);
-    score += 10 * multiplier * mods.scoreMult; combo++; if(combo>maxCombo) maxCombo=combo;
+    addScore(10 * multiplier * mods.scoreMult); combo++; if(combo>maxCombo) maxCombo=combo;
     e.dead = true;
   }
 }

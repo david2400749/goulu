@@ -42,7 +42,7 @@ function onUp(){
         parryChain++;
         parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
         const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-        score += 20 * multiplier * chainMult * mods.scoreMult * fm() * pm;
+        addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
         combo++; comboTimer=mods.chainWindow*1.2;
         if(combo>maxCombo) maxCombo=combo;
         hitstop = PARRY_HITSTOP;

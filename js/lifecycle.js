@@ -10,7 +10,7 @@ function startGame(modeId, isDaily){
   state='play'; cam.menuTarget = 0;
   entities.length=0; particles.length=0; shockwaves.length=0; toasts.length=0;
   damageNumbers.length=0;
-  score=0; combo=0; comboTimer=0; multiplier=1;
+  score=0; scoreFrac=0; combo=0; comboTimer=0; multiplier=1;
   lives=3;
   maxCombo=1; parryCount=0; runDust=0; surgeFired=false;
   elapsed=0; dustTimer=0.85; antiTimer=3.2;

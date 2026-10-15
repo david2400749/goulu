@@ -103,7 +103,7 @@ function killBoss(){
   profile.bossesKilled = (profile.bossesKilled||0) + 1;
   for(const en of entities) if(en.bossPart) en.dead = true;
   const bonus = boss.type.pts;
-  score += bonus;
+  addScore(bonus);
   shockCharges = getMaxCharges();
   if(currentCampaignLevel) heal(1);
   const card = pickAnomalyCard();
