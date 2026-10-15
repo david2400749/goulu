@@ -1,0 +1,13 @@
+{
+  "name": "goulu",
+  "version": "12.1.0",
+  "private": true,
+  "description": "GOULU — Le trou noir affamé : jeu d'arcade WebGL2 sans build. Ce fichier ne sert qu'aux tests.",
+  "scripts": {
+    "check": "node -e \"const fs=require('fs');const {execFileSync}=require('child_process');for(const f of fs.readdirSync('js')) if(f.endsWith('.js')) execFileSync(process.execPath,['--check','js/'+f],{stdio:'inherit'});console.log('syntaxe JS : OK')\"",
+    "test": "npm run check && node tests/smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
