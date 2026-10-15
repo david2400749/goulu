@@ -8,6 +8,7 @@ function onDown(e){
   initAudio();
   if(state==='tutorial'){ attract = true; return; }
   if(state==='over'){
+    if(e && e.target && e.target.closest && e.target.closest('.over-panel')) return;
     if(overCd<=0){
       if(currentCampaignLevel) startCampaignLevel(currentCampaignLevel.n);
       else startGame(currentMode.id, lastGameWasDaily);
@@ -92,6 +93,10 @@ window.addEventListener('blur',()=>{ attract=false; if(state==='play') togglePau
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ attract=false; if(state==='play') togglePause(); } });
 window.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{
+  if(!optionsScreen.classList.contains('hidden')){
+    if(e.code==='Escape') optionsScreen.classList.add('hidden');
+    return;
+  }
   if(e.code==='Escape'){
     if(state==='play') togglePause();
     else if(state==='paused') togglePause();

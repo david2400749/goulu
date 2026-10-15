@@ -373,12 +373,13 @@ function update(dt){
               blip(520,0.1,'square',0.09);
             }
             if(mods.vampire && isParry) vampireTick();
-            // Momentum Kill check
-            if(mods.momentumEnabled){
-              const sp = Math.sqrt(e.vx*e.vx + e.vy*e.vy);
-              if(sp > 800){
-                addScore(10 * multiplier);
-                if(!runTechniques.momentum) runTechniques.momentum = true;
+            // Momentum Kill : antimatière détruite à plus de 800 px/s
+            if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800){
+              runTechniques.momentum = true;
+              if(mods.momentumEnabled) addScore(10 * multiplier);
+              else if(!profile.techniques.momentum){
+                profile.techniques.momentum = true; saveP();
+                showUnlockToast('💥', 'Technique : Momentum Kill !');
               }
             }
           }

@@ -121,13 +121,14 @@ function startGame(modeId, isDaily){
   if(activeDailyRule) addToast(activeDailyRule.name + ' · ' + activeDailyRule.desc, '#7ee7ff');
   setTimeout(()=>{ if(state==='play') thoughtOnce('start', ['J\'ai faim.','Encore.','Le silence a un goût.'][Math.floor(Math.random()*3)]); }, 1400);
 
-  ghostLineEl.classList.add('on');
+  const ghost = getBestGhostPace();
+  ghostLineEl.classList.toggle('on', !!(ghost && ghost.length >= 3));
   try{ drawGhostCanvas(); }catch(e){}
 }
 
 function gameOver(){
   state='over';
-  overCd=0.65;
+  overCd=1.0;
   attract=false;
   shake = reduceFx() ? 12 : 30;
   burst(bh.x, bh.y, SKINS[profile.skin].preview, 70, 620);
