@@ -5,6 +5,23 @@ useGL = !/[?&]nogl/.test(location.search) && SpaceGL.init(glCanvas);
 if(!useGL){ glCanvas.style.display = 'none'; canvas.style.background = '#010103'; }
 resize();
 
+/* Perte du contexte WebGL (fréquente sur mobile après une mise en arrière-plan) :
+   bascule immédiate sur le rendu 2D, puis retour au WebGL dès que le navigateur le rend. */
+if(useGL){
+  glCanvas.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    useGL = false;
+    glCanvas.style.display = 'none'; canvas.style.background = '#010103';
+    makeFallbackBg();
+  });
+  glCanvas.addEventListener('webglcontextrestored', () => {
+    if(!SpaceGL.init(glCanvas)) return;
+    useGL = true;
+    glCanvas.style.display = ''; canvas.style.background = '';
+    resize();
+  });
+}
+
 function compositeClipFrame(){
   if(!clipRecorderActive || !clipCtx) return;
   clipCtx.clearRect(0, 0, clipCanvas.width, clipCanvas.height);

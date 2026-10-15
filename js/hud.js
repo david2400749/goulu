@@ -2,6 +2,14 @@
 /* =========================================================
    Utils
    ========================================================= */
+/* Le score reste entier ; les fractions issues des multiplicateurs (×1,05, ×1,5…)
+   sont cumulées à part, pour qu'aucun bonus ne soit perdu à l'arrondi. */
+function addScore(v){
+  if(!(v > 0)) return;
+  scoreFrac += v;
+  const whole = Math.floor(scoreFrac + 1e-9);
+  score += whole; scoreFrac -= whole;
+}
 function getMaxCharges(){ return BASE_MAX_CHARGES + (mods ? (mods.maxCharges - BASE_MAX_CHARGES) : 0); }
 function getDustPerCharge(){ return mods ? mods.dustPerCharge : BASE_DUST_PER_CHG; }
 function pickDustType(){

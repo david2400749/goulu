@@ -208,6 +208,22 @@ function renderSkins(){
     skinGridEl.appendChild(el);
   }
 }
+function renderTechniques(){
+  const grid = $('techGrid'); if(!grid) return;
+  grid.innerHTML = '';
+  let n = 0;
+  for(const t of TECHNIQUES){
+    const on = !!profile.techniques[t.id]; if(on) n++;
+    const el = document.createElement('div');
+    el.className = 'ach ' + (on ? 'unlocked' : 'locked');
+    el.innerHTML = '<div class="ach-icon">' + (on ? t.icon : '🔒') + '</div>'
+      + '<div class="ach-name">' + t.name + '</div>'
+      + '<div class="ach-desc">' + t.desc + '</div>'
+      + '<div class="ach-fx">' + t.effect + '</div>';
+    grid.appendChild(el);
+  }
+  if($('techCount')) $('techCount').textContent = n;
+}
 function renderQuests(){
   try{ initDailyQuests(); }catch(e){}
   const q = profile.quests; if(!q) return;
@@ -245,6 +261,7 @@ function renderStats(){
   if(statsAvgEl) statsAvgEl.textContent = avg;
   if(statsWaveEl) statsWaveEl.textContent = profile.bestWave || 0;
   if(statsElemEl) statsElemEl.textContent = profile.elemChains || 0;
+  renderTechniques();
   try{ drawSpark(); }catch(e){}
 }
 
@@ -459,6 +476,7 @@ pauseBtn.addEventListener('click', e=>{ e.stopPropagation(); if(state==='play') 
 $('btnResume').addEventListener('click', ()=>{ togglePause(); });
 $('btnOptions').addEventListener('click', ()=>{ syncOptionsUI(); optionsScreen.classList.remove('hidden'); });
 $('btnCloseOptions').addEventListener('click', ()=>{ optionsScreen.classList.add('hidden'); });
+$('btnMenuOptions').addEventListener('click', e=>{ e.stopPropagation(); initAudio(); syncOptionsUI(); optionsScreen.classList.remove('hidden'); $('btnCloseOptions').focus(); });
 let quitArm = 0;
 $('btnQuit').addEventListener('click', ()=>{
   const b = $('btnQuit');

@@ -13,7 +13,7 @@ let currentMode = MODES.classic;
 let currentCampaignLevel = null;
 let entities=[], particles=[], shockwaves=[], toasts=[];
 let damageNumbers = [];
-let score=0, combo=0, comboTimer=0, multiplier=1, lives=3;
+let score=0, scoreFrac=0, combo=0, comboTimer=0, multiplier=1, lives=3;
 let maxCombo=1, elapsed=0, dustTimer=0, antiTimer=0;
 let shake=0, flash=0, parryFlash=0, danger=0;
 let attract=false, overCd=0;

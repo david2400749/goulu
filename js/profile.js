@@ -66,6 +66,17 @@ function migrate(p){
   if (!p.quests || p.quests.date !== todayStr()) p.quests = freshQuests(todayStr());
   if (!p.quests.elemChains) p.quests.elemChains = 0;
   if (!p.quests.bestWave) p.quests.bestWave = 0;
+  /* v12.1 : les anciennes versions pouvaient enregistrer des scores décimaux */
+  const ri = v => (typeof v === 'number' && isFinite(v)) ? Math.round(v) : v;
+  p.best = ri(p.best);
+  if(p.bestRun) p.bestRun.score = ri(p.bestRun.score);
+  if(p.daily) p.daily.score = ri(p.daily.score);
+  for(const k in p.modeRecords) p.modeRecords[k] = ri(p.modeRecords[k]);
+  for(const k in p.campaign.best) p.campaign.best[k] = ri(p.campaign.best[k]);
+  for(const h of p.history) if(h) h.score = ri(h.score);
+  for(const k in p.replays){ const r = p.replays[k]; if(r){ r.score = ri(r.score); if(Array.isArray(r.pacing)) r.pacing = r.pacing.map(ri); } }
+  if(Array.isArray(p.bestRunPace)) p.bestRunPace = p.bestRunPace.map(ri);
+  ['bestScore','scoreSum'].forEach(k => { p.quests[k] = ri(p.quests[k]); });
   return p;
 }
 function saveP(){ try{ localStorage.setItem(K.profile, JSON.stringify(profile)); }catch(e){ console.warn('GOULU: sauvegarde impossible', e); } }

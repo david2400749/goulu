@@ -8,6 +8,7 @@ function onDown(e){
   initAudio();
   if(state==='tutorial'){ attract = true; return; }
   if(state==='over'){
+    if(e && e.target && e.target.closest && e.target.closest('.over-panel')) return;
     if(overCd<=0){
       if(currentCampaignLevel) startCampaignLevel(currentCampaignLevel.n);
       else startGame(currentMode.id, lastGameWasDaily);
@@ -42,7 +43,7 @@ function onUp(){
         parryChain++;
         parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
         const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-        score += 20 * multiplier * chainMult * mods.scoreMult * fm() * pm;
+        addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
         combo++; comboTimer=mods.chainWindow*1.2;
         if(combo>maxCombo) maxCombo=combo;
         hitstop = PARRY_HITSTOP;
@@ -92,6 +93,10 @@ window.addEventListener('blur',()=>{ attract=false; if(state==='play') togglePau
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ attract=false; if(state==='play') togglePause(); } });
 window.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{
+  if(!optionsScreen.classList.contains('hidden')){
+    if(e.code==='Escape') optionsScreen.classList.add('hidden');
+    return;
+  }
   if(e.code==='Escape'){
     if(state==='play') togglePause();
     else if(state==='paused') togglePause();

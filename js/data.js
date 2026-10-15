@@ -78,9 +78,9 @@ const UPGRADES = [
 ];
 
 const TECHNIQUES = [
-  { id:'dashparry', icon:'⚡', name:'Dash-Parry', desc:'3 parry en <1s' },
-  { id:'echochain', icon:'🔊', name:'Echo-Chain', desc:'Parry pendant un Écho' },
-  { id:'momentum',  icon:'💥', name:'Momentum Kill', desc:'Anti tuée >800 px/s' },
+  { id:'dashparry', icon:'⚡', name:'Dash-Parry', desc:'3 parry en moins d\'1 s', effect:'Fenêtre de chaîne +0,5 s' },
+  { id:'echochain', icon:'🔊', name:'Echo-Chain', desc:'Parry pendant un Écho', effect:'Un écho tous les 3 parry' },
+  { id:'momentum',  icon:'💥', name:'Momentum Kill', desc:'Détruis une antimatière lancée à pleine vitesse', effect:'+10 pts × multiplicateur par élimination rapide' },
 ];
 
 const LORE = CAMPAIGN_LEVELS.map((l,i)=>({ n:i+1, name:l.name, text:l.lore }));

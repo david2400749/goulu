@@ -5,12 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#02030a">
 <title>GOULU — Le trou noir affamé</title>
+<meta name="description" content="Incarne un trou noir affamé : aspire la poussière d'étoiles, relâche l'onde de choc au bon moment et survis aux boss. Jeu d'arcade gratuit, sans installation, sur mobile et ordinateur.">
+<link rel="canonical" href="https://david2400749.github.io/goulu/">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GOULU">
+<!-- Aperçu des liens partagés (WhatsApp, Discord, X, Facebook…) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="GOULU">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="GOULU — Le trou noir affamé">
+<meta property="og:description" content="Aspire, relâche, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel. Bats mon score !">
+<meta property="og:url" content="https://david2400749.github.io/goulu/">
+<meta property="og:image" content="https://david2400749.github.io/goulu/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Le trou noir de GOULU et son disque d'accrétion">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GOULU — Le trou noir affamé">
+<meta name="twitter:description" content="Aspire, relâche, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel.">
+<meta name="twitter:image" content="https://david2400749.github.io/goulu/assets/og-image.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"VideoGame","name":"GOULU — Le trou noir affamé","url":"https://david2400749.github.io/goulu/","image":"https://david2400749.github.io/goulu/assets/og-image.jpg","description":"Jeu d'arcade gratuit : incarne un trou noir affamé, aspire la poussière d'étoiles et relâche l'onde de choc au bon moment.","inLanguage":"fr","genre":["Arcade","Rythme"],"gamePlatform":["Navigateur web","Mobile","Ordinateur"],"applicationCategory":"Game","operatingSystem":"Tous","playMode":"SinglePlayer","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<noscript><p style="padding:24px;color:#e9edf6;font-family:system-ui,sans-serif">GOULU a besoin de JavaScript pour fonctionner.</p></noscript>
 
 <canvas id="gl"></canvas>
 <canvas id="c"></canvas>
@@ -104,6 +132,7 @@
       <div class="mbadge cyan">Shards <b id="badgeShards">0</b></div>
       <div class="mbadge green" id="badgeCampaign">Campagne <b>0</b>/10</div>
       <div class="mbadge cyan" id="challengeBadge" style="display:none"></div>
+      <button class="mbadge mbtn" id="btnMenuOptions" aria-label="Options : son, accessibilité, assistance">⚙ Options</button>
     </div>
     <nav class="menu-tabs" id="menuTabs">
       <button class="mtab active" data-tab="play">Jouer</button>
@@ -124,7 +153,7 @@
           <div class="row"><div class="ic">♪</div><div class="tx"><b>Relâche sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.</div></div>
           <div class="row"><div class="ic">◈</div><div class="tx">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
         </div>
-        <button class="btn btn-primary" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
+        <button class="btn btn-primary cta-sticky" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
       </div>
 
       <div class="panel" data-panel="campaign">
@@ -169,6 +198,10 @@
           </div>
         </div>
         <div class="stats-block">
+          <h3>Techniques · <span id="techCount">0</span> / 3</h3>
+          <div class="ach-grid" id="techGrid"></div>
+        </div>
+        <div class="stats-block">
           <div class="ach-header" style="margin-bottom:10px">
             <div class="label">Succès débloqués</div>
             <div class="count"><span id="achCount">0</span> / <span id="achTotal">26</span></div>
@@ -193,7 +226,7 @@
         <div class="stats-block"><h3>Quêtes du jour · <span id="questsTimer">00:00:00</span></h3>
           <div class="quest-list" id="questList"></div>
           <div class="quest-foot">◆ <b id="shardsCount">0</b> shards</div></div>
-        <button class="btn btn-daily" id="btnDaily" style="width:100%">Jouer le défi <span class="arrow">→</span></button>
+        <button class="btn btn-daily cta-sticky" id="btnDaily" style="width:100%">Jouer le défi <span class="arrow">→</span></button>
       </div>
 
       <div class="panel" data-panel="skins">

@@ -2,7 +2,7 @@
 function collectDust(e){
   const dt = DUST_TYPES[e.dustType] || DUST_TYPES.gold;
   const gain = dt.pts * mods.dustValue;
-  score += multiplier * gain * mods.scoreMult * fm();
+  addScore(multiplier * gain * mods.scoreMult * fm());
   combo++; comboTimer=mods.chainWindow*1.2; runDust++;
   if(combo>maxCombo) maxCombo=combo;
   dustSinceCharge++;
@@ -22,7 +22,7 @@ function collectDust(e){
     for(let i=entities.length-1;i>=0;i--){
       const o = entities[i]; if(o.type !== 'anti' || o.dead) continue;
       const dx=o.x-e.x, dy=o.y-e.y;
-      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); score += 5 * multiplier * mods.scoreMult; o.dead = true; }
+      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); addScore(5 * multiplier * mods.scoreMult); o.dead = true; }
     }
   } else if(e.dustType === 'white'){ if(shockCharges < getMaxCharges()) shockCharges++; }
   elemTypesCollected.add(e.dustType);
@@ -43,7 +43,7 @@ function heal(amount){
 }
 function hitAnti(e){
   if(invincibleT > 0 || hurtT > 0){
-    if(invincibleT > 0) score += 5 * multiplier;
+    if(invincibleT > 0) addScore(5 * multiplier);
     burst(e.x,e.y,'#ffffff',20,420);
     blip(660,0.1,'sine',0.1,990);
     return;
@@ -306,7 +306,7 @@ function update(dt){
               parryChain++;
               parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
               const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-              score += 20 * multiplier * chainMult * mods.scoreMult * fm() * pm;
+              addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
               hitstop = PARRY_HITSTOP;
               parryCount++; parryTimes.push(performance.now());
               if(parryTimes.length > 5) parryTimes.shift();
@@ -337,7 +337,7 @@ function update(dt){
               chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
               gain = 20 * multiplier * chainMult;
             } else { gain = 8 * multiplier; }
-            score += gain * mods.scoreMult * fm() * pm;
+            addScore(gain * mods.scoreMult * fm() * pm);
             combo++; comboTimer=mods.chainWindow*1.2;
             if(combo>maxCombo) maxCombo=combo;
             if(isParry){
@@ -373,12 +373,13 @@ function update(dt){
               blip(520,0.1,'square',0.09);
             }
             if(mods.vampire && isParry) vampireTick();
-            // Momentum Kill check
-            if(mods.momentumEnabled){
-              const sp = Math.sqrt(e.vx*e.vx + e.vy*e.vy);
-              if(sp > 800){
-                score += 10 * multiplier;
-                if(!runTechniques.momentum) runTechniques.momentum = true;
+            // Momentum Kill : antimatière détruite à plus de 800 px/s
+            if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800){
+              runTechniques.momentum = true;
+              if(mods.momentumEnabled) addScore(10 * multiplier);
+              else if(!profile.techniques.momentum){
+                profile.techniques.momentum = true; saveP();
+                showUnlockToast('💥', 'Technique : Momentum Kill !');
               }
             }
           }

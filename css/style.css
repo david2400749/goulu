@@ -45,7 +45,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hud-label{font-family:var(--f-mono);font-size:10.5px;font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-3)}
 .hud-left{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .hud-left .row1{display:flex;align-items:center;gap:10px}
-.hearts{display:flex;gap:4px}
+.hearts{display:flex;flex-wrap:wrap;gap:4px;max-width:100%}
 .heart{width:22px;height:5px;background:var(--ice);border-radius:1px;box-shadow:0 0 10px rgba(169,220,255,.55);
   transition:opacity .3s,background .3s,box-shadow .3s}
 .heart.lost{background:rgba(190,212,255,.16);box-shadow:none}
@@ -115,6 +115,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes bossHintPulse{0%,100%{opacity:.5}50%{opacity:1}}
 .boss-hint.hidden{opacity:0}
 .charges-wrap{display:none}
+/* Téléphones : la colonne centrale ne doit plus pousser les boutons hors de l'écran */
+@media (max-width:540px){
+  .hud-center{min-width:0}
+  .hud-center>.hud-label{letter-spacing:.16em;white-space:nowrap}
+  .combo-track,.elemental-track{width:min(150px,34vw)}
+  .hud-right .btns{flex-direction:column}
+  .hud-right .best-pill .hud-label{letter-spacing:.12em}
+}
 .ghost-line{position:fixed;top:78px;left:max(18px,env(safe-area-inset-left));width:96px;height:32px;border:1px solid var(--line);border-radius:2px;
   background:rgba(8,11,19,.4);opacity:0;transition:opacity .4s;overflow:hidden;padding:2px}
 .ghost-line.on{opacity:1}
@@ -160,6 +168,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes firePulse{0%,100%{box-shadow:0 0 0 rgba(255,140,60,0)}50%{box-shadow:0 0 18px rgba(255,140,60,.4)}}
 .mbadge.cyan{color:var(--ice);border-color:rgba(169,220,255,.3)}
 .mbadge.green{color:var(--green);border-color:rgba(116,230,166,.3)}
+.mbadge.mbtn{cursor:pointer;margin-left:auto;color:var(--ink-2);transition:color .2s,border-color .2s}
+.mbadge.mbtn:hover{color:#fff;border-color:var(--line-2)}
+.ach-fx{font-size:10px;color:var(--gold);line-height:1.25}
+.ach.locked .ach-fx{color:var(--ink-3)}
 .menu-tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 .mtab{padding:9px 12px;font-family:var(--f-mono);font-size:10.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);
   border-bottom:1.5px solid transparent;margin-bottom:-1px;transition:all .2s}
@@ -183,6 +195,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .btn-share{width:100%;min-height:40px;font-size:11px;letter-spacing:.2em;color:var(--ice);border:1px solid rgba(169,220,255,.3);background:rgba(169,220,255,.05)}
 .btn-share:hover{background:rgba(169,220,255,.12)}
 .btn-share.copied{color:var(--green);border-color:rgba(116,230,166,.5)}
+/* bouton d'action principal toujours visible quand le menu défile */
+.cta-sticky{position:sticky;bottom:max(14px,env(safe-area-inset-bottom));z-index:3;flex-shrink:0}
+.btn-primary.cta-sticky{box-shadow:0 0 0 1px rgba(255,210,150,.5),0 8px 30px -8px rgba(255,150,60,.65),0 18px 34px 14px rgba(2,3,9,.82)}
+.btn-daily.cta-sticky{box-shadow:0 8px 28px -8px rgba(110,190,255,.6),0 18px 34px 14px rgba(2,3,9,.82)}
 .btn .arrow{transition:transform .25s}
 .btn:hover .arrow{transform:translateX(4px)}
 

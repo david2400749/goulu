@@ -10,7 +10,7 @@ function startGame(modeId, isDaily){
   state='play'; cam.menuTarget = 0;
   entities.length=0; particles.length=0; shockwaves.length=0; toasts.length=0;
   damageNumbers.length=0;
-  score=0; combo=0; comboTimer=0; multiplier=1;
+  score=0; scoreFrac=0; combo=0; comboTimer=0; multiplier=1;
   lives=3;
   maxCombo=1; parryCount=0; runDust=0; surgeFired=false;
   elapsed=0; dustTimer=0.85; antiTimer=3.2;
@@ -121,13 +121,14 @@ function startGame(modeId, isDaily){
   if(activeDailyRule) addToast(activeDailyRule.name + ' · ' + activeDailyRule.desc, '#7ee7ff');
   setTimeout(()=>{ if(state==='play') thoughtOnce('start', ['J\'ai faim.','Encore.','Le silence a un goût.'][Math.floor(Math.random()*3)]); }, 1400);
 
-  ghostLineEl.classList.add('on');
+  const ghost = getBestGhostPace();
+  ghostLineEl.classList.toggle('on', !!(ghost && ghost.length >= 3));
   try{ drawGhostCanvas(); }catch(e){}
 }
 
 function gameOver(){
   state='over';
-  overCd=0.65;
+  overCd=1.0;
   attract=false;
   shake = reduceFx() ? 12 : 30;
   burst(bh.x, bh.y, SKINS[profile.skin].preview, 70, 620);
