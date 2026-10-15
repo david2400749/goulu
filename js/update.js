@@ -75,6 +75,54 @@ function spawnShockwave(isEcho, pulse){
 }
 
 /* =========================================================
+   Parry : une seule règle pour les trois façons de parer
+   ---------------------------------------------------------
+   kind = 'shock'   onde de choc sur une antimatière
+          'boss'    onde de choc sur un boss
+          'contact' relâche au contact (mode Pacifiste, niveau MURMURES)
+   pm   = multiplicateur de pulse (1, ou 1,5 sur le tempo)
+   Le combo reste géré par l'appelant (un parry de boss ne le fait pas monter).
+   ========================================================= */
+function doParry(e, pm, kind){
+  parryChain++;
+  parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
+  const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
+  addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
+  hitstop = PARRY_HITSTOP;
+  parryCount++; parryTimes.push(performance.now());
+  if(parryTimes.length > 5) parryTimes.shift();
+  parryFlash = reduceFx() ? 0.25 : 0.6; slowmoT = 0.18; timeScale = 0.4;
+  vibrate(45); shake = Math.max(shake, 10);
+  burst(e.x, e.y, '#ffdd44', 32, 520);
+  burst(e.x, e.y, '#ffffff', 12, 380);
+  /* règles propres à chaque cas (inchangées) : l'écho ne naît que d'une onde sur
+     antimatière ; Vampire ne compte pas les parry de boss */
+  if(kind === 'shock'){
+    if(mods.echo) pendingEchoes.push({time:0.4});
+    else if(mods.echochainEnabled && (++echoParryCount % 3 === 0)) pendingEchoes.push({time:0.4});
+  }
+  if(kind !== 'boss' && mods.vampire) vampireTick();
+  checkTechniques();
+  if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
+    perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
+    invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
+    slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
+    addToast('★ PERFECT CHAIN ★', '#ffffff', H/2 - 130);
+    burst(e.x, e.y, '#ffffff', 48, 780);
+    blip(880, 0.3, 'sine', 0.18, 2200);
+    blip(1320, 0.4, 'triangle', 0.12, 3000);
+    vibrate([30, 40, 60, 40, 30]);
+    shake = Math.max(shake, 32);
+  } else if(parryChain > 1){
+    addToast('CHAIN ×' + chainMult, '#ffdd44', H/2 - 100);
+    blip(880*chainMult, 0.18, 'sine', 0.14, 1400);
+  } else {
+    addToast('★ PARRY ! ★', '#ffdd44', H/2 - 70);
+    blip(880, 0.18, 'sine', 0.16, 1400);
+  }
+}
+
+/* =========================================================
    Update (condensed but complete)
    ========================================================= */
 function update(dt){
@@ -302,77 +350,16 @@ function update(dt){
               boss.parts = boss.parts.filter(p => p !== e);
               if(boss.parts.length === 0) killBoss();
             }
-            if(isParry){
-              parryChain++;
-              parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
-              const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-              addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
-              hitstop = PARRY_HITSTOP;
-              parryCount++; parryTimes.push(performance.now());
-              if(parryTimes.length > 5) parryTimes.shift();
-              parryFlash=reduceFx()?0.25:0.6; slowmoT=0.18; timeScale=0.4;
-              vibrate(45); shake=Math.max(shake,10);
-              burst(e.x,e.y,'#ffdd44',32,520);
-              checkTechniques();
-              if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
-                perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
-                invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
-                slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
-                addToast('★ PERFECT CHAIN ★', '#ffffff', H/2 - 130);
-                burst(e.x, e.y, '#ffffff', 48, 780);
-                blip(880, 0.3, 'sine', 0.18, 2200);
-                vibrate([30, 40, 60, 40, 30]);
-                shake = Math.max(shake, 32);
-              } else if(parryChain > 1){
-                addToast('CHAIN ×' + chainMult, '#ffdd44', H/2 - 100);
-              } else {
-                addToast('★ PARRY ! ★','#ffdd44',H/2-70);
-              }
-            }
+            if(isParry) doParry(e, pm, 'boss');
           } else {
-            let gain, chainMult=1;
-            if(isParry){
-              parryChain++;
-              parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
-              chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-              gain = 20 * multiplier * chainMult;
-            } else { gain = 8 * multiplier; }
-            addScore(gain * mods.scoreMult * fm() * pm);
-            combo++; comboTimer=mods.chainWindow*1.2;
-            if(combo>maxCombo) maxCombo=combo;
-            if(isParry){
-              hitstop = PARRY_HITSTOP;
-              parryCount++; parryTimes.push(performance.now());
-              if(parryTimes.length > 5) parryTimes.shift();
-              parryFlash=reduceFx()?0.25:0.6; slowmoT=0.18; timeScale=0.4;
-              vibrate(45); shake=Math.max(shake,10);
-              burst(e.x,e.y,'#ffdd44',32,520);
-              burst(e.x,e.y,'#ffffff',12,380);
-              if(mods.echo) pendingEchoes.push({time:0.4});
-              else if(mods.echochainEnabled && (++echoParryCount % 3 === 0)) pendingEchoes.push({time:0.4});
-              checkTechniques();
-              if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
-                perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
-                invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
-                slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
-                addToast('★ PERFECT CHAIN ★', '#ffffff', H/2 - 130);
-                burst(e.x, e.y, '#ffffff', 48, 780);
-                blip(880, 0.3, 'sine', 0.18, 2200);
-                blip(1320, 0.4, 'triangle', 0.12, 3000);
-                vibrate([30, 40, 60, 40, 30]);
-                shake = Math.max(shake, 32);
-              } else if(parryChain > 1){
-                addToast('CHAIN ×' + chainMult, '#ffdd44', H/2 - 100);
-                blip(880*chainMult,0.18,'sine',0.14,1400);
-              } else {
-                addToast('★ PARRY ! ★','#ffdd44',H/2-70);
-                blip(880,0.18,'sine',0.16,1400);
-              }
-            } else {
+            if(isParry) doParry(e, pm, 'shock');
+            else {
+              addScore(8 * multiplier * mods.scoreMult * fm() * pm);
               burst(e.x,e.y,'#ff2d6f',16,340);
               blip(520,0.1,'square',0.09);
             }
-            if(mods.vampire && isParry) vampireTick();
+            combo++; comboTimer=mods.chainWindow*1.2;
+            if(combo>maxCombo) maxCombo=combo;
             // Momentum Kill : antimatière détruite à plus de 800 px/s
             if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800){
               runTechniques.momentum = true;
