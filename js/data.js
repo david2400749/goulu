@@ -222,8 +222,10 @@ const ANOMALIES = [
   { id:'pacte', name:'Pacte Noir', icon:'🖤', cat:'risk', rarity:'legendary', desc:'<b>+150% pts</b> mais <b>-1 vie</b>', max:1, apply:(m)=>{ m.scoreMult *= 2.5; m.bonusLives -= 1; } },
   { id:'echo', name:'Écho', icon:'🔊', cat:'special', rarity:'legendary', desc:'Chaque parry crée une <b>2e onde</b>', max:1, apply:(m)=>{ m.echo = true; } },
 ];
+/* PV +1 en 0.12.2 pour compenser Écho et Vampire désormais actifs sur les boss.
+   La Nuée a autant d'éclats que de PV. */
 const BOSS_TYPES = [
-  { id:'consumer', name:'Le Consommateur', icon:'👁️', hp:3, color:'#ff2d6f', pts:600 },
-  { id:'swarm', name:'La Nuée', icon:'💠', hp:5, color:'#a06eff', pts:800 },
-  { id:'eye', name:'L\'Œil', icon:'🌀', hp:4, color:'#7ee7ff', pts:1000 },
+  { id:'consumer', name:'Le Consommateur', icon:'👁️', hp:4, color:'#ff2d6f', pts:600 },
+  { id:'swarm', name:'La Nuée', icon:'💠', hp:6, color:'#a06eff', pts:800 },
+  { id:'eye', name:'L\'Œil', icon:'🌀', hp:5, color:'#7ee7ff', pts:1000 },
 ];

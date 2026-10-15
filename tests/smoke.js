@@ -285,6 +285,30 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  await test('PV des boss (+1 en 0.12.2) et Nuée : un éclat par PV', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      startGame('classic', false); entities.length = 0;
+      const hp = {};
+      bossesKilled = 1;                                   // hors premier boss (le tout premier a 1 PV de moins)
+      for(const id of ['consumer', 'swarm', 'eye']){ boss = null; entities.length = 0; spawnBossByName(id); hp[id] = boss.maxHp; }
+      boss = null; entities.length = 0; spawnBossByName('swarm');
+      const shards = boss.parts.length;
+      for(const p of boss.parts.slice()){                 // détruit chaque éclat comme le fait une onde
+        damageBoss(1, p.x, p.y); if(!boss) break;
+        boss.parts = boss.parts.filter(q => q !== p); if(boss.parts.length === 0) killBoss();
+      }
+      const swarmDead = boss === null;
+      boss = null; entities.length = 0; bossesKilled = 0; spawnBossByName('consumer');
+      return { hp, shards, swarmDead, firstConsumer: boss.maxHp };
+    });
+    await ctx.close();
+    assert(JSON.stringify(r.hp) === JSON.stringify({ consumer: 4, swarm: 6, eye: 5 }), 'PV : ' + JSON.stringify(r.hp));
+    assert(r.shards === 6 && r.swarmDead, 'Nuée : ' + r.shards + ' éclats, morte : ' + r.swarmDead);
+    assert(r.firstConsumer === 3, 'premier Consommateur du mode classique : ' + r.firstConsumer + ' PV');
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
