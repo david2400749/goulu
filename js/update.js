@@ -79,7 +79,7 @@ function spawnShockwave(isEcho, pulse){
    ---------------------------------------------------------
    kind = 'shock'   onde de choc sur une antimatière
           'boss'    onde de choc sur un boss
-          'contact' relâche au contact (mode Pacifiste, niveau MURMURES)
+          'contact' onde au contact (mode Pacifiste, niveau MURMURES)
    pm   = multiplicateur de pulse (1, ou 1,5 sur le tempo)
    fromEcho = la parade vient d'une onde d'écho (et non d'un relâché du joueur)
    Le combo reste géré par l'appelant (un parry de boss ne le fait pas monter).
@@ -233,7 +233,7 @@ function update(dt){
   musicSetBpm(70 + multiplier*10);
   beatBpm += (70 + multiplier*10 - beatBpm) * (1 - Math.exp(-dt*3));
   if(resonanceT > 0) resonanceT = Math.max(0, resonanceT - gdt);
-  if(profile.pulses === 0 && elapsed > 10) thoughtOnce('beathint', 'Essaie de relâcher pile sur le battement.');
+  if(profile.pulses === 0 && elapsed > 10) thoughtOnce('beathint', ctl('beatHint'));
 
   const currentWave = (!currentCampaignLevel && currentMode.useWaves) ? WAVES[waveIndex] : null;
   const campaignDust = currentCampaignLevel ? currentCampaignLevel.dustRate : null;

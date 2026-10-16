@@ -116,7 +116,7 @@ const inView = (page, id) => page.evaluate(id => {
       await page.click('#btnPlay');
       await page.waitForTimeout(400);
       const out = [];
-      for(const id of ['soundBtn', 'clipBtn', 'pauseBtn', 'bestHud', 'scoreHud', 'hearts']) if(!(await inView(page, id))) out.push(id);
+      for(const id of ['soundBtn', 'clipBtn', 'pauseBtn', 'bestHud', 'scoreHud', 'hearts', 'btnHold', 'btnWave']) if(!(await inView(page, id))) out.push(id);
       await ctx.close();
       assert(!out.length, 'hors écran : ' + out.join(', '));
       assert(!errors.length, errors.join('\n'));
@@ -256,7 +256,7 @@ const inView = (page, id) => page.evaluate(id => {
       for(let k = 0; k < 4; k++){ const p = boss.parts[0]; p.x = bh.x + 70; p.y = bh.y; p.vx = p.vy = 0; wave(); out.boss.push(score); }
       Object.assign(out, { bossCombo: combo, bossLives: lives, bossEchoes: pendingEchoes.length, bossPerfect: runPerfects, bossHp: boss.hp });
       fresh('pacifist'); out.contact = [];
-      for(let k = 0; k < 2; k++){ anti(50); anti(-50); attract = true; onUp(); out.contact.push(score); }
+      for(let k = 0; k < 2; k++){ anti(50); anti(-50); fireWave(); out.contact.push(score); }
       Object.assign(out, { contactCombo: combo, contactLives: lives, contactPerfect: runPerfects, contactCount: parryCount });
       return out;
     });
@@ -275,7 +275,7 @@ const inView = (page, id) => page.evaluate(id => {
       Math.random = mulberry32(7); startGame('classic', false); entities.length = 0;
       mods.echo = true; lives = 99; spawnBossByName('eye'); boss.hp = boss.maxHp = 50;
       const eye = boss.parts[0]; eye.eyeR = eye.eyeR0 = 85;          // l'Œil reste dans la zone de parry
-      shockCharges = 1; attract = true; onUp(); attract = true;      // un seul relâché, puis on maintient
+      shockCharges = 1; attract = true; fireWave();                  // une seule onde, puis on maintient
       const hp0 = boss.hp;
       for(let i = 0; i < 360; i++){ hitstop = 0; antiTimer = 99; dustTimer = 99; update(1 / 60); if(!boss) break; }
       return { lost: hp0 - (boss ? boss.hp : 0), parry: parryCount };
@@ -336,8 +336,68 @@ const inView = (page, id) => page.evaluate(id => {
     return r;
   });
 
-  await test('Tactile : l\'onde ne part qu\'au lever du dernier doigt', async () => {
+  await test('2 commandes au toucher : un doigt aspire, le bouton ONDE tire sans l\'interrompre', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: PLAYER, touch: true });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const wave = document.getElementById('btnWave'), field = document.getElementById('c');
+      const t = (id, el) => new Touch({ identifier: id, target: el, clientX: 100, clientY: 400 });
+      const send = (type, el, changed, remaining) => el.dispatchEvent(new TouchEvent(type, { touches: remaining, changedTouches: [changed], bubbles: true, cancelable: true }));
+      entities.length = 0; shockCharges = 3; shockwaves.length = 0;
+      const f1 = t(1, field), f2 = t(2, wave), out = {};
+      send('touchstart', field, f1, [f1]);                 out.hold = attract;
+      send('touchstart', wave, f2, [f1, f2]);              out.afterWave = { waves: shockwaves.length, attract, charges: shockCharges };
+      send('touchend', wave, f2, [f1]);                    out.afterWaveUp = { waves: shockwaves.length, attract };
+      send('touchend', field, f1, []);                     out.afterHoldUp = { waves: shockwaves.length, attract };
+      syncHUD(); out.label = document.getElementById('waveSub').textContent;
+      return out;
+    });
+    await ctx.close();
+    assert(r.hold, 'le doigt posé n\'aspire pas : ' + JSON.stringify(r));
+    assert(r.afterWave.waves === 1 && r.afterWave.attract && r.afterWave.charges === 2, 'bouton ONDE : ' + JSON.stringify(r));
+    assert(r.afterWaveUp.waves === 1 && r.afterWaveUp.attract, 'lever le doigt de ONDE a coupé l\'aspiration : ' + JSON.stringify(r));
+    assert(r.afterHoldUp.waves === 1 && !r.afterHoldUp.attract, 'relâcher l\'aspiration ne doit plus tirer d\'onde : ' + JSON.stringify(r));
+    assert(r.label === '2 charges', 'charges affichées : ' + r.label);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('2 commandes au clavier et à la souris (ESPACE / F, clic gauche / clic droit)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.evaluate(() => { entities.length = 0; shockCharges = 3; shockwaves.length = 0; });
+    const st = () => page.evaluate(() => ({ attract, waves: shockwaves.length }));
+    const r = {};
+    await page.keyboard.down('Space'); r.spaceDown = await st();
+    await page.keyboard.press('KeyF'); r.f = await st();
+    await page.keyboard.up('Space'); r.spaceUp = await st();
+    await page.mouse.move(300, 300);
+    await page.mouse.down(); r.leftDown = await st();
+    await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' }); r.right = await st();
+    await page.mouse.up(); r.leftUp = await st();
+    await ctx.close();
+    const want = { spaceDown: { attract: true, waves: 0 }, f: { attract: true, waves: 1 }, spaceUp: { attract: false, waves: 1 },
+      leftDown: { attract: true, waves: 1 }, right: { attract: true, waves: 2 }, leftUp: { attract: false, waves: 2 } };
+    const diff = Object.keys(want).filter(k => JSON.stringify(want[k]) !== JSON.stringify(r[k])).map(k => k + ' : attendu ' + JSON.stringify(want[k]) + ', obtenu ' + JSON.stringify(r[k]));
+    assert(!diff.length, diff.join('\n'));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Option « 1 seul bouton » : ancien mode, textes et boutons adaptés', async () => {
+    const { page, ctx } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: PLAYER, touch: true });
+    const before = await page.evaluate(() => ({ dual: document.body.classList.contains('ctrl-dual'), hint: hintEl.textContent, controls: profile.options.controls }));
+    await page.click('#btnMenuOptions'); await page.click('#optSingle');
+    const after = await page.evaluate(() => ({ dual: document.body.classList.contains('ctrl-dual'), hint: hintEl.textContent, controls: profile.options.controls,
+      saved: JSON.parse(localStorage.getItem('goulu_profile_v10')).options.controls }));
+    await page.keyboard.press('Escape'); await page.click('#btnPlay');
+    const btnShown = await page.evaluate(() => document.getElementById('btnWave').getBoundingClientRect().width > 0);
+    await ctx.close();
+    assert(before.dual && before.controls === 'dual' && /onde/i.test(before.hint), 'par défaut : ' + JSON.stringify(before));
+    assert(!after.dual && after.controls === 'single' && after.saved === 'single' && /Relâche/.test(after.hint), 'après option : ' + JSON.stringify(after));
+    assert(!btnShown, 'le bouton ONDE reste affiché en mode 1 bouton');
+  });
+
+  await test('1 bouton (ancien mode) au toucher : l\'onde ne part qu\'au lever du dernier doigt', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: { tutorialDone: true, options: { controls: 'single' } }, touch: true });
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
       const touch = id => new Touch({ identifier: id, target: document.body, clientX: 100, clientY: 700 });
@@ -392,7 +452,7 @@ const inView = (page, id) => page.evaluate(id => {
           if(state !== 'play') break;
           const holding = (i % 80) < 50;
           if(holding && !attract) attract = true;
-          if(!holding && attract) onUp();
+          if(!holding && attract){ attract = false; fireWave(); }
           if(lives < 2){ lives = 3; hurtT = 0; }
           update(1 / 60);
           if(boss) seen.add(boss.type.id);

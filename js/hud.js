@@ -10,6 +10,48 @@ function addScore(v){
   const whole = Math.floor(scoreFrac + 1e-9);
   score += whole; scoreFrac -= whole;
 }
+/* Commandes : par défaut 2 commandes séparées (ASPIRER maintenu, ONDE à la demande).
+   L'ancien mode « 1 seul bouton » (relâcher = onde) reste disponible dans les options. */
+function dualControls(){ return !profile.options || profile.options.controls !== 'single'; }
+function touchUI(){ return document.body.classList.contains('touch'); }
+const CONTROL_TEXT = {
+  //           2 boutons, ordinateur | 2 boutons, tactile | 1 bouton
+  howtoHold: ['<b>Maintiens</b> ESPACE ou le clic gauche : tu aspires tout.',
+              '<b>Maintiens</b> ton doigt sur l\'écran (repère ASPIRER en bas à gauche) : tu aspires tout.',
+              '<b>Maintiens</b> le clic / ESPACE (ou ton doigt, en bas de l\'écran) : tu aspires tout.'],
+  howtoWave: ['<b>F</b>, Entrée ou <b>clic droit</b> : onde de choc qui détruit l\'antimatière.',
+              'Bouton <b>ONDE</b> en bas à droite : onde de choc qui détruit l\'antimatière.',
+              '<b>Relâche</b> : onde de choc qui détruit l\'antimatière.'],
+  howtoBeat: ['<b>Onde sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.',
+              '<b>Onde sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.',
+              '<b>Relâche sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.'],
+  howtoBoss: ['Boss : <b>aspire-le</b>, puis lance l\'<b>onde</b> quand il est proche pour le frapper.',
+              'Boss : <b>aspire-le</b>, puis lance l\'<b>onde</b> quand il est proche pour le frapper.',
+              'Boss : <b>maintiens</b> pour l\'aspirer, <b>relâche</b> près de lui pour frapper.'],
+  hint:      ['ESPACE / clic gauche : aspirer · F / clic droit : onde · Sur le kick = pulse',
+              'Gauche : aspirer · Droite : onde',
+              'Maintiens pour aspirer · Relâche pour l\'onde · Sur le kick = pulse'],
+  bossHint:  ['ASPIRE le boss · ONDE près de lui pour frapper',
+              'ASPIRE le boss · ONDE près de lui pour frapper',
+              'MAINTIENS pour aspirer · RELÂCHE pour frapper'],
+  tut0:      ['Maintiens <b>ESPACE</b> ou le <b>clic gauche</b> pour <b>attirer</b> la poussière dorée.',
+              'Maintiens ton doigt sur l\'écran (repère <b>ASPIRER</b>) pour <b>attirer</b> la poussière dorée.',
+              'Maintiens le clic, <b>ESPACE</b> ou ton doigt (en bas de l\'écran) pour <b>attirer</b> la poussière dorée.'],
+  tut1:      ['Appuie sur <b>F</b> (ou clic droit) pour déclencher une <b>ONDE DE CHOC</b>.',
+              'Appuie sur le bouton <b>ONDE</b> (en bas à droite) pour déclencher une <b>ONDE DE CHOC</b>.',
+              'Relâche pour déclencher une <b>ONDE DE CHOC</b>.'],
+  tut2:      ['Lance l\'onde quand l\'antimatière entre dans le <b>cercle</b> pointillé.',
+              'Appuie sur <b>ONDE</b> quand l\'antimatière entre dans le <b>cercle</b> pointillé.',
+              'Relâche quand l\'antimatière entre dans le <b>cercle</b> pointillé.'],
+  bossToast1:['👇 ASPIRE le boss', '👇 ASPIRE le boss', '👇 MAINTIENS pour ASPIRER le boss'],
+  bossToast2:['👆 ONDE pour le FRAPPER !', '👆 ONDE pour le FRAPPER !', '👆 RELÂCHE pour FRAPPER !'],
+  deathTiming:['Tu avais une charge ! Lance l\'onde plus tôt pour le <b>PARRY</b>.',
+               'Tu avais une charge ! Appuie sur <b>ONDE</b> plus tôt pour le <b>PARRY</b>.',
+               'Tu avais une charge ! Relâche plus tôt pour le <b>PARRY</b>.'],
+  beatHint:  ['Essaie de lancer l\'onde pile sur le battement.', 'Essaie de lancer l\'onde pile sur le battement.',
+              'Essaie de relâcher pile sur le battement.']
+};
+function ctl(key){ const t = CONTROL_TEXT[key]; return t[dualControls() ? (touchUI() ? 1 : 0) : 2]; }
 function getMaxCharges(){ return BASE_MAX_CHARGES + (mods ? (mods.maxCharges - BASE_MAX_CHARGES) : 0); }
 function getDustPerCharge(){ return mods ? mods.dustPerCharge : BASE_DUST_PER_CHG; }
 function pickDustType(){
@@ -151,7 +193,20 @@ function syncHUD(){
   } else {
     blitzTimerEl.classList.remove('on','warn');
   }
+  syncTouchControls();
   updateGhostPace();
+}
+/* Boutons tactiles : aspiration en cours, charges restantes sur le bouton ONDE */
+let lastTcKey = '';
+function syncTouchControls(){
+  if(!touchUI() || !dualControls()) return;
+  const noShock = !!currentMode.noShock, tut = state === 'tutorial';   // au tutoriel, l'onde est gratuite
+  const key = (attract ? 1 : 0) + ':' + shockCharges + ':' + (noShock ? 1 : 0) + ':' + (tut ? 1 : 0);
+  if(key === lastTcKey) return; lastTcKey = key;
+  $('btnHold').classList.toggle('on', attract);
+  $('waveLabel').textContent = noShock ? 'Parry' : 'Onde';
+  $('waveSub').textContent = tut ? 'appuie' : noShock ? 'au contact' : shockCharges + (shockCharges > 1 ? ' charges' : ' charge');
+  $('btnWave').classList.toggle('empty', !tut && !noShock && shockCharges <= 0);
 }
 function updateGhostPace(){
   const gk = Math.floor(elapsed)+':'+score; if(gk === lastGhostKey) return; lastGhostKey = gk;
