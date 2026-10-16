@@ -1,0 +1,121 @@
+# GOULU — analyse de game design (0.13.0-dev)
+
+Ce document répond à trois questions : pourquoi un joueur lance GOULU, pourquoi il y revient,
+et pourquoi il accepterait d'y dépenser de l'argent. Il dit ce qui a été corrigé en 0.13
+et ce qu'il reste à faire, par ordre de priorité.
+
+---
+
+## 1. Pourquoi on lance GOULU (l'accroche)
+
+| Atout | Pourquoi ça marche |
+|---|---|
+| **Un seul geste** : maintenir / relâcher | Compréhensible en 3 secondes, jouable d'un pouce dans le métro. C'est le format des hits mobiles (Flappy Bird, Helix Jump, Stack). |
+| **Le visuel** : un vrai trou noir de Schwarzschild en temps réel | C'est le « wow » de la capture d'écran et du clip. Aucun concurrent hyper-casual n'a ça. C'est l'argument marketing n° 1. |
+| **Un fantasme simple** : « tu es un trou noir, tu as faim » | Clair, drôle, mémorisable. Le journal intérieur (« J'ai faim. ») donne une personnalité. |
+| **Gratuit, sans installation** | Un lien suffit. Le lien de défi (« Bats-moi : … ») est un vrai moteur viral. |
+
+**Verdict : l'accroche est forte.** Le risque n'est pas qu'on ne lance pas le jeu, c'est qu'on
+le quitte au bout de 5 parties.
+
+## 2. Pourquoi on reste (ou pourquoi on partait)
+
+Un joueur reste quand trois boucles tournent en même temps :
+
+1. **La boucle de 60 secondes (la partie)** : tension → maîtrise → récompense immédiate.
+   GOULU l'a déjà, et elle est riche : parry, chaînes ×2/×4/×8, Perfect Chain, pulse sur le
+   tempo, résonance, chaînes élémentaires, boss.
+2. **La boucle de session (« encore une »)** : chaque partie, même ratée, doit faire avancer
+   quelque chose.
+3. **La boucle de plusieurs jours (« je reviens demain »)** : une raison concrète de revenir.
+
+### Ce qui manquait (avant 0.13)
+
+| Problème | Effet sur le joueur |
+|---|---|
+| Une partie ratée ne rapportait **rien** (sauf de rares quêtes) | « J'ai perdu 2 minutes. » → il ferme le jeu. C'était le trou n° 1. |
+| Shards très rares : 3 par jour maximum + 20 avec la campagne, pour 80 nécessaires dans l'arbre | La progression s'arrêtait après la campagne. |
+| **Combo Long** coûtait 5 shards et **ne faisait rien** (bug) | Le joueur paie et rien ne change : perte de confiance. |
+| Mort = fin brutale, même après 3 minutes de partie parfaite | Frustration sans issue. |
+| Tirage d'anomalies imposé | Un mauvais tirage gâche la partie sans que le joueur y puisse rien. |
+| Boss au même rythme du début à la fin | Après 2 rencontres, plus de surprise. |
+| La série de jours ne rapportait rien | Rien n'encourageait à revenir le lendemain. |
+| Aucun cap visible après la partie | Le joueur ne sait pas quoi viser ensuite. |
+
+### Ce que 0.13 ajoute
+
+| Ajout | Boucle renforcée | Détail |
+|---|---|---|
+| **Niveau du trou noir** | session | XP à chaque partie : survie, poussières, parry, boss, Perfect Chain, score (plafonné). Chaque niveau donne 1 shard, et 3 shards tous les 5 niveaux. Barre animée en fin de partie, badge « Niv. » dans le menu. |
+| **Bonus du jour : XP ×2** sur la première partie | plusieurs jours | Une raison simple de lancer le jeu chaque jour. Bandeau dans l'onglet Jouer. |
+| **Seconde chance** | partie / session | Une fois par partie, après 15 s de jeu, contre 1 shard : 2 vies, 3 s d'invincibilité, charges pleines, l'écran est nettoyé. 6 s pour décider. Jamais au défi du jour (classement équitable). |
+| **Relance des cartes** | partie | Une relance par partie à l'écran d'anomalie. |
+| **Boss enragés** à mi-vie | partie | Consommateur plus agressif, Nuée plus rapide, Œil qui tire 3 projectiles plus souvent. Halo rouge, annonce, son. |
+| **Prochain objectif** en fin de partie | session | Le déblocage le plus proche (« Skin Cramoisi · 34 / 50 parry »), ou un rappel quand une évolution est achetable. Point orange sur l'onglet Évolution. |
+| **Paliers de série** | plusieurs jours | 3e jour : +1 shard ; tous les 7 jours : +3 shards. |
+| **Combo Long réparé** | confiance | La fenêtre de combo s'allonge vraiment de 0,6 s. |
+
+Ordre de grandeur : une partie classique de 60 à 90 s rapporte 150 à 250 XP (le double pour
+la première du jour), soit environ un niveau par partie au début, puis un niveau toutes les
+2 ou 3 parties vers le niveau 15. L'arbre d'évolution complet coûte 80 shards : environ
+40 niveaux en comptant les 20 shards de la campagne, moins avec les quêtes et les séries.
+
+## 3. Pourquoi on paierait
+
+Un joueur paie pour trois raisons, dans cet ordre : **se montrer** (cosmétiques), **gagner du
+temps** (accélérer une progression qu'il aime déjà) et **soutenir** un créateur qu'il apprécie.
+Il refuse de payer pour gagner contre les autres : c'est ce qui tue la confiance.
+
+### Ce qui est prêt dans le code
+
+- **Une monnaie unique (les shards)** déjà au cœur de tout : évolutions, seconde chance,
+  skin Prismatique. C'est exactement l'endroit où brancher une monnaie premium ou une pub
+  récompensée, sans rien redessiner.
+- **La seconde chance** est le moment de plus forte intention d'achat d'un jeu d'arcade
+  (« ma meilleure partie, 1 shard pour continuer ? »). Aujourd'hui elle coûte des shards
+  gagnés en jouant ; demain elle peut aussi s'offrir contre une pub regardée.
+- **Les skins** changent la température et la teinte du disque d'accrétion rendu en WebGL :
+  c'est un cosmétique visible et désirable, parfait pour une boutique.
+
+### Modèle recommandé (ordre de mise en place)
+
+1. **Pub récompensée facultative** (web : AdSense H5 Games / AppLixir ; app : AdMob)
+   - « Regarde une pub → seconde chance gratuite » (en plus de l'option shard).
+   - « Regarde une pub → double l'XP de cette partie » (une fois par jour).
+   - Jamais de pub imposée entre deux parties : on perd plus de joueurs qu'on ne gagne d'argent.
+2. **Pack Fondateur** (achat unique, 3 à 5 €) : un skin exclusif animé, +10 shards,
+   pas de pub, nom dans les crédits. Le meilleur rapport effort/revenu pour un jeu solo.
+3. **Boutique de skins** : 3 à 4 nouveaux disques par saison (thèmes : pulsar, quasar,
+   naine blanche, disque « arc-en-ciel »), achetables en shards **ou** en euros.
+4. **Passe de saison** (4 à 6 semaines, 3 à 5 €) : une piste gratuite et une piste premium
+   alimentées par l'XP déjà en place. Uniquement des cosmétiques, des titres et des shards.
+
+**Règles à ne jamais casser** : rien d'achetable ne doit compter au défi du jour (déjà le
+cas : ni évolutions, ni seconde chance) ; le jeu doit rester entièrement jouable gratuitement.
+
+### Contrainte technique importante
+
+Le profil est stocké dans `localStorage` : n'importe qui peut s'ajouter des shards dans la
+console. C'est acceptable pour des cosmétiques et un pack de soutien, mais **tout achat
+réel doit être validé côté serveur** (Stripe Checkout + petite fonction serverless, ou
+achats intégrés Google Play / App Store si le jeu est empaqueté avec Capacitor ou une TWA).
+
+## 4. Feuille de route proposée
+
+| Priorité | Lot | Pourquoi |
+|---|---|---|
+| 1 | **Mesures** (début / fin de partie, cause de mort, niveau, seconde chance acceptée ou non, rétention J1 / J7) | Sans chiffres, impossible de savoir ce qui retient vraiment. Plausible, Umami ou PostHog suffisent. |
+| 2 | **Classement mondial du défi du jour** (Supabase ou Firebase) | Le défi identique pour tous est déjà prêt ; il lui manque le classement pour devenir un rendez-vous quotidien. |
+| 3 | **Pub récompensée** pour la seconde chance et le double XP | Premier revenu, sans gêner personne. |
+| 4 | **Nouveau boss** (ex. « le Pulsar » qui balaie l'écran d'un faisceau à esquiver au rythme) et nouvelles anomalies synergiques | La variété des parties est ce qui use le plus vite un roguelite. |
+| 5 | **Pack Fondateur + boutique de skins** | Revenu principal, 100 % cosmétique. |
+| 6 | **Missions hebdomadaires** et **passe de saison** | Rétention long terme, une fois la base de joueurs mesurée. |
+| 7 | **Application** (Capacitor / TWA) pour le Play Store et l'App Store | Visibilité, notifications (« ta série de 6 jours t'attend »), achats intégrés. |
+
+### Équilibrage à surveiller
+
+- Certaines combinaisons d'anomalies font exploser le score (Fureur + Chaîne Libre ×12,
+  Pacte Noir ×2,5 + Faim ×1,8) : un écart de ×10 entre deux parties similaires démotive
+  les joueurs « normaux » face aux records. À plafonner ou à réserver au mode Chaos.
+- La seconde chance à 1 shard est volontairement bon marché pour être découverte ;
+  à ajuster (par exemple 2 shards après le niveau 10) selon les mesures.

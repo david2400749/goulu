@@ -197,7 +197,7 @@ function checkModeUnlocks(){
 function showUnlockToast(icon, name){
   if(achToastEl) achToastEl.remove();
   const el=document.createElement('div');
-  el.className='ach-toast';
+  el.className='ach-toast' + (overEl.classList.contains('hidden') ? '' : ' low');   // écran de fin : en bas, sous le score
   el.innerHTML='<div class="ti">'+icon+'</div><div class="tt"><div class="tn">Débloqué</div><div class="tname">'+name+'</div></div>';
   document.body.appendChild(el);
   achToastEl=el;
@@ -282,7 +282,7 @@ function checkAchievements(runData){
 function showAchToast(a){
   if(achToastEl) achToastEl.remove();
   const el=document.createElement('div');
-  el.className='ach-toast';
+  el.className='ach-toast' + (overEl.classList.contains('hidden') ? '' : ' low');   // écran de fin : en bas, sous le score
   el.innerHTML='<div class="ti">'+a.icon+'</div><div class="tt"><div class="tn">Succès débloqué</div><div class="tname">'+a.name+'</div></div>';
   document.body.appendChild(el);
   achToastEl=el;
@@ -355,8 +355,23 @@ function chooseAnomaly(card){
 }
 function openAnomalyScreen(){
   state='anomaly'; anomalyScreenOpen=true; attract=false;
-  drawAnomalyCards();
+  drawAnomalyCards(); syncRerollBtn();
   anomalyScreen.classList.remove('hidden');
+}
+
+/* Relance des cartes : une par partie, pour ne jamais subir un tirage sans issue. */
+function syncRerollBtn(){
+  const b = $('btnReroll'); if(!b) return;
+  $('rerollLeft').textContent = rerollsLeft;
+  b.disabled = rerollsLeft <= 0;
+  b.classList.toggle('spent', rerollsLeft <= 0);
+}
+function rerollAnomalies(){
+  if(state !== 'anomaly' || rerollsLeft <= 0) return;
+  rerollsLeft--;
+  drawAnomalyCards(); syncRerollBtn();
+  if(actx && !audioMuted) blip(520, 0.14, 'triangle', 0.1, 880);
+  vibrate(15);
 }
 
 /* =========================================================
