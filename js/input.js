@@ -1,7 +1,7 @@
 /* GOULU — entrées clavier / souris / tactile, pause */
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
-  if(state==='anomaly' || state==='paused') return;
+  if(state==='anomaly' || state==='paused' || state==='revive') return;
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
   if(e && e.cancelable) e.preventDefault();
@@ -41,7 +41,7 @@ function onUp(){
         if(d >= range) continue;
         hitAny = true;
         doParry(e, pm, 'contact');
-        combo++; comboTimer=mods.chainWindow*1.2;
+        combo++; comboTimer=comboWindow();
         if(combo>maxCombo) maxCombo=combo;
         if(e.bossPart){
           damageBoss(1, e.x, e.y);
@@ -82,6 +82,7 @@ window.addEventListener('keydown',e=>{
     if(e.code==='Escape') optionsScreen.classList.add('hidden');
     return;
   }
+  if(state==='revive'){ if(e.code==='Escape') declineRevive(); return; }
   if(e.code==='Escape'){
     if(state==='play') togglePause();
     else if(state==='paused') togglePause();

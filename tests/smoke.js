@@ -371,6 +371,109 @@ const inView = (page, id) => page.evaluate(id => {
     return 'téléphone : dessin ×' + r.vis.toFixed(2) + ', vitesses ×' + r.phys.toFixed(2);
   });
 
+  /* ---------- 0.13 : progression de compte, seconde chance, relance, boss enragé ---------- */
+  await test('Combo Long : la fenêtre de combo s\'allonge vraiment', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, upgrades: { app4: true } } });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => { entities.length = 0; collectDust({ dustType: 'gold', x: bh.x, y: bh.y }); return { t: comboTimer, base: PARRY_CHAIN_WINDOW * 1.2 }; });
+    await ctx.close();
+    assert(Math.abs(r.t - (r.base + 0.6)) < 1e-9, 'fenêtre ' + r.t + ' au lieu de ' + (r.base + 0.6));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  const die = page => page.evaluate(() => { lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y }); return state; });
+
+  await test('XP à chaque partie, niveau → shard, bonus du jour une seule fois', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const run = () => page.evaluate(() => {
+      profile.quests.picked = ['__aucune'];               // les quêtes du jour donnent aussi des shards : on les écarte
+      startGame('classic', false); entities.length = 0; reviveUsed = true;
+      elapsed = 60; runDust = 20; parryCount = 5; score = 3000;
+      lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y });
+      return { state, gained: lastXp.gained, bonus: lastXp.bonus, level: profile.level, xp: profile.xp, shards: lastXp.shards,
+        box: !document.getElementById('xpBox').classList.contains('hidden'), next: document.getElementById('xpNext').textContent };
+    });
+    const a = await run(), b = await run();
+    await ctx.close();
+    /* 60 (survie) + 10 (poussières) + 15 (parry) + 30 (masse) = 115, doublé la 1re fois */
+    assert(a.state === 'over' && a.gained === 230 && a.bonus && a.level === 2 && a.xp === 130 && a.shards === 1, '1re partie : ' + JSON.stringify(a));
+    assert(b.gained === 115 && !b.bonus && b.level === 3 && b.xp === 110 && b.shards === 1, '2e partie : ' + JSON.stringify(b));
+    assert(a.box && a.next.length > 0, 'bloc XP / prochain objectif absent : ' + JSON.stringify(a));
+    assert(!errors.length, errors.join('\n'));
+    return 'niveau ' + b.level + ' après 2 parties';
+  });
+
+  await test('Seconde chance : une fois par partie, contre un shard, jamais au défi', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, shards: 3 } });
+    await page.click('#btnPlay');
+    await page.evaluate(() => { profile.quests.picked = ['__aucune']; });
+    const early = await page.evaluate(() => { elapsed = 5; lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y }); return state; });
+    await page.evaluate(() => { startGame('classic', false); elapsed = 20; });
+    const s1 = await die(page);
+    await page.click('#btnRevive');
+    const after = await page.evaluate(() => ({ state, lives, shards: profile.shards, inv: invincibleT > 2, charges: shockCharges === getMaxCharges() }));
+    const s2 = await die(page);
+    await page.evaluate(() => { startGame('classic', false); elapsed = 20; });
+    const s3 = await die(page);
+    const declined = await page.evaluate(() => { const before = profile.shards; tickRevive(REVIVE_TIME + 0.1); return { state, spent: before + lastXp.shards - profile.shards }; });
+    const daily = await page.evaluate(() => { lastGameWasDaily = true; startGame('classic', true); elapsed = 20; lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y }); return state; });
+    await ctx.close();
+    assert(early === 'over', 'proposée avant ' + 15 + ' s : ' + early);
+    assert(s1 === 'revive', 'pas de seconde chance proposée : ' + s1);
+    assert(after.state === 'play' && after.lives === 2 && after.shards === 2 && after.inv && after.charges, 'après renaissance : ' + JSON.stringify(after));
+    assert(s2 === 'over', 'deuxième seconde chance dans la même partie : ' + s2);
+    assert(s3 === 'revive' && declined.state === 'over' && declined.spent === 0, 'refus / délai : ' + JSON.stringify({ s3, declined }));
+    assert(daily === 'over', 'seconde chance au défi du jour : ' + daily);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Anomalies : une relance de cartes par partie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.evaluate(() => openAnomalyScreen());
+    await page.click('#btnReroll');
+    const r = await page.evaluate(() => ({ state, left: rerollsLeft, cards: document.querySelectorAll('#anomCards .card').length, disabled: document.getElementById('btnReroll').disabled }));
+    await page.evaluate(() => rerollAnomalies());
+    const again = await page.evaluate(() => rerollsLeft);
+    await page.click('#anomCards .card');
+    const st = await page.evaluate(() => ({ state, n: activeAnomalies.length }));
+    await page.evaluate(() => { startGame('classic', false); });
+    const reset = await page.evaluate(() => rerollsLeft);
+    await ctx.close();
+    assert(r.state === 'anomaly' && r.left === 0 && r.cards >= 1 && r.disabled, JSON.stringify(r));
+    assert(again === 0 && st.state === 'play' && st.n === 1 && reset === 1, JSON.stringify({ again, st, reset }));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Boss enragé à mi-vie (l\'Œil tire 3 projectiles)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      startGame('classic', false); entities.length = 0; bossesKilled = 1; lives = 99;
+      spawnBossByName('consumer');
+      damageBoss(1, 0, 0); const at3 = boss.enraged;
+      damageBoss(1, 0, 0); const at2 = boss.enraged;
+      boss = null; entities.length = 0; spawnBossByName('eye'); boss.enraged = true;
+      boss.parts[0].shootTimer = 0; hitstop = 0; antiTimer = 99; dustTimer = 99; update(1 / 60);
+      return { at3: !!at3, at2: !!at2, shots: entities.filter(e => e.isProjectile).length };
+    });
+    await ctx.close();
+    assert(!r.at3 && r.at2, 'Consommateur 4 PV : enragé à 2 PV attendu : ' + JSON.stringify(r));
+    assert(r.shots === 3, 'tirs de l\'Œil enragé : ' + r.shots);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Série de jours : 3e jour récompensé d\'un shard', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      profile.streak = { current: 2, lastDate: yesterdayStr(), best: 2 }; profile.shards = 0;
+      updateStreakOnPlay(); const a = { streak: profile.streak.current, shards: profile.shards };
+      updateStreakOnPlay(); return { a, again: profile.shards };   // 2e partie du même jour : rien de plus
+    });
+    await ctx.close();
+    assert(r.a.streak === 3 && r.a.shards === 1 && r.again === 1, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [

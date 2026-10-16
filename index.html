@@ -128,6 +128,7 @@
       <div class="menu-version" id="menuVersion"></div>
     </header>
     <div class="menu-badges">
+      <div class="mbadge lvl" id="badgeLevel" title="Niveau du trou noir : chaque partie rapporte de l'XP, chaque niveau des shards">Niv. <b>1</b><span class="lvl-bar"><i></i></span></div>
       <div class="mbadge gold">Record <b id="badgeBest">0</b></div>
       <div class="mbadge fire" id="badgeStreak">Série <b>0</b> j</div>
       <div class="mbadge cyan">Shards <b id="badgeShards">0</b></div>
@@ -145,6 +146,7 @@
     </nav>
     <div class="menu-content">
       <div class="panel active" data-panel="play">
+        <div class="xp-bonus hidden" id="dailyXpBonus">✦ Bonus du jour : ta première partie rapporte <b>XP ×2</b></div>
         <div class="mode-grid" id="modeGrid"></div>
         <div class="howto">
           <h2>Pilotage</h2>
@@ -168,7 +170,7 @@
           <div class="count"><span id="shardsEvoCount">0</span> <b>/ dépensés : <span id="shardsSpent">0</span></b></div>
         </div>
         <div class="evo-branches" id="evoBranches"></div>
-        <div class="evo-tip">Les améliorations sont <b>permanentes</b> et s'appliquent à toutes les parties.</div>
+        <div class="evo-tip">Les améliorations sont <b>permanentes</b> et s'appliquent à toutes les parties (sauf le défi du jour).<br>Shards : chaque <b>niveau</b> du trou noir, chaque chapitre terminé, les quêtes du jour et les séries de jours.</div>
       </div>
 
       <div class="panel" data-panel="stats">
@@ -248,6 +250,19 @@
     <div class="anom-timer">Le temps est suspendu</div>
   </div>
   <div class="cards" id="anomCards"></div>
+  <button class="btn btn-ghost anom-reroll" id="btnReroll">↻ Relancer les cartes · <span id="rerollLeft">1</span></button>
+</div>
+
+<div id="reviveScreen" class="hidden">
+  <div class="revive-panel">
+    <div class="revive-title">SECONDE CHANCE</div>
+    <div class="revive-sub">Ta partie n'est pas finie</div>
+    <div class="revive-score" id="reviveScore">0</div>
+    <div class="revive-track"><div class="revive-ring" id="reviveRing"></div></div>
+    <button class="btn btn-primary revive-yes" id="btnRevive">Renaître · 💎 <span id="reviveCost">1</span></button>
+    <div class="revive-owned">Tu as <b id="reviveOwned">0</b> shards · 2 vies, 3 s d'invincibilité, charges pleines</div>
+    <button class="btn btn-ghost revive-no" id="btnReviveNo">Non merci · <span id="reviveCount">6</span></button>
+  </div>
 </div>
 
 <div id="pauseScreen" class="hidden">
@@ -310,6 +325,12 @@
       <div class="stat cyan"><div class="v" id="statMax">×1</div><div class="l">Max combo</div><div class="delta" id="deltaMax"></div></div>
       <div class="stat pink"><div class="v" id="statTime">0s</div><div class="l">Survie</div><div class="delta" id="deltaTime"></div></div>
     </div>
+    <div class="xp-box hidden" id="xpBox">
+      <div class="xp-head"><span class="xp-lvl" id="xpLvl">NIV. 1</span><span class="xp-gain" id="xpGain"></span><span class="xp-need" id="xpNeed"></span></div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+      <div class="xp-lines" id="xpLines"></div>
+      <div class="xp-next" id="xpNext"></div>
+    </div>
     <div class="over-record" id="finalRecord">Record 0</div>
     <div class="over-actions">
       <button class="btn btn-primary" id="btnReplay">Rejouer</button>
@@ -344,6 +365,7 @@
 <script src="js/audio.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/progression.js"></script>
+<script src="js/meta.js"></script>
 <script src="js/campaign.js"></script>
 <script src="js/lifecycle.js"></script>
 <script src="js/update.js"></script>

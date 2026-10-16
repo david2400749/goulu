@@ -11,6 +11,8 @@ function addScore(v){
   score += whole; scoreFrac -= whole;
 }
 function getMaxCharges(){ return BASE_MAX_CHARGES + (mods ? (mods.maxCharges - BASE_MAX_CHARGES) : 0); }
+/* Fenêtre du combo : liée à la fenêtre de chaîne (Réflexe), plus le bonus permanent Combo Long. */
+function comboWindow(){ return mods ? mods.chainWindow*1.2 + (mods.comboBonus||0) : COMBO_MAX; }
 function getDustPerCharge(){ return mods ? mods.dustPerCharge : BASE_DUST_PER_CHG; }
 function pickDustType(){
   if(currentCampaignLevel){
@@ -53,7 +55,7 @@ function newMods(noPerm){
     attractMult:1, shockRadiusMult:1, repelMult:1, dustValue:1,
     dustPerCharge:BASE_DUST_PER_CHG, maxCharges:BASE_MAX_CHARGES,
     bonusLives:0, parryRangeMult:1, chainCap:4,
-    chainWindow:PARRY_CHAIN_WINDOW, scoreMult:1, antiSpawnMult:1,
+    chainWindow:PARRY_CHAIN_WINDOW, comboBonus:0, scoreMult:1, antiSpawnMult:1,
     invincBonus:0, startAnomalies:0,
     echo:false, fureur:false, vampire:false,
     dashparryEnabled:false, echochainEnabled:false, momentumEnabled:false
@@ -115,7 +117,7 @@ function syncHUD(){
   }
   if(combo>0){
     comboTrack.classList.add('on');
-    comboFill.style.transform='scaleX('+Math.max(0,Math.min(1,comboTimer/(mods?mods.chainWindow*1.2:COMBO_MAX)))+')';
+    comboFill.style.transform='scaleX('+Math.max(0,Math.min(1,comboTimer/comboWindow()))+')';
   } else {
     comboTrack.classList.remove('on');
     comboFill.style.transform='scaleX(0)';

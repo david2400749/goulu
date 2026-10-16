@@ -205,6 +205,7 @@ function setOverBase(title, modeTxt, nearHtml, nearClose, causeT, causeH, recTxt
   hudEl.classList.remove('active');
   ghostLineEl.classList.remove('on');
   overEl.classList.remove('hidden');
+  showXpResult(lastXp); showNextGoal();
 }
 function runSummaryObj(){
   return {
@@ -212,7 +213,8 @@ function runSummaryObj(){
     bosses:runBossesKilled, anomalies:activeAnomalies.length, perfect:runHasPerfect,
     wasDaily:lastGameWasDaily,
     wave:(currentMode.useWaves && !currentCampaignLevel) ? waveIndex+1 : 0,
-    elemChains:runElemChains, elemTypes:elemTypesCollected.size, engaged:isEngaged()
+    elemChains:runElemChains, elemTypes:elemTypesCollected.size, engaged:isEngaged(),
+    perfects:runPerfects, revived:runRevives > 0
   };
 }
 function bookkeepRun(run){
@@ -221,6 +223,7 @@ function bookkeepRun(run){
   if(run.perfect) profile.perfectChains++;
   if(run.engaged && run.wave > profile.bestWave) profile.bestWave = run.wave;
   profile.elemChains = (profile.elemChains||0) + run.elemChains;
+  lastXp = grantXp(run);
 }
 function completeCampaignLevel(level){
   if(state !== 'play') return;
@@ -235,7 +238,7 @@ function completeCampaignLevel(level){
   if(level.n === 10 && !profile.skinsUnlocked.includes('singular')) profile.skinsUnlocked.push('singular');
   attract = false;
   musicStop(); try{ stopClipRecording(); }catch(e){}
-  const run = runSummaryObj();
+  const run = runSummaryObj(); run.cleared = true;
   bookkeepRun(run); updateQuestsProgress(run); checkQuestRewards();
   saveP();
   refreshMenuBadges();
@@ -264,5 +267,9 @@ function showVictory(level){
   victoryEl.classList.remove('hidden');
   if(actx && !audioMuted){ [523,659,784,1047,1319,1568].forEach((f,i)=>blip(f,0.5,'sine',0.16,undefined,i*0.12)); }
   vibrate([100,60,100,60,200]);
+  if(lastXp && lastXp.levels.length){
+    const top = lastXp.levels[lastXp.levels.length-1].level;
+    setTimeout(()=>showUnlockToast('💎', 'Niveau ' + top + ' · +' + lastXp.shards + ' shard' + (lastXp.shards > 1 ? 's' : '')), 900);
+  }
   checkAchievements({score, time:Math.floor(elapsed), maxCombo, wave:0, elemTypes:0, campaign:true, engaged:true});
 }

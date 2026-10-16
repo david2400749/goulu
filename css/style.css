@@ -445,3 +445,43 @@ body.touch .wave-banner{align-self:start;margin-top:52px}
 body.big-text .stat .l,body.big-text .ach-desc,body.big-text .evo-upg .ds,body.big-text .camp-desc,body.big-text .mode-desc,body.big-text .stat-cell .l{font-size:12.5px !important}
 body.big-text .evo-upg .nm,body.big-text .ach-name,body.big-text .row .tx{font-size:13px !important}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+
+/* ---------------- 0.13 : progression de compte ---------------- */
+.mbadge.lvl{color:var(--gold);border-color:rgba(255,213,144,.3);display:inline-flex;align-items:center;gap:6px}
+.lvl-bar{display:inline-block;width:34px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.lvl-bar i{display:block;height:100%;background:var(--gold);transform-origin:left;transform:scaleX(0)}
+.xp-bonus{font-size:12px;color:var(--ink-2);text-align:center;padding:7px 10px;margin-bottom:8px;border:1px dashed rgba(255,213,144,.35);border-radius:3px;background:rgba(255,213,144,.05)}
+.xp-bonus b{color:var(--gold)}
+.mtab.notify::after{content:'';display:inline-block;width:6px;height:6px;margin-left:6px;vertical-align:middle;border-radius:50%;background:var(--hot);box-shadow:0 0 8px var(--hot)}
+
+.xp-box{width:100%;display:flex;flex-direction:column;gap:6px;padding:9px 11px;border:1px solid rgba(255,213,144,.25);border-radius:3px;background:rgba(255,213,144,.04)}
+.xp-head{display:flex;align-items:baseline;gap:8px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.xp-lvl{font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--gold)}
+.xp-gain{font-size:11px;color:#fff;flex:1}
+.xp-need{font-size:10px;color:var(--ink-3)}
+.xp-track{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--hot-2),var(--gold));transform-origin:left;transform:scaleX(0);box-shadow:0 0 12px rgba(255,181,110,.6)}
+.xp-box.lvlup{animation:lvlUp .8s both}
+@keyframes lvlUp{0%{box-shadow:0 0 0 0 rgba(255,213,144,.9)}100%{box-shadow:0 0 0 14px rgba(255,213,144,0)}}
+.xp-lines{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:10.5px;color:var(--ink-3)}
+.xp-lines b{color:var(--ink-2);font-family:var(--f-mono);font-weight:500}
+.xp-next{font-size:11.5px;color:var(--ink-2);line-height:1.35}
+.xp-next:empty{display:none}
+.xp-next b{color:var(--ice)}
+
+.anom-reroll{margin-top:14px;min-height:38px;font-size:11px;letter-spacing:.16em;animation:panelIn .5s .2s both}
+.anom-reroll.spent{opacity:.35;pointer-events:none}
+
+#reviveScreen{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 45%,rgba(40,10,20,.55),rgba(2,3,8,.86));animation:fadeIn .25s both}
+#reviveScreen.hidden{display:none}
+.revive-panel{width:min(360px,100%);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:24px 20px;background:var(--panel);border:1px solid var(--line-2);border-top:2px solid var(--gold);border-radius:var(--r);backdrop-filter:blur(16px);animation:panelIn .4s both}
+.revive-title{font-size:clamp(20px,5.4vw,26px);font-weight:200;letter-spacing:.4em;padding-left:.4em;color:#fff;text-shadow:0 0 30px rgba(255,200,120,.6)}
+.revive-sub{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-3)}
+.revive-score{font-family:var(--f-mono);font-size:clamp(40px,11vw,56px);font-weight:300;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums}
+.revive-track{width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.revive-ring{height:100%;background:var(--gold);transform-origin:left}
+.revive-yes{width:100%;min-height:52px;font-size:13px}
+.revive-owned{font-size:11.5px;color:var(--ink-3);line-height:1.4}
+.revive-owned b{color:var(--ice)}
+.revive-no{width:100%;min-height:40px;font-size:11px}
+.ach-toast.low{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px))}

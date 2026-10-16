@@ -3,7 +3,7 @@ function collectDust(e){
   const dt = DUST_TYPES[e.dustType] || DUST_TYPES.gold;
   const gain = dt.pts * mods.dustValue;
   addScore(multiplier * gain * mods.scoreMult * fm());
-  combo++; comboTimer=mods.chainWindow*1.2; runDust++;
+  combo++; comboTimer=comboWindow(); runDust++;
   if(combo>maxCombo) maxCombo=combo;
   dustSinceCharge++;
   if(dustSinceCharge>=getDustPerCharge() && shockCharges<getMaxCharges()){
@@ -59,7 +59,7 @@ function hitAnti(e){
   burst(e.x,e.y,'#ff2d6f',26,400);
   thud(); vibrate(80);
   if(specialization === 'kamikaze') kamikazeTimer = 20;
-  if(lives<=0) gameOver();
+  if(lives<=0) loseRun();
 }
 function spawnShockwave(isEcho, pulse){
   const weak = !!(currentMode.beatOnly && !pulse && !isEcho);
@@ -276,7 +276,7 @@ function update(dt){
 
     if(e.bossPart && boss){
       if(boss.type.id==='swarm'){
-        e.swarmAngle += gdt * 0.8;
+        e.swarmAngle += gdt * (boss.enraged ? 1.5 : 0.8);
         if(attract) e.swarmR = Math.max(bh.r + 12, e.swarmR - gdt * 70 * PHYS);
         else e.swarmR = Math.min(e.swarmR0, e.swarmR + gdt * 30 * PHYS);
         e.x = bh.x + Math.cos(e.swarmAngle) * e.swarmR;
@@ -284,9 +284,9 @@ function update(dt){
       } else if(boss.type.id==='eye' && e.isMain){
         e.shootTimer -= gdt;
         if(e.shootTimer <= 0){
-          e.shootTimer = 2.6;
+          e.shootTimer = boss.enraged ? 1.9 : 2.6;
           const a = Math.atan2(bh.y-e.y, bh.x-e.x);
-          for(let k=-1;k<=1;k+=2){
+          for(let k=-1;k<=1;k+=(boss.enraged ? 1 : 2)){
             const ang=a+k*0.2; const spd=160*PHYS;
             entities.push({ x:e.x, y:e.y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, r:9, type:'anti', isProjectile:true, phase:rng()*Math.PI*2, trail:[] });
           }
@@ -313,7 +313,7 @@ function update(dt){
         e.vy-=uy*REPEL_F*PHYS*mods.repelMult*rf*gdt;
       }
       if(hostileE && !e.isProjectile){
-        const seek = (e.bossPart ? 60 : 120) * PHYS * (profile.options.assist ? 0.55 : 1);
+        const seek = (e.bossPart ? (boss && boss.enraged ? 100 : 60) : 120) * PHYS * (profile.options.assist ? 0.55 : 1);
         e.vx+=ux*seek*gdt; e.vy+=uy*seek*gdt;
       }
       if(!e.isProjectile){ const dr=Math.pow(DRAG,gdt); e.vx*=dr; e.vy*=dr; }
@@ -361,7 +361,7 @@ function update(dt){
               burst(e.x,e.y,'#ff2d6f',16,340);
               blip(520,0.1,'square',0.09);
             }
-            combo++; comboTimer=mods.chainWindow*1.2;
+            combo++; comboTimer=comboWindow();
             if(combo>maxCombo) maxCombo=combo;
             // Momentum Kill : antimatière détruite à plus de 800 px/s (à l'échelle de l'écran)
             if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800*PHYS){
