@@ -36,12 +36,14 @@ function migrate(p){
   p.skinsUnlocked = p.skinsUnlocked || ['classic'];
   p.muted = !!p.muted;
   p.bossesKilled = p.bossesKilled || 0;
-  p.options = p.options || { sfx:80, music:70, shake:true, colorblind:false };
+  /* réglages manquants (profil partiel ou ancien) : valeurs par défaut, sinon le volume vaut NaN */
+  p.options = Object.assign({ sfx:80, music:70, shake:true, colorblind:false }, p.options || {});
   if(p.options.vibrate === undefined) p.options.vibrate = true;
   if(p.options.reduceFx === undefined) p.options.reduceFx = false;
   if(p.options.bigText === undefined) p.options.bigText = false;
   if(p.options.assist === undefined) p.options.assist = false;
   if(p.options.beatOffset === undefined) p.options.beatOffset = 0;
+  if(p.options.controls !== 'single') p.options.controls = 'dual';   // 0.13 : 2 commandes séparées par défaut
   p.schema = 10;
   p.shards = p.shards || 0;
   p.history = p.history || [];
