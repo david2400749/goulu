@@ -51,22 +51,27 @@ function drawSceneLayer(t){
   sctx.globalCompositeOperation = 'source-over';
   sctx.globalAlpha = 1;
   sctx.clearRect(0, 0, W, H);
-  if(state === 'menu') return;
   sctx.save();
   sctx.translate(cam.dx, cam.dy);
+  if(state === 'menu'){ sctx.restore(); return; }
+  drawJets(t);
   const cb = profile.options.colorblind;
   for(let i = 0; i < entities.length; i++){ const e = entities[i]; if(!e.dead) drawEntity(e, t, cb); }
-  sctx.globalCompositeOperation = 'lighter';
+  drawParticles();
+  sctx.restore();
+}
+function drawParticles(c){
+  const g = c || sctx;   // couche scène (déformée) ou, au menu, l'overlay
+  g.globalCompositeOperation = 'lighter';
   for(let i = 0; i < particles.length; i++){
     const p = particles[i];
     const a = Math.max(0, p.life / p.maxLife);
-    sctx.globalAlpha = a * 0.95;
-    sctx.fillStyle = p.color;
-    sctx.beginPath(); sctx.arc(p.x, p.y, p.r * a + 0.5, 0, Math.PI * 2); sctx.fill();
+    g.globalAlpha = a * 0.95;
+    g.fillStyle = p.color;
+    g.beginPath(); g.arc(p.x, p.y, p.r * a + 0.5, 0, Math.PI * 2); g.fill();
   }
-  sctx.globalAlpha = 1;
-  sctx.globalCompositeOperation = 'source-over';
-  sctx.restore();
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-over';
 }
 
 function drawTrail(e, rgb){
@@ -393,6 +398,9 @@ function drawOverlay(t, shk){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if(!useGL) drawFallbackWorld(t, shk);
+  if(state === 'menu' && particles.length){   // menu : gestes avalés par le trou noir
+    ctx.save(); ctx.translate(cam.dx, cam.dy); drawParticles(ctx); ctx.restore();
+  }
   if(state !== 'menu'){
     ctx.save();
     ctx.translate(cam.dx + shk.x, cam.dy + shk.y);
@@ -436,7 +444,7 @@ function drawFallbackWorld(t, shk){
   const cx = bh.x + cam.dx + shk.x, cy = bh.y + cam.dy + shk.y;
   const R = bh.r * cam.zoom;
   const gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 6);
-  gl.addColorStop(0, 'rgba(255,170,80,.35)'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+  gl.addColorStop(0, 'rgba(255,170,80,' + clamp(0.35 * aliveVisual(t).glow, 0.08, 0.7).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
   ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 6, 0, Math.PI * 2); ctx.fill();
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(1, 0.3);
   for(let i = 0; i < 4; i++){
@@ -458,7 +466,10 @@ function renderFrame(dt){
   /* état visuel lissé */
   VIS.attract += (((attract && playing) ? 1 : 0) - VIS.attract) * (1 - Math.exp(-dt * 6));
   VIS.fade = Math.min(1, VIS.fade + dt * 0.9);
-  const spinSpeed = (state === 'menu' ? 0.7 : 1) * (1 + 1.3 * VIS.attract + (multiplier - 1) * 0.08);
+  aliveLook(dt);
+  ALIVE.menuPull = Math.max(0, ALIVE.menuPull - dt * 1.4);
+  const AV = aliveVisual(performance.now() / 1000);
+  const spinSpeed = (state === 'menu' ? 0.7 : 1) * (1 + 1.3 * VIS.attract + (multiplier - 1) * 0.08) * AV.spin;
   VIS.spin += dt * spinSpeed * (timeScale < 1 ? Math.max(0.35, timeScale) : 1);
   const bi = (state === 'play' && music.playing) ? beatInfo() : null;
   const kick = bi ? Math.max(0, 1 - bi.phase * 4) : 0;
@@ -481,7 +492,7 @@ function renderFrame(dt){
   const radius = bh.r * cam.zoom;
   const tint = WAVE_TINTS[waveIndex % WAVE_TINTS.length];
   const wantTint = (state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1];
-  for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] - VTINT[i]) * Math.min(1, dt * 1.5);
+  for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] * AV.tint[i] - VTINT[i]) * Math.min(1, dt * 4);
 
   const ripples = [];
   for(let i = shockwaves.length - 1; i >= 0 && ripples.length < 4; i--){
@@ -489,7 +500,7 @@ function renderFrame(dt){
     ripples.push({ r: sw.r, w: 14 + sw.r * 0.08, s: (sw.pulse ? 34 : 24) * (1 - p) * (sw.weak ? 0.4 : 1), a: 1 });
   }
   const flick = sk.flicker && !reduceFx() ? 1 + 0.22 * Math.pow(Math.max(0, Math.sin(t * 5.2)), 12) : 1;   // skin Pulsar : éclats réguliers
-  const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * (state === 'finale' ? 1 + finaleT * 0.4 : 1);
+  const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick * (1 + AV.trance) + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * AV.glow * (state === 'finale' ? 1 + finaleT * 0.4 : 1);
 
   const fbW = glCanvas.width, fbH = glCanvas.height;
   SpaceGL.render({
@@ -498,10 +509,10 @@ function renderFrame(dt){
     shakeX: shk.x, shakeY: shk.y,
     k: radius / 2.598, focal: H * 0.95,
     time: t, spin: VIS.spin, drift: [Math.sin(t * 0.043) * 14, Math.cos(t * 0.037) * 9],
-    tilt: 1.285 + 0.03 * Math.sin(t * 0.21), roll: -0.13 + 0.02 * Math.sin(t * 0.17),
-    glow, temp: sk.temp * (1 + 0.16 * VIS.attract), beam: 2.35,
+    tilt: 1.285 + 0.03 * Math.sin(t * 0.21) + AV.tilt, roll: -0.13 + 0.02 * Math.sin(t * 0.17) + AV.roll,
+    glow, temp: sk.temp * (1 + 0.16 * VIS.attract) * AV.temp, beam: 2.35,
     hue, sat: sk.sat,
-    lens: 20 * (1 + 0.55 * VIS.attract), sceneLens: 1.15 * (1 + 0.4 * VIS.attract),
+    lens: 20 * (1 + 0.55 * VIS.attract) * AV.lens, sceneLens: 1.15 * (1 + 0.4 * VIS.attract),
     sceneOn: state !== 'menu', sceneCanvas, sceneGain: 1.18,
     starGain: 1.0, quality: 1, tint: VTINT, ripples,
     bloomThr: 1.0, bloom: 0.8, exposure: 1.15, vignette: 0.5, grain: 0.028,

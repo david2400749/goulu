@@ -97,6 +97,7 @@ function pressWaveBtn(){
 
 /* ---------- souris ---------- */
 window.addEventListener('mousedown', e => {
+  if(state === 'menu' && e.button === 0 && menuTapTarget(e.target)) menuTap(e.clientX, e.clientY);
   const onWaveBtn = e.target && e.target.closest && e.target.closest('#btnWave');
   if(e.button === 2 || onWaveBtn){
     if(dualControls() && inGame()){ initAudio(); fireWave(); }
@@ -119,6 +120,7 @@ function dropTouches(e){
   for(const id of Array.from(holdTouches)) if(!live.has(id)) holdTouches.delete(id);
 }
 window.addEventListener('touchstart', e => {
+  if(state === 'menu' && e.touches && e.touches[0] && menuTapTarget(e.target)) menuTap(e.touches[0].clientX, e.touches[0].clientY);
   enableTouchUI();
   if(!dualControls() || !inGame()){ onDown(e); return; }
   if(e.target && e.target.closest && e.target.closest('button')) return;   // pause, son…
@@ -154,6 +156,10 @@ window.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- clavier ---------- */
 window.addEventListener('keydown',e=>{
+  if(document.activeElement && document.activeElement.id === 'nameInput'){   // saisie du nom : on laisse taper
+    if(e.code === 'Escape') closeNameModal();
+    return;
+  }
   if(!optionsScreen.classList.contains('hidden')){
     if(e.code==='Escape') optionsScreen.classList.add('hidden');
     return;

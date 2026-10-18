@@ -16,6 +16,7 @@
   }],
   ['touch', ()=>{ if(IS_TOUCH) document.body.classList.add('touch'); }],
   ['controls', applyControls],
+  ['greeting', bootGreeting],
   ['version', ()=>{
     const dev = /-dev$/.test(GAME_VERSION);
     $('menuVersion').textContent = 'v' + GAME_VERSION + (dev ? ' · version de développement' : '');

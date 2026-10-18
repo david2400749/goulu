@@ -226,7 +226,7 @@ function thought(text, key){
 function thoughtOnce(key, text){ if(!thoughtSeen.has(key)) thought(text, key); }
 function thoughtHit(){
   if(lives > 0 && lives <= 1) thoughtOnce('low', 'Pas encore.');
-  else thought(['Ça brûle.','Je ne veux pas disparaître.','Encore un peu.'][Math.floor(Math.random()*3)]);
+  else thought(pick(persona().hit));
 }
 const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.', pulsar:'Il tourne. Il bat. Comme moi.' };
 function a11y(el){

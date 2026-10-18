@@ -119,3 +119,21 @@ achats intégrés Google Play / App Store si le jeu est empaqueté avec Capacito
   Les chaînes de parry (Chaîne Libre ×12) restent libres : elles récompensent l'adresse.
 - La seconde chance à 1 shard est volontairement bon marché pour être découverte ;
   à ajuster (par exemple 2 shards après le niveau 10) selon les mesures.
+
+## 5. Un trou noir vivant (0.16)
+
+Le joueur s'attache plus facilement à un personnage qu'à un curseur. Depuis la 0.16, le trou noir
+exprime son état sans qu'on ait à lire un chiffre :
+
+- **Humeurs** : affamé (disque terne, rotation lente), repu (brûlant, rapide), blessé (vacille,
+  vire au rouge), en transe pendant la résonance, cœur qui s'accélère quand la menace approche.
+- **Regard et sursaut** : le disque se penche vers la menace la plus proche ; un frôlement le fait tressaillir.
+- **Jets polaires** sur une Perfect Chain, au multiplicateur ×9 et à chaque nouveau stade.
+- **Stades** dans la partie (Graine → Avaleur → Dévoreur → Quasar), calculés sur ce que fait le
+  joueur (poussières, parry, boss), affichés en fin de partie et sur le partage. La zone de
+  collision ne change jamais.
+- **Voix intérieure** selon le niveau du compte : perdu, puis arrogant, puis mélancolique.
+- **Nom** proposé après la première partie, repris dans le menu et le texte de partage.
+- **Accueil** selon l'absence (« Tu es revenu. J'avais faim. », « J'ai cru que tu m'avais oublié. »).
+- **Menu** : toucher près du trou noir l'attire, il avale le geste.
+

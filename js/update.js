@@ -17,6 +17,7 @@ function collectDust(e){
       addToast('⚙️ +1 CHARGE', '#7ee7ff', H/2 + 40);
     }
   }
+  aliveEat(e.dustType);
   if(e.dustType === 'blue'){ slowmoT = 1.0; timeScale = 0.4; flash = Math.max(flash, 0.25); }
   else if(e.dustType === 'red'){
     for(let i=entities.length-1;i>=0;i--){
@@ -51,6 +52,7 @@ function hitAnti(e){
   const dx=bh.x-e.x, dy=bh.y-e.y;
   const d=Math.sqrt(dx*dx+dy*dy);
   lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR(), pulsar:!!e.pulsarBeam };
+  aliveHurt();
   lives--; runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
   combo=0; comboTimer=0; multiplier=1;
   parryChain=0; parryChainTimer=0; perfectChainFired=false;
@@ -106,7 +108,7 @@ function doParry(e, pm, kind, fromEcho){
   if(mods.vampire) vampireTick();   // Vampire compte tous les parry, boss compris
   checkTechniques();
   if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
-    perfectChainFired = true; runHasPerfect = true; runPerfects++; thoughtOnce('perfect','Plus rien ne peut me toucher.');
+    perfectChainFired = true; runHasPerfect = true; runPerfects++; aliveJet(1); thoughtOnce('perfect','Plus rien ne peut me toucher.');
     invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
     slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
     addToast('★ PERFECT CHAIN ★', '#ffffff', H/2 - 130);
@@ -154,6 +156,7 @@ function update(dt){
 
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i]; p.life-=dt;
+    if(p.sink) sinkParticle(p, dt);
     if(p.life<=0){ particles.splice(i,1); continue; }
     p.x+=p.vx*dt; p.y+=p.vy*dt;
     const dr=Math.pow(0.16,dt); p.vx*=dr; p.vy*=dr;
@@ -178,6 +181,7 @@ function update(dt){
   }
   if(state!=='play'){ danger=0; return; }
   elapsed+=gdt;
+  aliveTick(gdt);
 
   if(specialization === 'fantome'){
     fantomeTimer += gdt;
@@ -422,6 +426,10 @@ function update(dt){
       }
       if(state!=='play') break;
       continue;
+    }
+    if(e.type==='anti' && !e.grazed){                     // frôlement : passée tout près sans toucher
+      if(d < hitR + 22) e.near = true;
+      else if(e.near && d > hitR + 48){ e.grazed = true; aliveGraze(); }
     }
     if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260){
       if(!e.bossPart) entities.splice(i,1);
