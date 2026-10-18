@@ -139,8 +139,12 @@ function renderEvolution(){
   for(const branch of branches){
     const col = document.createElement('div');
     col.className = 'evo-branch';
-    col.innerHTML = '<div class="evo-branch-head"><span class="ic">'+branch.icon+'</span>'+branch.name+'</div>';
     const ups = UPGRADES.filter(u => u.branch === branch.id);
+    const got = ups.filter(u => profile.upgrades[u.id]).length;
+    col.innerHTML = '<div class="evo-branch-head"><span class="ic">'+branch.icon+'</span>'+branch.name
+      + '<span class="evo-prog">'+got+' / '+ups.length+'</span></div>';
+    const wrap = document.createElement('div'); wrap.className = 'evo-branch-ups';
+    col.appendChild(wrap);
     for(const u of ups){
       const owned = !!profile.upgrades[u.id];
       const canBuy = !owned && profile.shards >= u.cost;
@@ -164,7 +168,7 @@ function renderEvolution(){
           showUnlockToast(u.icon, u.name + ' activé !');
         });
       }
-      col.appendChild(el);
+      wrap.appendChild(el);
     }
     evoBranchesEl.appendChild(col);
   }
@@ -281,6 +285,7 @@ document.querySelectorAll('.mtab').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     const tab=btn.dataset.tab;
     document.querySelectorAll('.mtab').forEach(b=>b.classList.toggle('active', b===btn));
+    try{ btn.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' }); }catch(e){}   // barre d'onglets défilante sur téléphone
     document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.dataset.panel===tab));
     try{
       if(tab==='daily'){ refreshDaily(); renderDailyBoard(); }
@@ -493,18 +498,83 @@ soundBtn.addEventListener('click', e=>{
 });
 pauseBtn.addEventListener('click', e=>{ e.stopPropagation(); if(state==='play') togglePause(); });
 $('btnResume').addEventListener('click', ()=>{ togglePause(); });
-$('btnOptions').addEventListener('click', ()=>{ syncOptionsUI(); optionsScreen.classList.remove('hidden'); });
+menuEl.addEventListener('scroll', ()=>{ menuEl.style.setProperty('--veil', Math.min(1, menuEl.scrollTop / 220).toFixed(3)); }, { passive:true });
+
+/* La réinitialisation n'est proposée que depuis le menu, jamais en pleine partie (pause). */
+function openOptions(){ syncOptionsUI(); $('optProgress').classList.toggle('hidden', state !== 'menu'); optionsScreen.classList.remove('hidden'); }
+$('btnOptions').addEventListener('click', ()=>{ openOptions(); });
 $('btnCloseOptions').addEventListener('click', ()=>{ optionsScreen.classList.add('hidden'); });
-$('btnMenuOptions').addEventListener('click', e=>{ e.stopPropagation(); initAudio(); syncOptionsUI(); optionsScreen.classList.remove('hidden'); $('btnCloseOptions').focus(); });
-let quitArm = 0;
-$('btnQuit').addEventListener('click', ()=>{
-  const b = $('btnQuit');
-  if(quitArm && performance.now() - quitArm < 3000){ quitArm = 0; b.textContent = 'QUITTER'; backToMenu(); }
-  else {
-    quitArm = performance.now(); b.textContent = 'CONFIRMER ?';
-    setTimeout(()=>{ if(quitArm && performance.now() - quitArm >= 2900){ quitArm = 0; b.textContent = 'QUITTER'; } }, 3000);
-  }
-});
+$('btnMenuOptions').addEventListener('click', e=>{ e.stopPropagation(); initAudio(); openOptions(); $('btnCloseOptions').focus(); });
+
+/* ---------- Réinitialiser la progression du profil ----------
+   Confirmation en deux temps : une fenêtre qui liste ce qui sera effacé, puis un bouton
+   à MAINTENIR 1,5 s (un simple clic ne suffit pas, pour éviter tout accident).
+   Conservés : réglages (son, commandes, accessibilité), identifiant du classement
+   (une même personne ne doit pas apparaître deux fois dans le classement du jour). */
+const RESET_HOLD = 1.5;
+let resetHoldAt = 0, resetRaf = 0;
+function openResetModal(){
+  $('rsLevel').textContent = profile.level;
+  $('rsShards').textContent = profile.shards;
+  $('resetModal').classList.remove('hidden');
+  $('btnResetCancel').focus();
+}
+function closeResetModal(){ cancelResetHold(); $('resetModal').classList.add('hidden'); }
+function startResetHold(e){
+  if(e && e.cancelable) e.preventDefault();
+  if(resetHoldAt) return;
+  resetHoldAt = performance.now();
+  const tick = now => {
+    if(!resetHoldAt) return;
+    const p = Math.min(1, (now - resetHoldAt) / 1000 / RESET_HOLD);
+    $('resetFill').style.transform = 'scaleX(' + p + ')';
+    if(p >= 1){ resetHoldAt = 0; resetProgress(); return; }
+    resetRaf = requestAnimationFrame(tick);
+  };
+  resetRaf = requestAnimationFrame(tick);
+  vibrate(20);
+}
+function cancelResetHold(){
+  resetHoldAt = 0; cancelAnimationFrame(resetRaf);
+  $('resetFill').style.transform = 'scaleX(0)';
+}
+function resetProgress(){
+  const fresh = { options: profile.options, muted: profile.muted, playerId: profile.playerId, tutorialDone: true };
+  try{ for(const k of [K.profile, K.v9, K.legacy, 'goulu_best']) localStorage.removeItem(k); }catch(e){}
+  profile = migrate(fresh);
+  saveP();
+  vibrate([40, 40, 80]);
+  location.reload();     // repart d'un état propre partout (menus, HUD, quêtes, caméra)
+}
+$('btnReset').addEventListener('click', e=>{ e.stopPropagation(); openResetModal(); });
+$('btnResetCancel').addEventListener('click', e=>{ e.stopPropagation(); closeResetModal(); });
+const holdBtn = $('btnResetHold');
+holdBtn.addEventListener('pointerdown', startResetHold);
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => holdBtn.addEventListener(ev, cancelResetHold));
+holdBtn.addEventListener('keydown', e=>{ if((e.code === 'Space' || e.code === 'Enter') && !e.repeat) startResetHold(e); });
+holdBtn.addEventListener('keyup', e=>{ if(e.code === 'Space' || e.code === 'Enter') cancelResetHold(); });
+holdBtn.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });   // un clic seul n'efface rien
+
+/* Boutons de pause à confirmer : un 1er appui arme le bouton (« CONFIRMER ? »), un 2e dans les 3 s agit. */
+function armedButton(id, label, action){
+  const b = $(id); let armedAt = 0;
+  b.addEventListener('click', ()=>{
+    if(armedAt && performance.now() - armedAt < 3000){ armedAt = 0; b.textContent = label; action(); return; }
+    armedAt = performance.now(); b.textContent = 'CONFIRMER ?';
+    setTimeout(()=>{ if(armedAt && performance.now() - armedAt >= 2900){ armedAt = 0; b.textContent = label; } }, 3000);
+  });
+  return () => { armedAt = 0; b.textContent = label; };
+}
+/* Recommencer la partie en cours : même mode, même chapitre ou même défi du jour.
+   La partie abandonnée ne compte pas (comme Quitter) ; un défi relancé compte un essai de plus. */
+function restartRun(){
+  pauseScreen.classList.add('hidden'); optionsScreen.classList.add('hidden');
+  attract = false;
+  if(currentCampaignLevel) startCampaignLevel(currentCampaignLevel.n);
+  else startGame(currentMode.id, lastGameWasDaily);
+}
+const disarmRestart = armedButton('btnRestart', 'RECOMMENCER', restartRun);
+const disarmQuit = armedButton('btnQuit', 'QUITTER', backToMenu);
 $('btnSkipTut').addEventListener('click', e=>{ e.stopPropagation(); if(tutorialActive) endTutorial(); });
 $('btnNameSave').addEventListener('click', e=>{ e.stopPropagation(); saveName(); });
 $('btnNameLater').addEventListener('click', e=>{ e.stopPropagation(); closeNameModal(); });

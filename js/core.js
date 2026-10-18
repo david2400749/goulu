@@ -31,7 +31,7 @@ function menuLayout(){
   const zoom = Math.max(1.45, Math.min(2.7, Math.min(W, H) * 0.0046));
   return wide
     ? { dx: W * 0.17, dy: 0, zoom }
-    : { dx: 0, dy: -H * 0.215, zoom: Math.max(1.3, Math.min(zoom, W * 0.0052)) };
+    : { dx: 0, dy: -H * 0.29, zoom: Math.max(1.3, Math.min(zoom, W * 0.0048)) };   // portrait : trou noir dans le tiers haut, le menu commence plus tôt
 }
 function updateCamera(dt){
   cam.menu += (cam.menuTarget - cam.menu) * Math.min(1, dt * 2.6);

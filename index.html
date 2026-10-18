@@ -129,6 +129,9 @@
 <div id="menu" class="screen">
   <div class="menu-shell">
     <header class="menu-head">
+      <button class="head-opt" id="btnMenuOptions" type="button" title="Options" aria-label="Options : son, commandes, accessibilité, progression">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5"/></svg>
+      </button>
       <div class="menu-logo">G<span class="logo-o">O</span>ULU</div>
       <div class="menu-tag">Le trou noir affamé</div>
       <button class="menu-greet" id="menuGreet" type="button" title="Renommer ton trou noir"></button>
@@ -141,7 +144,6 @@
       <div class="mbadge cyan">Shards <b id="badgeShards">0</b></div>
       <div class="mbadge green" id="badgeCampaign">Campagne <b>0</b>/10</div>
       <div class="mbadge cyan" id="challengeBadge" style="display:none"></div>
-      <button class="mbadge mbtn" id="btnMenuOptions" aria-label="Options : son, accessibilité, assistance">⚙ Options</button>
     </div>
     <nav class="menu-tabs" id="menuTabs">
       <button class="mtab active" data-tab="play">Jouer</button>
@@ -305,6 +307,7 @@
     </div>
     <div class="pause-actions">
       <button class="btn btn-primary" id="btnResume">Reprendre</button>
+      <button class="btn btn-ghost" id="btnRestart">Recommencer</button>
       <button class="btn btn-ghost" id="btnOptions">Options</button>
       <button class="btn btn-ghost pause-quit" id="btnQuit">Quitter</button>
     </div>
@@ -312,32 +315,55 @@
 </div>
 
 <div id="optionsScreen" class="hidden">
-  <div class="options-panel">
-    <div class="options-title">OPTIONS</div>
-    <div class="opt-row"><div class="opt-label">Volume SFX</div>
-      <input type="range" class="opt-slider" id="optSfx" min="0" max="100" value="80">
+  <div class="options-panel" role="dialog" aria-labelledby="optTitle">
+    <div class="options-title" id="optTitle">OPTIONS</div>
+    <div class="opt-section">Son</div>
+    <div class="opt-row"><div class="opt-label">Effets sonores</div>
+      <input type="range" class="opt-slider" id="optSfx" min="0" max="100" value="80" aria-label="Volume des effets sonores">
       <div class="opt-val" id="optSfxVal">80%</div></div>
-    <div class="opt-row"><div class="opt-label">Volume musique</div>
-      <input type="range" class="opt-slider" id="optMusic" min="0" max="100" value="70">
+    <div class="opt-row"><div class="opt-label">Musique</div>
+      <input type="range" class="opt-slider" id="optMusic" min="0" max="100" value="70" aria-label="Volume de la musique">
       <div class="opt-val" id="optMusicVal">70%</div></div>
-    <div class="opt-row"><div class="opt-label">Secousses écran</div>
-      <div class="opt-toggle on" id="optShake"></div></div>
-    <div class="opt-row"><div class="opt-label">Mode daltonien</div>
-      <div class="opt-toggle" id="optColorblind"></div></div>
-    <div class="opt-row"><div class="opt-label">Réduire les effets</div>
-      <div class="opt-toggle" id="optReduce"></div></div>
     <div class="opt-row"><div class="opt-label">Vibrations</div>
-      <div class="opt-toggle on" id="optVibrate"></div></div>
-    <div class="opt-row"><div class="opt-label">Texte large</div>
-      <div class="opt-toggle" id="optBig"></div></div>
-    <div class="opt-row"><div class="opt-label">1 seul bouton (ancien mode : relâcher = onde)</div>
-      <div class="opt-toggle" id="optSingle"></div></div>
-    <div class="opt-row"><div class="opt-label">Assistance (+2 vies, ennemis plus lents)</div>
-      <div class="opt-toggle" id="optAssist"></div></div>
-    <div class="opt-row"><div class="opt-label">Calage rythme (Bluetooth)</div>
-      <input type="range" class="opt-slider" id="optBeat" min="-150" max="150" step="10" value="0">
+      <div class="opt-toggle on" id="optVibrate" aria-label="Vibrations"></div></div>
+    <div class="opt-section">Jeu</div>
+    <div class="opt-row"><div class="opt-label">1 seul bouton<small>Ancien mode : relâcher = onde</small></div>
+      <div class="opt-toggle" id="optSingle" aria-label="Un seul bouton"></div></div>
+    <div class="opt-row"><div class="opt-label">Assistance<small>+2 vies, ennemis plus lents</small></div>
+      <div class="opt-toggle" id="optAssist" aria-label="Assistance"></div></div>
+    <div class="opt-row"><div class="opt-label">Calage rythme<small>Casque Bluetooth en retard ?</small></div>
+      <input type="range" class="opt-slider" id="optBeat" min="-150" max="150" step="10" value="0" aria-label="Calage du rythme">
       <div class="opt-val" id="optBeatVal">0 ms</div></div>
-    <button class="btn btn-primary" id="btnCloseOptions" style="width:100%;margin-top:6px">Fermer</button>
+    <div class="opt-section">Affichage et confort</div>
+    <div class="opt-row"><div class="opt-label">Secousses de l'écran</div>
+      <div class="opt-toggle on" id="optShake" aria-label="Secousses de l'écran"></div></div>
+    <div class="opt-row"><div class="opt-label">Réduire les effets</div>
+      <div class="opt-toggle" id="optReduce" aria-label="Réduire les effets"></div></div>
+    <div class="opt-row"><div class="opt-label">Mode daltonien</div>
+      <div class="opt-toggle" id="optColorblind" aria-label="Mode daltonien"></div></div>
+    <div class="opt-row"><div class="opt-label">Texte large</div>
+      <div class="opt-toggle" id="optBig" aria-label="Texte large"></div></div>
+    <div class="opt-progress" id="optProgress">
+      <div class="opt-section">Progression</div>
+      <div class="opt-note">Repartir de zéro : niveau, shards, records, campagne, skins et succès seront effacés. Tes réglages sont conservés.</div>
+      <button class="btn btn-danger" id="btnReset" type="button">Réinitialiser ma progression</button>
+    </div>
+    <button class="btn btn-primary opt-close" id="btnCloseOptions">Fermer</button>
+  </div>
+</div>
+
+<div id="resetModal" class="hidden">
+  <div class="reset-panel" role="alertdialog" aria-labelledby="resetTitle" aria-describedby="resetList">
+    <div class="reset-title" id="resetTitle">TOUT EFFACER ?</div>
+    <ul class="reset-list" id="resetList">
+      <li>Niveau <b id="rsLevel">1</b> et <b id="rsShards">0</b> shards</li>
+      <li>Records, historique, quêtes et série de jours</li>
+      <li>Campagne, skins, succès, techniques et évolutions</li>
+      <li>Le nom de ton trou noir</li>
+    </ul>
+    <div class="reset-keep">Conservés : son, commandes, accessibilité.</div>
+    <button class="btn btn-danger btn-hold" id="btnResetHold" type="button"><span class="hold-fill" id="resetFill"></span><span class="hold-txt">Maintiens pour effacer</span></button>
+    <button class="btn btn-ghost" id="btnResetCancel" type="button">Annuler</button>
   </div>
 </div>
 
