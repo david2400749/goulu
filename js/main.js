@@ -39,6 +39,7 @@ function loop(now){
     /* jeu gelé : le décor continue de vivre */
   } else if(state === 'tutorial'){
     updateTutorial(dt);
+    syncTouchControls();
   } else {
     musicTick(dt);
     update(dt);

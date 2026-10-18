@@ -6,9 +6,17 @@
 
 Tu es un trou noir. Tu as faim.
 
-- **Maintiens** (clic, doigt ou ESPACE) pour aspirer la poussière d'étoiles.
-- **Relâche** pour déclencher une onde de choc qui détruit l'antimatière.
-- Relâche **au dernier moment** pour un *parry*, et **sur le battement** de la musique pour un *pulse*.
+Deux commandes séparées :
+
+| | **ASPIRER** (maintenir) | **ONDE** (appuyer) |
+|---|---|---|
+| Ordinateur | ESPACE ou clic gauche | F, Entrée ou clic droit |
+| Téléphone | doigt posé n'importe où (repère en bas à gauche) | bouton ONDE en bas à droite |
+
+- **Aspire** la poussière d'étoiles : elle recharge tes ondes.
+- Lance l'**onde** pour détruire l'antimatière : **au dernier moment** pour un *parry*,
+  **sur le battement** de la musique pour un *pulse*. Tu peux continuer d'aspirer pendant ce temps.
+- L'ancien mode à un seul bouton (relâcher = onde) reste disponible dans les options.
 
 Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous,
 5 modes de jeu, des boss, des mutations à chaque vague, des skins et un arbre d'évolution permanent.
@@ -20,7 +28,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.12.3-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.13.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
