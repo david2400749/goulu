@@ -189,6 +189,7 @@ function renderAch(){
 function renderSkins(){
   if(!skinGridEl) return;
   skinCountEl.textContent = profile.skinsUnlocked.length;
+  if($('skinTotal')) $('skinTotal').textContent = Object.keys(SKINS).length;
   skinGridEl.innerHTML='';
   for(const id in SKINS){
     const s=SKINS[id];

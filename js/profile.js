@@ -59,6 +59,7 @@ function migrate(p){
   p.level = Math.max(1, p.level || 1);
   p.xp = p.xp || 0;
   p.xpBonusDate = p.xpBonusDate || '';
+  p.pulsarsKilled = p.pulsarsKilled || 0;
   p.specUnlocked = p.specUnlocked || {};
   p.tutorialDone = p.tutorialDone || false;
   p.bossTutorialDone = p.bossTutorialDone || false;

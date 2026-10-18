@@ -8,7 +8,7 @@ function applyWave(idx){
   waveBannerEl.classList.add('on');
   waveBannerTimer = 2.2;
   if(waveLoreEl) waveLoreEl.textContent = '';
-  if(waveIndex === WAVES.length-1){ anomalyNextAt = elapsed + 25; endlessBurstAt = 18; }
+  if(waveIndex === WAVES.length-1){ anomalyNextAt = elapsed + 25; endlessBurstAt = 18; endlessBossAt = 30; }
   if(w.boss && !boss) spawnBoss();
 }
 function updateWaves(dt){
@@ -58,7 +58,7 @@ function triggerElementalChain(type){
   runElemChains++; profile.elemChains++; saveP();
   let msg = '', color = d.color;
   switch(type){
-    case 'gold': addScore(5 * multiplier * mods.scoreMult); msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
+    case 'gold': addScore(5 * multiplier * scoreK(false)); msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
     case 'blue': overkillFreeze = 2.0; msg = '❄️ FREEZE GLOBAL'; burst(bh.x, bh.y, '#7ee7ff', 40, 500); break;
     case 'red': chainExplosion(); msg = '🔥 EXPLOSION EN CHAÎNE'; burst(bh.x, bh.y, '#ff5c2d', 50, 600); break;
     case 'white': shockCharges = Math.min(getMaxCharges()*2, shockCharges + getMaxCharges()); msg = '⚪ OVERCHARGE'; burst(bh.x, bh.y, '#ffffff', 40, 500); break;
@@ -81,7 +81,7 @@ function chainExplosion(){
   }
   for(const e of toKill){
     burst(e.x, e.y, '#ff5c2d', 15, 400);
-    addScore(10 * multiplier * mods.scoreMult); combo++; if(combo>maxCombo) maxCombo=combo;
+    addScore(10 * multiplier * scoreK(false)); combo++; if(combo>maxCombo) maxCombo=combo;
     e.dead = true;
   }
 }
@@ -350,8 +350,32 @@ function chooseAnomaly(card){
   vibrate(card.rarity === 'legendary' ? [40,30,50] : 30);
   anomalyScreen.classList.add('hidden');
   anomalyScreenOpen=false;
-  state='play';
+  startResume(card);
   checkSpecialization();
+}
+
+/* Décompte après le choix d'une carte : le joueur reprend ses repères avant que le jeu reparte. */
+const RESUME_DELAY = 1.5, RESUME_STEP = 0.5;
+function startResume(card){
+  state = 'resume'; resumeT = RESUME_DELAY;
+  $('resumeCard').textContent = card.icon + ' ' + card.name;
+  $('resumeCount').textContent = Math.ceil(RESUME_DELAY / RESUME_STEP);
+  $('resumeScreen').classList.remove('hidden');
+}
+function tickResume(dt){
+  const before = Math.ceil(resumeT / RESUME_STEP);
+  resumeT -= dt;
+  const n = Math.ceil(resumeT / RESUME_STEP);
+  if(n !== before && n > 0){
+    $('resumeCount').textContent = n;
+    if(actx && !audioMuted) blip(660, 0.08, 'sine', 0.07);
+  }
+  if(resumeT <= 0){
+    resumeT = 0;
+    $('resumeScreen').classList.add('hidden');
+    state = 'play';
+    if(actx && !audioMuted) blip(990, 0.12, 'sine', 0.09, 1320);
+  }
 }
 function openAnomalyScreen(){
   state='anomaly'; anomalyScreenOpen=true; attract=false;
@@ -379,6 +403,7 @@ function rerollAnomalies(){
    ========================================================= */
 function analyzeDeath(c){
   if(!c) return {title:'FATALITÉ',text:"L'antimatière t'a eu."};
+  if(c.pulsar) return {title:'AVEUGLÉ',text:ctl('deathPulsar')};
   if(c.wasAttracting && c.hadCharges && c.distance<c.parryRange*1.5)
     return {title:'TIMING RATÉ',text:ctl('deathTiming')};
   if(c.wasAttracting && !c.hadCharges)

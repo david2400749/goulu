@@ -56,6 +56,9 @@ function spawnBossByName(bossId){
       const e={ x:bh.x+Math.cos(a)*R, y:bh.y+Math.sin(a)*R, vx:0, vy:0, r:12, type:'boss', bossPart:true, phase:rng()*Math.PI*2, swarmAngle:a, swarmR:R, swarmR0:R, isMain:false, trail:[] };
       entities.push(e); boss.parts.push(e);
     }
+  } else if(type.id==='pulsar'){
+    const e = makePulsar();
+    entities.push(e); boss.parts.push(e);
   } else if(type.id==='eye'){
     const a=rng()*Math.PI*2;
     const R=Math.min(220, Math.min(W,H)*0.4);
@@ -65,13 +68,16 @@ function spawnBossByName(bossId){
   bossNameEl.textContent = type.name + ' · ' + bossHp + ' / ' + bossHp;
   bossFillEl.style.transform = 'scaleX(1)';
   bossBarEl.classList.add('on');
-  if(bossHintEl) bossHintEl.classList.remove('hidden');
+  if(bossHintEl){ bossHintEl.textContent = ctl(type.id === 'pulsar' ? 'pulsarHint' : 'bossHint'); bossHintEl.classList.remove('hidden'); }
   if(actx && !audioMuted){ blip(120,0.6,'sawtooth',0.15,60); blip(180,0.5,'triangle',0.1); }
   vibrate([50,30,50]);
   shake = Math.max(shake, 28);
   addToast('⚠️ ' + type.name.toUpperCase(), type.color, H/2-130);
   thoughtOnce('boss_'+type.id, BOSS_THOUGHTS[type.id] || 'Quelque chose d\'immense a faim aussi.');
-  if(!profile.bossTutorialDone){
+  if(type.id === 'pulsar' && !profile.pulsarTutorialDone){
+    profile.pulsarTutorialDone = true; saveP();
+    setTimeout(() => addToast(ctl('pulsarToast'), '#bfe6ff', H/2 - 60), 900);
+  } else if(!profile.bossTutorialDone){
     profile.bossTutorialDone = true; saveP();
     setTimeout(() => {
       addToast(ctl('bossToast1'), '#7ee7ff', H/2 - 60);
@@ -112,6 +118,7 @@ function killBoss(){
   if(!boss) return;
   bossesKilled++; runBossesKilled++;
   profile.bossesKilled = (profile.bossesKilled||0) + 1;
+  if(boss.type.id === 'pulsar') profile.pulsarsKilled = (profile.pulsarsKilled||0) + 1;
   for(const en of entities) if(en.bossPart) en.dead = true;
   const bonus = boss.type.pts;
   addScore(bonus);
@@ -221,7 +228,7 @@ function thoughtHit(){
   if(lives > 0 && lives <= 1) thoughtOnce('low', 'Pas encore.');
   else thought(['Ça brûle.','Je ne veux pas disparaître.','Encore un peu.'][Math.floor(Math.random()*3)]);
 }
-const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.' };
+const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.', pulsar:'Il tourne. Il bat. Comme moi.' };
 function a11y(el){
   el.tabIndex = 0; el.setAttribute('role','button');
   el.addEventListener('keydown', ev=>{ if(ev.code==='Space'||ev.code==='Enter'){ ev.preventDefault(); ev.stopPropagation(); el.click(); } });

@@ -49,6 +49,7 @@ function startGame(modeId, isDaily){
   campaignNoAnomaly = !!(currentCampaignLevel && (currentCampaignLevel.constraint === 'noAnomaly' || currentCampaignLevel.constraint === 'reducedStats'));
   campaignReducedStats = !!(currentCampaignLevel && currentCampaignLevel.constraint === 'reducedStats');
   runTechniques = { dashparry: false, echochain: false, momentum: false };
+  pulsarDailyDone = false; endlessBossAt = 30; resumeT = 0; $('resumeScreen').classList.add('hidden');
   reviveUsed = false; runRevives = 0; rerollsLeft = RUN_REROLLS; lastXp = null;
   $('reviveScreen').classList.add('hidden');
   parryTimes = [];

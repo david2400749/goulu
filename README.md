@@ -19,7 +19,7 @@ Deux commandes séparées :
 - L'ancien mode à un seul bouton (relâcher = onde) reste disponible dans les options.
 
 Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous,
-5 modes de jeu, des boss qui s'enragent à mi-vie, des mutations à chaque vague (avec une relance par partie),
+5 modes de jeu, 4 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme), des mutations à chaque vague (avec une relance par partie),
 des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : le trou noir monte de niveau
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
@@ -30,7 +30,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.14.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.15.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -65,6 +65,7 @@ js/
   space.js         moteur WebGL2 (voir ci-dessous)
   render.js        couche scène (entités), overlay (repères), paramètres envoyés au GPU, repli 2D
   hud.js audio.js  HUD, audio synthétisé (SFX, musique, grondement gravitationnel)
+  pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
   meta.js          progression de compte : niveau / XP, bonus du jour, seconde chance, prochain objectif
   entities.js progression.js campaign.js lifecycle.js update.js   logique du jeu
   input.js ui.js boot.js main.js                                    entrées, menus, démarrage, boucle

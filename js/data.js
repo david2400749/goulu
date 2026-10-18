@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.14.0-dev';
+const GAME_VERSION = '0.15.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -55,7 +55,7 @@ const CAMPAIGN_LEVELS = [
   },
   { n:10, name:'SINGULARITÉ', desc:'Le Mangeur d\'Étoiles',
     duration:120, dustRate:0.70, antiRate:1.2, weights:{gold:0.55,blue:0.20,red:0.20,white:0.05},
-    bosses:['consumer','swarm','eye','consumer','swarm'],
+    bosses:['consumer','swarm','eye','consumer','pulsar'],
     lore:"Je me souviens maintenant. J'ai commencé à manger parce que j'avais peur du vide. Le vide, c'était moi.",
     constraint:'final'
   },
@@ -96,6 +96,7 @@ const DAILY_RULES = [
   { id:'boss',    name:'DÉPART EN BOSS', desc:'Le premier boss arrive tout de suite', startWave:3, apply:(m)=>{} },
   { id:'sobre',   name:'SOBRIÉTÉ', desc:'2 charges max, 3 poussières par charge', apply:(m)=>{ m.maxCharges = 2; m.dustPerCharge = 3; } },
   { id:'echo',    name:'ÉCHO',    desc:'Chaque parry crée une 2e onde', apply:(m)=>{ m.echo = true; } },
+  { id:'pulsar',  name:'NUIT DU PULSAR', desc:'Le Pulsar surgit à 20 s', pulsarAt:20, apply:(m)=>{} },
 ];
 function dailyRuleFor(dateStr){
   const n = (parseInt(dateStr.slice(4,6),10)*31 + parseInt(dateStr.slice(6,8),10)) % DAILY_RULES.length;
@@ -110,7 +111,7 @@ const MODES = {
     unlock:'boss_1', unlockLabel:'Tue 1 boss', duration:0, anomalyInterval:20, bossInterval:60, noShock:true, label:'PACIFISTE', useWaves:false },
   blitz: { id:'blitz', name:'Blitz', icon:'⚡', desc:'30 secondes chrono',
     unlock:'plays_30', unlockLabel:'30 parties', duration:30, anomalyInterval:10, bossInterval:25, noShock:false, label:'BLITZ', useWaves:false },
-  chaos: { id:'chaos', name:'Chaos', icon:'🌀', desc:'Anomalies, boss et antis en rafale',
+  chaos: { id:'chaos', name:'Chaos', icon:'🌀', desc:'Anomalies, boss et antis en rafale · score sans plafond',
     unlock:'perfect_1', unlockLabel:'1 PERFECT CHAIN', duration:0, anomalyInterval:10, bossInterval:30, noShock:false, label:'CHAOS', useWaves:false },
   metronome: { id:'metronome', name:'Métronome', icon:'🎵', desc:'L\'onde ne frappe fort que sur le tempo',
     unlock:'pulse_20', unlockLabel:'20 pulses', duration:0, anomalyInterval:20, bossInterval:60, noShock:false, label:'MÉTRONOME', useWaves:true, beatOnly:true }
@@ -191,6 +192,7 @@ const ACH = [
   { id:'camp_final', icon:'🌑', name:'Singularité',desc:'Termine la campagne',         check:(r,p)=>p.campaign.completed && p.campaign.completed[10] },
   { id:'pulse_10',   icon:'🎵', name:'Métronome',  desc:'10 pulses sur le tempo',     check:(r,p)=>(p.pulses||0)>=10 },
   { id:'reso_1',     icon:'🎼', name:'Résonance',  desc:'Déclenche une Résonance',    check:(r,p)=>(p.resonances||0)>=1 },
+  { id:'pulsar_1',   icon:'✴️', name:'Phare éteint', desc:'Vaincs le Pulsar',          check:(r,p)=>(p.pulsarsKilled||0)>=1 },
 ];
 
 const SKINS = {
@@ -202,7 +204,8 @@ const SKINS = {
   void:   {name:'Void',desc:'Tous succès',unlock:'all',ring:['rgba(255,255,255,.9)','rgba(200,200,200,.5)','rgba(150,150,150,.3)'],stroke:'rgba(255,255,255,.9)',glow:['rgba(255,255,255,.35)','rgba(120,120,120,.15)','rgba(0,0,0,0)'],preview:'#f4f4f4',disk:['rgba(240,240,240,.85)','rgba(255,255,255,.5)','rgba(80,80,80,0)']},
   prism:  {name:'Prismatique',desc:'15 shards',unlock:'shards_15',ring:['hsla(0,100%,70%,.9)','hsla(120,100%,70%,.7)','hsla(240,100%,70%,.5)'],stroke:'rgba(255,255,255,.95)',glow:['rgba(255,100,200,.5)','rgba(100,200,255,.25)','rgba(0,0,0,0)'],preview:'#ff6bd6',disk:['rgba(255,100,200,.85)','rgba(100,200,255,.45)','rgba(60,20,120,0)']},
   singular:{name:'Singularité',desc:'Finir campagne',unlock:'camp_final',ring:['hsla(45,100%,70%,.95)','hsla(0,100%,65%,.7)','hsla(280,100%,70%,.5)'],stroke:'rgba(255,240,180,.95)',glow:['rgba(255,200,100,.55)','rgba(255,80,180,.3)','rgba(40,0,80,0)'],preview:'#ffe9a3',disk:['rgba(255,220,120,.9)','rgba(255,120,200,.5)','rgba(80,20,120,0)']},
-  echo:{name:'Résonance',desc:'1 Résonance',unlock:'reso_1',ring:['hsla(300,100%,72%,.9)','hsla(48,100%,65%,.75)','hsla(190,100%,70%,.5)'],stroke:'rgba(255,230,255,.95)',glow:['rgba(255,150,240,.5)','rgba(255,210,100,.25)','rgba(0,0,0,0)'],preview:'#ff9cf0',disk:['rgba(255,150,240,.85)','rgba(255,215,110,.45)','rgba(60,20,120,0)']}
+  echo:{name:'Résonance',desc:'1 Résonance',unlock:'reso_1',ring:['hsla(300,100%,72%,.9)','hsla(48,100%,65%,.75)','hsla(190,100%,70%,.5)'],stroke:'rgba(255,230,255,.95)',glow:['rgba(255,150,240,.5)','rgba(255,210,100,.25)','rgba(0,0,0,0)'],preview:'#ff9cf0',disk:['rgba(255,150,240,.85)','rgba(255,215,110,.45)','rgba(60,20,120,0)']},
+  pulsar:{name:'Pulsar',desc:'Vaincre le Pulsar',unlock:'pulsar_1',ring:['hsla(205,100%,85%,.95)','hsla(210,100%,70%,.7)','hsla(220,100%,60%,.45)'],stroke:'rgba(225,245,255,.95)',glow:['rgba(160,215,255,.55)','rgba(80,140,255,.25)','rgba(0,10,40,0)'],preview:'#bfe6ff',disk:['rgba(200,235,255,.9)','rgba(140,200,255,.45)','rgba(30,60,140,0)']}
 };
 
 const ANOMALIES = [
@@ -218,8 +221,8 @@ const ANOMALIES = [
   { id:'chaine', name:'Chaîne Libre', icon:'⛓️', cat:'mob', rarity:'rare', desc:'Chaîne de parry max <b>×12</b>', max:1, apply:(m)=>{ m.chainCap = Math.max(m.chainCap, 12); } },
   { id:'reflexe', name:'Réflexe', icon:'⚡', cat:'mob', rarity:'common', desc:'Fenêtre de chaîne <b>+1s</b>', max:2, apply:(m)=>{ m.chainWindow += 1; } },
   { id:'fureur', name:'Fureur', icon:'😤', cat:'risk', rarity:'legendary', desc:'5s sans relâcher = <b>×2 score</b>', max:1, apply:(m)=>{ m.fureur = true; } },
-  { id:'faim', name:'Faim', icon:'🍖', cat:'risk', rarity:'rare', desc:'Anti <b>+50%</b> mais <b>+80% pts</b>', max:1, apply:(m)=>{ m.antiSpawnMult *= 1.5; m.scoreMult *= 1.8; } },
-  { id:'pacte', name:'Pacte Noir', icon:'🖤', cat:'risk', rarity:'legendary', desc:'<b>+150% pts</b> mais <b>-1 vie</b>', max:1, apply:(m)=>{ m.scoreMult *= 2.5; m.bonusLives -= 1; } },
+  { id:'faim', name:'Faim', icon:'🍖', cat:'risk', rarity:'rare', desc:'Anti <b>+50%</b> mais <b>+80% pts</b>', max:1, apply:(m)=>{ m.antiSpawnMult *= 1.5; m.anomScore *= 1.8; } },
+  { id:'pacte', name:'Pacte Noir', icon:'🖤', cat:'risk', rarity:'legendary', desc:'<b>+150% pts</b> mais <b>-1 vie</b>', max:1, apply:(m)=>{ m.anomScore *= 2.5; m.bonusLives -= 1; } },
   { id:'echo', name:'Écho', icon:'🔊', cat:'special', rarity:'legendary', desc:'Chaque parry crée une <b>2e onde</b>', max:1, apply:(m)=>{ m.echo = true; } },
 ];
 /* PV +1 en 0.12.2 pour compenser Écho et Vampire désormais actifs sur les boss.
@@ -228,4 +231,6 @@ const BOSS_TYPES = [
   { id:'consumer', name:'Le Consommateur', icon:'👁️', hp:4, color:'#ff2d6f', pts:600 },
   { id:'swarm', name:'La Nuée', icon:'💠', hp:6, color:'#a06eff', pts:800 },
   { id:'eye', name:'L\'Œil', icon:'🌀', hp:5, color:'#7ee7ff', pts:1000 },
+  /* 0.15 : boss de rythme, ne se frappe qu'en renvoyant son faisceau (js/pulsar.js) */
+  { id:'pulsar', name:'Le Pulsar', icon:'✴️', hp:5, color:'#a9dcff', pts:1200 },
 ];

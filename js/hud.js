@@ -48,11 +48,28 @@ const CONTROL_TEXT = {
   deathTiming:['Tu avais une charge ! Lance l\'onde plus tôt pour le <b>PARRY</b>.',
                'Tu avais une charge ! Appuie sur <b>ONDE</b> plus tôt pour le <b>PARRY</b>.',
                'Tu avais une charge ! Relâche plus tôt pour le <b>PARRY</b>.'],
+  pulsarHint:['ONDE quand le faisceau te touche · ASPIRE-le : renvois ×2',
+              'ONDE quand le faisceau te touche · ASPIRE-le : renvois ×2',
+              'RELÂCHE quand le faisceau te touche · MAINTIENS : renvois ×2'],
+  pulsarToast:['⚡ ONDE quand le FAISCEAU te touche !', '⚡ ONDE quand le FAISCEAU te touche !', '⚡ RELÂCHE quand le FAISCEAU te touche !'],
+  deathPulsar:['Le faisceau du Pulsar t\'a traversé. Lance l\'<b>onde</b> au moment où il te touche, sur le battement.',
+               'Le faisceau du Pulsar t\'a traversé. Appuie sur <b>ONDE</b> au moment où il te touche, sur le battement.',
+               'Le faisceau du Pulsar t\'a traversé. <b>Relâche</b> au moment où il te touche, sur le battement.'],
   beatHint:  ['Essaie de lancer l\'onde pile sur le battement.', 'Essaie de lancer l\'onde pile sur le battement.',
               'Essaie de relâcher pile sur le battement.']
 };
 function ctl(key){ const t = CONTROL_TEXT[key]; return t[dualControls() ? (touchUI() ? 1 : 0) : 2]; }
 function getMaxCharges(){ return BASE_MAX_CHARGES + (mods ? (mods.maxCharges - BASE_MAX_CHARGES) : 0); }
+/* Multiplicateur de score. scoreMult : règles du mode et du défi (Métronome, Fragile…).
+   anomScore × fm() : mutations (Faim, Pacte Noir, Fureur, Kamikaze), plafonnées à ×4
+   hors mode Chaos, pour qu'un tirage chanceux ne fasse pas ×10 sur une partie normale. */
+const ANOM_SCORE_CAP = 4;
+function scoreK(withFm){
+  if(!mods) return 1;
+  let a = (mods.anomScore || 1) * (withFm ? fm() : 1);
+  if(currentMode.id !== 'chaos') a = Math.min(ANOM_SCORE_CAP, a);
+  return mods.scoreMult * a;
+}
 /* Fenêtre du combo : liée à la fenêtre de chaîne (Réflexe), plus le bonus permanent Combo Long. */
 function comboWindow(){ return mods ? mods.chainWindow*1.2 + (mods.comboBonus||0) : COMBO_MAX; }
 function getDustPerCharge(){ return mods ? mods.dustPerCharge : BASE_DUST_PER_CHG; }
@@ -97,7 +114,7 @@ function newMods(noPerm){
     attractMult:1, shockRadiusMult:1, repelMult:1, dustValue:1,
     dustPerCharge:BASE_DUST_PER_CHG, maxCharges:BASE_MAX_CHARGES,
     bonusLives:0, parryRangeMult:1, chainCap:4,
-    chainWindow:PARRY_CHAIN_WINDOW, comboBonus:0, scoreMult:1, antiSpawnMult:1,
+    chainWindow:PARRY_CHAIN_WINDOW, comboBonus:0, scoreMult:1, anomScore:1, antiSpawnMult:1,
     invincBonus:0, startAnomalies:0,
     echo:false, fureur:false, vampire:false,
     dashparryEnabled:false, echochainEnabled:false, momentumEnabled:false

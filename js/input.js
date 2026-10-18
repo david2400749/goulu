@@ -8,11 +8,12 @@ const HOLD_KEYS = ['Space', 'ArrowUp'];
 const WAVE_KEYS = ['KeyF', 'KeyJ', 'Enter'];
 const isHoldKey = c => HOLD_KEYS.includes(c) || (!dualControls() && c === 'Enter');
 const isWaveKey = c => dualControls() && WAVE_KEYS.includes(c);
-const inGame = () => state === 'play' || state === 'tutorial';
+const inGame = () => state === 'play' || state === 'tutorial' || state === 'resume';
 
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
   if(state==='anomaly' || state==='paused' || state==='revive') return;
+  if(state==='resume'){ attract = true; return; }   // on peut déjà maintenir pendant le décompte
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
   if(e && e.cancelable) e.preventDefault();
@@ -37,6 +38,7 @@ function onUp(){
     attract = false;
     return;
   }
+  if(state==='resume'){ attract = false; return; }
   if(state!=='play') return;
   if(attract && !dualControls()) fireWave();
   attract=false;
@@ -54,13 +56,14 @@ function fireWave(){
   }
   if(state!=='play') return;
   pressWaveBtn();
+  if(pulsarTryReflect()) return;   // renvoi du faisceau du Pulsar : gratuit, sans onde
   if(currentMode.noShock){
     const range = parryR();
     let hitAny = false;
     const pu = isOnBeat(), pm = pu ? 1.5 : 1;
     for(let i=entities.length-1;i>=0;i--){
       const e=entities[i];
-      if(!e || e.dead || (e.type!=='anti' && !e.bossPart)) continue;
+      if(!e || e.dead || e.pulsar || (e.type!=='anti' && !e.bossPart)) continue;
       const dx=bh.x-e.x, dy=bh.y-e.y;
       const d=Math.sqrt(dx*dx+dy*dy);
       if(d >= range) continue;

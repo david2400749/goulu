@@ -2,7 +2,7 @@
 function collectDust(e){
   const dt = DUST_TYPES[e.dustType] || DUST_TYPES.gold;
   const gain = dt.pts * mods.dustValue;
-  addScore(multiplier * gain * mods.scoreMult * fm());
+  addScore(multiplier * gain * scoreK(true));
   combo++; comboTimer=comboWindow(); runDust++;
   if(combo>maxCombo) maxCombo=combo;
   dustSinceCharge++;
@@ -22,7 +22,7 @@ function collectDust(e){
     for(let i=entities.length-1;i>=0;i--){
       const o = entities[i]; if(o.type !== 'anti' || o.dead) continue;
       const dx=o.x-e.x, dy=o.y-e.y;
-      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); addScore(5 * multiplier * mods.scoreMult); o.dead = true; }
+      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); addScore(5 * multiplier * scoreK(false)); o.dead = true; }
     }
   } else if(e.dustType === 'white'){ if(shockCharges < getMaxCharges()) shockCharges++; }
   elemTypesCollected.add(e.dustType);
@@ -50,7 +50,7 @@ function hitAnti(e){
   }
   const dx=bh.x-e.x, dy=bh.y-e.y;
   const d=Math.sqrt(dx*dx+dy*dy);
-  lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR() };
+  lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR(), pulsar:!!e.pulsarBeam };
   lives--; runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
   combo=0; comboTimer=0; multiplier=1;
   parryChain=0; parryChainTimer=0; perfectChainFired=false;
@@ -88,7 +88,7 @@ function doParry(e, pm, kind, fromEcho){
   parryChain++;
   parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
   const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-  addScore(20 * multiplier * chainMult * mods.scoreMult * fm() * pm);
+  addScore(20 * multiplier * chainMult * scoreK(true) * pm);
   hitstop = PARRY_HITSTOP;
   parryCount++; parryTimes.push(performance.now());
   if(parryTimes.length > 5) parryTimes.shift();
@@ -226,6 +226,16 @@ function update(dt){
     bossNextAt = elapsed + currentMode.bossInterval;
     spawnBoss();
   }
+  // Vague infinie : un boss par minute (le 4e de la série est le Pulsar)
+  if(!currentCampaignLevel && currentMode.useWaves && waveIndex === WAVES.length-1 && !boss && waveTimer >= endlessBossAt){
+    endlessBossAt = waveTimer + 60;
+    spawnBoss();
+  }
+  // Défi « Nuit du Pulsar »
+  if(activeDailyRule && activeDailyRule.pulsarAt && !pulsarDailyDone && elapsed >= activeDailyRule.pulsarAt && !boss){
+    pulsarDailyDone = true;
+    spawnBossByName('pulsar');
+  }
 
   if(combo>0){ comboTimer-=gdt; if(comboTimer<=0){ combo=0; comboTimer=0; } }
   multiplier = Math.min(MAX_MULT, 1+Math.floor(combo/6));
@@ -295,7 +305,10 @@ function update(dt){
       }
     }
 
-    if(e.bossPart && boss && boss.type.id==='eye'){
+    if(e.pulsar){
+      if(boss) updatePulsar(e, gdt);
+      if(state!=='play') break;
+    } else if(e.bossPart && boss && boss.type.id==='eye'){
       e.eyeAngle += gdt*0.35;
       if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45*PHYS);
       else e.eyeR = Math.min(e.eyeR0, e.eyeR + gdt*30*PHYS);
@@ -337,7 +350,7 @@ function update(dt){
     }
 
     let killedByShock=false;
-    const isHostile = (e.type==='anti' || e.bossPart);
+    const isHostile = (e.type==='anti' || e.bossPart) && !e.pulsar;   // le Pulsar ne craint que son faisceau renvoyé
     if(isHostile){
       for(let s=0;s<shockwaves.length;s++){
         const sw=shockwaves[s];
@@ -357,7 +370,7 @@ function update(dt){
           } else {
             if(isParry) doParry(e, pm, 'shock');
             else {
-              addScore(8 * multiplier * mods.scoreMult * fm() * pm);
+              addScore(8 * multiplier * scoreK(true) * pm);
               burst(e.x,e.y,'#ff2d6f',16,340);
               blip(520,0.1,'square',0.09);
             }
@@ -384,7 +397,7 @@ function update(dt){
     }
 
     const hitR = e.type==='dust' ? bh.r+e.r*1.6 : bh.r+e.r*1.25;
-    if(d<hitR){
+    if(d<hitR && !e.pulsar){
       if(e.type==='dust'){ collectDust(e); entities.splice(i,1); }
       else if(e.bossPart){
         const isSwarm = !!boss && boss.type.id==='swarm';
@@ -414,7 +427,7 @@ function update(dt){
       if(!e.bossPart) entities.splice(i,1);
       continue;
     }
-    if((e.type==='anti' || e.bossPart) && d<nearDanger) nearDanger=d;
+    if((e.type==='anti' || (e.bossPart && !e.pulsar)) && d<nearDanger) nearDanger=d;
   }
   danger=Math.max(0,Math.min(1,1-nearDanger/145));
 }

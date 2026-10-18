@@ -241,7 +241,7 @@
       <div class="panel" data-panel="skins">
         <div class="ach-header">
           <div class="label">Skins débloqués</div>
-          <div class="count"><span id="skinCount">0</span> / 9</div>
+          <div class="count"><span id="skinCount">0</span> / <span id="skinTotal">10</span></div>
         </div>
         <div class="skin-grid" id="skinGrid"></div>
       </div>
@@ -257,6 +257,12 @@
   </div>
   <div class="cards" id="anomCards"></div>
   <button class="btn btn-ghost anom-reroll" id="btnReroll">↻ Relancer les cartes · <span id="rerollLeft">1</span></button>
+</div>
+
+<div id="resumeScreen" class="hidden" aria-live="polite">
+  <div class="resume-card" id="resumeCard"></div>
+  <div class="resume-count" id="resumeCount">3</div>
+  <div class="resume-sub">Prépare-toi</div>
 </div>
 
 <div id="reviveScreen" class="hidden">
@@ -372,6 +378,7 @@
 <script src="js/hud.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/pulsar.js"></script>
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/campaign.js"></script>

@@ -18,7 +18,8 @@ const SKIN_GFX = {
   void:     { temp:7500, hue:0,     sat:0.00, glow:1.05 },
   prism:    { temp:6200, hue:-1,    sat:1.45, glow:1.05 },   // hue -1 : cycle continu
   singular: { temp:7200, hue:0.35,  sat:1.30, glow:1.30 },
-  echo:     { temp:5400, hue:5.0,   sat:1.20, glow:1.10 }
+  echo:     { temp:5400, hue:5.0,   sat:1.20, glow:1.10 },
+  pulsar:   { temp:14000,hue:0,     sat:0.90, glow:1.15, flicker:true }
 };
 
 const VIS = { attract:0, spin:0, glow:1, fade:0, tilt:1.29, hurt:0, danger:0, ripple:[] };
@@ -170,6 +171,7 @@ function drawBolt(e, t){
 }
 
 function drawBossPart(e, t){
+  if(e.pulsar){ drawPulsar(e, t); return; }
   const color = boss ? boss.type.color : '#ff2d6f';
   const bid = boss ? boss.type.id : 'consumer';
   const flashAmt = boss && boss.hitFlash > 0 ? boss.hitFlash / 0.18 : 0;
@@ -406,6 +408,7 @@ function drawOverlay(t, shk){
       ctx.strokeStyle = 'rgba(255,92,138,' + ha.toFixed(3) + ')'; ctx.lineWidth = 2; ctx.stroke();
     }
     if(state === 'play' || (state === 'tutorial' && tutorialStep >= 1)) drawPlayerHud(t);
+    drawPulsarWarnings(t);
     ctx.restore();
     if(state === 'play') drawOffscreenWarnings();
     drawToasts();
@@ -485,7 +488,8 @@ function renderFrame(dt){
     const sw = shockwaves[i], p = 1 - sw.life / sw.maxLife;
     ripples.push({ r: sw.r, w: 14 + sw.r * 0.08, s: (sw.pulse ? 34 : 24) * (1 - p) * (sw.weak ? 0.4 : 1), a: 1 });
   }
-  const glow = (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * (state === 'finale' ? 1 + finaleT * 0.4 : 1);
+  const flick = sk.flicker && !reduceFx() ? 1 + 0.22 * Math.pow(Math.max(0, Math.sin(t * 5.2)), 12) : 1;   // skin Pulsar : éclats réguliers
+  const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * (state === 'finale' ? 1 + finaleT * 0.4 : 1);
 
   const fbW = glCanvas.width, fbH = glCanvas.height;
   SpaceGL.render({

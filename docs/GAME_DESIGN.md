@@ -107,15 +107,15 @@ achats intégrés Google Play / App Store si le jeu est empaqueté avec Capacito
 | 1 | **Mesures** (début / fin de partie, cause de mort, niveau, seconde chance acceptée ou non, rétention J1 / J7) | Sans chiffres, impossible de savoir ce qui retient vraiment. Plausible, Umami ou PostHog suffisent. |
 | 2 | **Classement mondial du défi du jour** (Supabase ou Firebase) | Le défi identique pour tous est déjà prêt ; il lui manque le classement pour devenir un rendez-vous quotidien. |
 | 3 | **Pub récompensée** pour la seconde chance et le double XP | Premier revenu, sans gêner personne. |
-| 4 | **Nouveau boss** (ex. « le Pulsar » qui balaie l'écran d'un faisceau à esquiver au rythme) et nouvelles anomalies synergiques | La variété des parties est ce qui use le plus vite un roguelite. |
+| 4 | ~~**Nouveau boss**~~ : **fait en 0.15**, le Pulsar (faisceau à renvoyer avec l'onde, sur le battement). Reste : nouvelles anomalies synergiques | La variété des parties est ce qui use le plus vite un roguelite. |
 | 5 | **Pack Fondateur + boutique de skins** | Revenu principal, 100 % cosmétique. |
 | 6 | **Missions hebdomadaires** et **passe de saison** | Rétention long terme, une fois la base de joueurs mesurée. |
 | 7 | **Application** (Capacitor / TWA) pour le Play Store et l'App Store | Visibilité, notifications (« ta série de 6 jours t'attend »), achats intégrés. |
 
 ### Équilibrage à surveiller
 
-- Certaines combinaisons d'anomalies font exploser le score (Fureur + Chaîne Libre ×12,
-  Pacte Noir ×2,5 + Faim ×1,8) : un écart de ×10 entre deux parties similaires démotive
-  les joueurs « normaux » face aux records. À plafonner ou à réserver au mode Chaos.
+- **Fait en 0.15** : les multiplicateurs de score des mutations (Faim, Pacte Noir, Fureur,
+  Kamikaze) sont plafonnés à ×4 au total, sauf en mode Chaos où la démesure est le principe.
+  Les chaînes de parry (Chaîne Libre ×12) restent libres : elles récompensent l'adresse.
 - La seconde chance à 1 shard est volontairement bon marché pour être découverte ;
   à ajuster (par exemple 2 shards après le niveau 10) selon les mesures.
