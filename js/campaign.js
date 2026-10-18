@@ -190,6 +190,7 @@ function setOverBase(title, modeTxt, nearHtml, nearClose, causeT, causeH, recTxt
   overModeEl.textContent = modeTxt;
   overTitleEl.textContent = title;
   nearMissEl.innerHTML = nearHtml;
+  if($('lbRank')) $('lbRank').textContent = '';
   nearMissEl.classList.toggle('close', !!nearClose);
   causeTitleEl.textContent = causeT;
   causeTextEl.innerHTML = causeH;

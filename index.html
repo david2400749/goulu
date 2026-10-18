@@ -233,6 +233,9 @@
           </div>
           <div class="daily-timer">Nouveau défi dans <b id="dailyTimer">00:00:00</b></div>
         </div>
+        <div class="stats-block lb-block hidden" id="dailyBoard"><h3>Classement mondial du jour</h3>
+          <div class="lb-list" id="dailyBoardList"></div>
+          <div class="lb-foot" id="dailyBoardFoot"></div></div>
         <div class="stats-block"><h3>Quêtes du jour · <span id="questsTimer">00:00:00</span></h3>
           <div class="quest-list" id="questList"></div>
           <div class="quest-foot">◆ <b id="shardsCount">0</b> shards</div></div>
@@ -345,6 +348,7 @@
     <div class="over-stage" id="overStage"></div>
     <div class="over-score" id="finalScore">0</div>
     <div class="near-miss" id="nearMiss"></div>
+    <div class="lb-result" id="lbRank"></div>
     <div class="cause-box">
       <div class="cause-title" id="causeTitle">—</div>
       <div class="cause-text" id="causeText">—</div>
@@ -397,6 +401,7 @@
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/alive.js"></script>
+<script src="js/leaderboard.js"></script>
 <script src="js/campaign.js"></script>
 <script src="js/lifecycle.js"></script>
 <script src="js/update.js"></script>
