@@ -464,9 +464,17 @@ $('btnPlay').addEventListener('click', e=>{
   try{ initAudio(); updateStreakOnPlay(); }catch(err){}
   lastGameWasDaily = false;
   currentCampaignLevel = null;
-  if(!profile.tutorialDone){ startTutorial(); }
-  else { startGame(profile.selectedMode || 'classic', false); }
+  const go = () => { if(!profile.tutorialDone){ startTutorial(); } else { startGame(profile.selectedMode || 'classic', false); } };
+  /* première fois : la naissance complète, puis la partie commence avec cette naissance */
+  if(!(profile.seen && profile.seen.birthFull)) startBirthCinema(null, b => { pendingBirth = b; go(); });
+  else go();
 });
+$('btnBirth').addEventListener('click', e=>{
+  e.stopPropagation();
+  try{ initAudio(); }catch(err){}
+  startBirthCinema(null, () => backToMenu());
+});
+$('btnSkipBirth').addEventListener('click', e=>{ e.stopPropagation(); finishBirth(); });
 $('btnDaily').addEventListener('click', e=>{
   e.stopPropagation();
   try{ initAudio(); updateStreakOnPlay(); }catch(err){}

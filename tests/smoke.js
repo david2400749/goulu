@@ -40,6 +40,8 @@ async function open(url, { viewport = { width: 1366, height: 768 }, profile, tou
   page.on('pageerror', e => errors.push('exception : ' + e.message));
   page.on('console', m => { if(m.type() === 'error' && !external(m.text()) && !external((m.location() || {}).url || '')) errors.push('console : ' + m.text()); });
   page.on('response', r => { if(r.status() >= 400 && !external(r.url())) errors.push('HTTP ' + r.status() + ' ' + r.url()); });
+  /* la cinématique de naissance complète n'est jouée qu'une fois : les profils de test l'ont déjà vue */
+  if(profile && !profile.seen) profile = Object.assign({ seen: { birthFull: true } }, profile);
   if(profile) await page.addInitScript(p => localStorage.setItem('goulu_profile_v10', p), JSON.stringify(profile));
   await page.goto(base + url);
   await page.waitForFunction(() => typeof state !== 'undefined' && typeof profile !== 'undefined');
@@ -123,16 +125,57 @@ const inView = (page, id) => page.evaluate(id => {
     });
   }
 
-  await test('Premier lancement : tutoriel puis partie', async () => {
+  await test('Premier lancement : naissance, tutoriel puis partie (avec cette naissance)', async () => {
     const { page, ctx, errors } = await open('index.html?nogl');
     await page.click('#btnPlay');
-    const s1 = await page.evaluate(() => state);
+    const s0 = await page.evaluate(() => ({ state, branch: CINE.b && CINE.b.id, screen: !document.getElementById('birthScreen').classList.contains('hidden') }));
+    await page.waitForTimeout(600);
+    await page.click('#btnSkipBirth');
+    const s1 = await page.evaluate(() => ({ state, seen: profile.seen.birthFull }));
     await page.click('#btnSkipTut');
     await page.waitForTimeout(700);
-    const s2 = await page.evaluate(() => ({ state, done: profile.tutorialDone }));
+    const s2 = await page.evaluate(() => ({ state, done: profile.tutorialDone, birth: birth && birth.id }));
     await ctx.close();
-    assert(s1 === 'tutorial', 'attendu tutorial, obtenu ' + s1);
-    assert(s2.state === 'play' && s2.done, JSON.stringify(s2));
+    assert(s0.state === 'birth' && s0.screen && s0.branch, 'naissance : ' + JSON.stringify(s0));
+    assert(s1.state === 'tutorial' && s1.seen, 'attendu tutorial, obtenu ' + JSON.stringify(s1));
+    assert(s2.state === 'play' && s2.done && s2.birth === s0.branch, JSON.stringify({ s0, s2 }));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissance complète : 8 étapes dans l\'ordre, l\'horizon n\'apparaît qu\'à la fin (rendu WebGL)', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: { tutorialDone: true, seen: {} } });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { titles: [], holes: [], discs: [] };
+      for(let k = 0; k < 40 * 30 && state === 'birth'; k++){
+        birthCinemaTick(1 / 30);
+        const tt = document.getElementById('bsTitle').textContent;
+        if(tt && out.titles[out.titles.length - 1] !== tt){ out.titles.push(tt); out.holes.push(holeK()); out.discs.push(discGlowK()); }
+        if(k % 15 === 0) renderFrame(1 / 30);
+      }
+      out.state = state; out.birth = birth && birth.id; out.seen = profile.seen.birthFull;
+      return out;
+    });
+    await page.waitForTimeout(300);
+    await ctx.close();
+    assert(r.titles.length === 8 && r.titles[0] === 'UNE ÉTOILE MASSIVE' && r.titles[6] === 'L\'HORIZON', 'étapes : ' + r.titles.join(' / '));
+    assert(r.holes.slice(0, 6).every(h => h < 0.01) && r.discs.slice(0, 7).every(d => d === 0), 'horizon trop tôt : ' + JSON.stringify(r));
+    assert(r.state === 'play' && r.birth && r.seen, 'après la naissance : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+    return r.birth;
+  });
+
+  await test('Naissance revue depuis le menu ; Échap la passe et ramène au menu', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnBirth');
+    await page.waitForTimeout(400);
+    const s1 = await page.evaluate(() => state);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+    const s2 = await page.evaluate(() => ({ state, menu: !document.getElementById('menu').classList.contains('hidden'), hidden: document.getElementById('birthScreen').classList.contains('hidden') }));
+    await ctx.close();
+    assert(s1 === 'birth', 'état : ' + s1);
+    assert(s2.state === 'menu' && s2.menu && s2.hidden, JSON.stringify(s2));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -675,7 +718,7 @@ const inView = (page, id) => page.evaluate(id => {
       entities.length = 0; elemChain = { type: null, count: 0, timer: 0 };
       for(let i = 0; i < 10; i++){ collectDust({ dustType: 'gold', x: bh.x, y: bh.y }); }
       const fed = { sated: aliveMood().sated, glow: aliveVisual(1).glow };
-      ALIVE.satiety = 0; elapsed = 30; ALIVE.lastEat = 15;
+      ALIVE.satiety = 0; ALIVE.jet = 0; elapsed = 30; ALIVE.lastEat = 15;   // jets éteints (naissance collapsar)
       const starved = { hungry: aliveMood().hungry, glow: aliveVisual(1).glow, spin: aliveVisual(1).spin };
       return { fed, starved };
     });
@@ -685,7 +728,7 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
-  await test('Stades : Graine → Quasar selon la masse, affiché en fin de partie', async () => {
+  await test('Stades : Nouveau-né → Microquasar selon la masse, affiché en fin de partie', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
@@ -697,7 +740,7 @@ const inView = (page, id) => page.evaluate(id => {
     });
     await ctx.close();
     assert(r.s1 === 1 && r.s3 === 3 && r.jet > 0.5 && r.sameR, JSON.stringify(r));
-    assert(/QUASAR/.test(r.over), 'écran de fin : ' + r.over);
+    assert(/MICROQUASAR/.test(r.over), 'écran de fin : ' + r.over);
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1013,30 +1056,84 @@ const inView = (page, id) => page.evaluate(id => {
   });
 
   /* ---------- 0.20 : cosmos ---------- */
-  const playSetup = page => page.evaluate(() => { startGame('classic', false); entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
+  /* sans naissance : pas de débris de retombée ni de masse de départ différente */
+  const playSetup = page => page.evaluate(() => { startGame('classic', false); birth = null; bhMass = 1; entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
   const tick = (page, n, hold) => page.evaluate(({ n, hold }) => {
     for(let i = 0; i < n; i++){ antiTimer = dustTimer = 999; hitstop = 0; attract = hold; if(state === 'play') update(1 / 60); }
   }, { n, hold });
 
-  await test('Masse : grossit en mangeant, s\'évapore plus vite petite, rayon et attraction suivent', async () => {
+  await test('Masse : ne fait que grossir (pas d\'évaporation au jeûne), le disque s\'éteint, un coup souffle le disque', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay'); await playSetup(page);
     const r = await page.evaluate(() => {
       const out = {};
-      bhMass = 1; for(let k = 0; k < 20; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
-      out.fed = bhMass;
-      const loss = m => { bhMass = m; const m0 = bhMass; antiTimer = dustTimer = 999; update(1); return m0 - bhMass; };
-      out.lossBig = loss(1.6); out.lossSmall = loss(0.7);
+      bhMass = 1; accRate = 0; for(let k = 0; k < 20; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
+      out.fed = bhMass; out.lamFed = eddRatio(); out.kFed = cosmosScore();
+      const m0 = bhMass; for(let i = 0; i < 600; i++){ antiTimer = dustTimer = 999; update(1 / 60); }
+      out.fasted = bhMass; out.massKept = bhMass >= m0; out.lamFast = eddRatio(); out.kFast = cosmosScore();
       bhMass = 1.6; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rBig = bh.rTarget;
       bhMass = 0.7; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rSmall = bh.rTarget;
-      bhMass = 1.2; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 30, y:bh.y }); out.afterHit = bhMass;
+      bhMass = 1.2; accRate = 3; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 30, y:bh.y }); out.afterHit = bhMass; out.lamHit = eddRatio();
       return out;
     });
     await ctx.close();
-    assert(r.fed > 1.12, 'la masse ne monte pas : ' + JSON.stringify(r));
-    assert(r.lossSmall > r.lossBig * 3, 'évaporation de Hawking (∝ 1/M²) : ' + JSON.stringify(r));
+    assert(r.fed > 1.05, 'la masse ne monte pas : ' + JSON.stringify(r));
+    assert(r.massKept, 'un trou noir stellaire ne maigrit pas en jeûnant : ' + JSON.stringify(r));
+    assert(r.lamFed > 0.8 && r.lamFast < 0.1 && r.kFed > r.kFast * 1.05, 'disque : ' + JSON.stringify(r));
     assert(r.rBig > r.rSmall * 1.2, 'rayon : ' + JSON.stringify(r));
-    assert(r.afterHit < 1.1, 'un coup ne fait pas perdre de masse : ' + JSON.stringify(r));
+    assert(r.afterHit > 1.2 && r.lamHit === 0, 'antimatière : la masse monte, le disque est soufflé : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Physique réelle : Rs, Hawking, Eddington, ISCO et efficacité de Kerr, entropie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => ({
+      rs: PHY.rsKm(1), th: PHY.hawkingK(1), life: PHY.lifeYears(1), edd: PHY.eddW(1), s: PHY.entropyKB(1),
+      i0: PHY.iscoRg(0), i1: PHY.iscoRg(1), im: PHY.iscoRg(-1), e0: PHY.eta(0), e998: PHY.eta(0.998), e1: PHY.eta(1),
+      shadow: PHY.shadowKm(1) / PHY.rsKm(1), sal: PHY.salpeterYears(0.1), sci: PHY.sci(2.1e67), age: PHY.age(3.2e6)
+    }));
+    await ctx.close();
+    const near = (v, want, tol) => Math.abs(v / want - 1) < tol;
+    assert(near(r.rs, 2.953, 0.005), 'Rs(1 M☉) = ' + r.rs + ' km');
+    assert(near(r.th, 6.17e-8, 0.01), 'T_H(1 M☉) = ' + r.th);
+    assert(near(r.life, 2.1e67, 0.03), 'durée de vie = ' + r.life);
+    assert(near(r.edd, 1.26e31, 0.01), 'L_Edd = ' + r.edd);
+    assert(near(r.s, 1.05e77, 0.02), 'entropie = ' + r.s);
+    assert(near(r.i0, 6, 1e-9) && near(r.i1, 1, 1e-6) && near(r.im, 9, 1e-9), 'ISCO : ' + [r.i0, r.i1, r.im]);
+    assert(near(r.e0, 0.0572, 0.01) && near(r.e998, 0.32, 0.02) && near(r.e1, 0.4226, 0.01), 'η : ' + [r.e0, r.e998, r.e1]);
+    assert(near(r.shadow, 2.598, 0.001) && near(r.sal, 5e7, 0.1), 'ombre / Salpeter : ' + [r.shadow, r.sal]);
+    assert(r.sci === '2,1×10⁶⁷' && r.age === '3,2 millions d\'années', 'affichage : ' + r.sci + ' · ' + r.age);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissances : la même pour tous au défi du jour, effets de départ, légende et instruments', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = {};
+      lastGameWasDaily = true; startGame('classic', true); const d1 = birth.id;
+      startGame('classic', true); out.dailySame = birth.id === d1;
+      const seen = new Set(); for(let k = 0; k < 30; k++){ lastGameWasDaily = false; startGame('classic', false); seen.add(birth.id); }
+      out.kinds = seen.size;
+      pendingBirth = BIRTHS.find(b => b.id === 'direct'); startGame('classic', false);
+      out.direct = { m: realMass(), mass: bhMass, calm: antiTimer > 5, cap: document.getElementById('birthCap').textContent };
+      pendingBirth = BIRTHS.find(b => b.id === 'collapsar'); startGame('classic', false);
+      out.collapsar = shockCharges === getMaxCharges();
+      pendingBirth = BIRTHS.find(b => b.id === 'fallback'); startGame('classic', false); entities.length = 0;
+      const sp = spawnEntity; let n = 0; spawnEntity = (...a) => { if(a[0] === 'dust') n++; return sp(...a); };
+      for(let i = 0; i < 300; i++){ antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60); }
+      spawnEntity = sp; out.fallbackDust = n;   // ∫ 2,2 (1 + t/4)^−5/3 dt sur 5 s ≈ 5,5
+      out.ring = holeK() === 1;
+      syncHUD(); out.chip = document.getElementById('physChip').textContent; out.mass = document.getElementById('massVal').textContent;
+      togglePause(); out.panel = document.getElementById('pausePhys').textContent; togglePause();
+      return out;
+    });
+    await ctx.close();
+    assert(r.dailySame && r.kinds === 3, 'tirage : ' + JSON.stringify(r));
+    assert(Math.abs(r.direct.m - 15) < 0.01 && r.direct.calm && /SUPERNOVA RATÉE/.test(r.direct.cap) && /Rs = 44 km/.test(r.direct.cap), 'supernova ratée : ' + JSON.stringify(r.direct));
+    assert(r.collapsar && r.fallbackDust >= 4 && r.ring, 'collapsar / retombée : ' + JSON.stringify(r));
+    assert(/Rs 24 km · a\* 0,50/.test(r.chip) && /8,0 M☉/.test(r.mass), 'HUD : ' + r.chip + ' · ' + r.mass);
+    assert(/Température de Hawking/.test(r.panel) && /plus froid que le fond cosmologique/.test(r.panel), 'instruments : ' + r.panel);
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1120,8 +1217,27 @@ const inView = (page, id) => page.evaluate(id => {
       return { tier, k: scoreK(false) / k0, banner: waveNameEl.textContent, level: musicWantedLevel(), best: profile.bestTier, chip: (syncHUD(), document.getElementById('tierChip').textContent) };
     });
     await ctx.close();
-    assert(r.tier === 3 && r.banner === 'NAINE ROUGE' && r.best === 3, 'palier : ' + JSON.stringify(r));
+    assert(r.tier === 3 && r.banner === 'BINAIRE X' && r.best === 3, 'palier : ' + JSON.stringify(r));
     assert(r.k > 1.15 && r.level === 3 && /PALIER 3/.test(r.chip), 'effets : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Phases réelles : binaire X (flux de la compagne), rupture de marée, âge réel du trou noir', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      applyWave(WAVES.length - 1); waveTimer = 130; tier = 3; xrbA = 0; xrbT = 0; entities.length = 0;
+      antiTimer = dustTimer = 999; update(1 / 60);
+      const q = xrbPoint(), d = entities.find(e => e.type === 'dust');
+      const out = { phase: phaseId(), stream: !!d && Math.hypot(d.x - q.x, d.y - q.y) < 30, age: realAge() };
+      phaseEnter(5); out.star = starTimer <= 3;
+      out.names = TIER_NAMES.slice(0, 3).join(' / ');
+      return out;
+    });
+    await ctx.close();
+    assert(r.phase === 'xrb' && r.stream, 'binaire X : ' + JSON.stringify(r));
+    assert(r.age > 1e6 && r.age < 1e7, 'âge : ' + r.age);
+    assert(r.star && r.names === 'RETOMBÉE / VAGABOND / BINAIRE X', JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1276,16 +1392,20 @@ const inView = (page, id) => page.evaluate(id => {
       rock.x = bh.x + 5; rock.vx = 0; const l0 = lives; invincibleT = 0; hurtT = 0;
       antiTimer = dustTimer = 999; update(1 / 60); out.hurt = lives === l0 - 1;
       sector = null;
-      const gain = m => { bhMass = m; const a = bhMass; massGain('gold'); return bhMass - a; };
-      out.edd = { low: gain(1.0), high: gain(1.7) };
-      const ms = m => { bhMass = m; return massScore(); };
-      out.peak = ms(1.4) > ms(1.8) && ms(1.4) > ms(1.0);
+      const gain = lam => { bhMass = 1; accRate = lam * EDD_RATE; const a = bhMass; massGain('gold'); return bhMass - a; };
+      out.edd = { low: gain(0.5), high: gain(3) };
+      const ks = lam => { bhMass = 1; accRate = lam * EDD_RATE; return cosmosScore(); };
+      out.peak = ks(1) > ks(0) && ks(3) === ks(1);
+      entities.length = 0; accRate = 3 * EDD_RATE;
+      entities.push({ x:bh.x + 100, y:bh.y, vx:0, vy:0, r:7, type:'dust', dustType:'gold', phase:0, trail:[] });
+      attract = false; antiTimer = dustTimer = 999; update(1 / 60);
+      out.blown = entities[0] && entities[0].vx > 0;
       return out;
     });
     await ctx.close();
     assert(Math.abs(r.mag - 0.7) < 1e-6, 'champ magnétique : ' + r.mag);
     assert(r.rocks === 1 && r.pushed && r.hurt, 'astéroïdes : ' + JSON.stringify(r));
-    assert(r.edd.high < r.edd.low * 0.4 && r.peak, 'Eddington : ' + JSON.stringify(r));
+    assert(r.edd.high < r.edd.low * 0.5 && r.peak && r.blown, 'Eddington (sur le débit) : ' + JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 

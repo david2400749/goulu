@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.21.0-dev';
+const GAME_VERSION = '0.22.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -276,10 +276,26 @@ const CONTRACTS = [
   { id:'boss2',   name:'Vaincs 2 boss',               reward:3, test:()=>runBossesKilled >= 2 },
   { id:'reso2',   name:'2 résonances',                reward:2, test:()=>runResonances >= 2 },
   { id:'comet5',  name:'Détruis 5 comètes',           reward:2, test:()=>runComets >= 5 },
-  { id:'mass15',  name:'Atteins une masse de 1,50',   reward:2, test:()=>bhMass >= 1.5 }
+  { id:'mass15',  name:'Grossis de 35 %',             reward:2, test:()=>bhMass >= 1.35 * birthStart() }
 ];
 
-const TIER_NAMES = ['NÉBULEUSE', 'PROTO-ÉTOILE', 'NAINE ROUGE', 'GÉANTE ROUGE', 'NAINE BLANCHE', 'ÉTOILE À NEUTRONS', 'MAGNÉTAR', 'HYPERNOVA', 'QUASAR', 'SINGULARITÉ'];
+/* Phases de la vie d'un trou noir stellaire, dans l'ordre réel (0.22). PHASES[0] : première minute,
+   PHASES[n] : palier n. age : âge réel du trou noir (années) au début et à la fin de la phase,
+   parcouru en échelle logarithmique : les lois sont vraies, seul le temps est accéléré. */
+const PHASES = [
+  { id:'newborn',     name:'NOUVEAU-NÉ',             age:[3e-11, 1e-4], lore:'L\'horizon vient de se former et vibre encore (ringdown).' },
+  { id:'fallback',    name:'RETOMBÉE',               age:[1e-4, 10],    lore:'Les débris de l\'étoile retombent sur toi : le débit décroît comme t^−5/3.' },
+  { id:'rogue',       name:'VAGABOND',               age:[10, 1e6],     lore:'Éjecté par le recul de ta naissance, tu erres dans le gaz interstellaire (accrétion de Bondi, Ṁ ∝ M²).' },
+  { id:'xrb',         name:'BINAIRE X',              age:[1e6, 1e7],    lore:'Tu captures une étoile compagne : sa matière déborde de son lobe de Roche et nourrit ton disque (comme Cygnus X-1).' },
+  { id:'microquasar', name:'MICROQUASAR',            age:[1e7, 3e7],    lore:'Ton disque alterne état dur (jets) et état mou (disque brillant), comme GRS 1915+105.' },
+  { id:'tde',         name:'RUPTURE DE MARÉE',       age:[3e7, 1e8],    lore:'Une étoile passe trop près : les forces de marée vont la déchirer.' },
+  { id:'bbh',         name:'BINAIRE DE TROUS NOIRS', age:[1e8, 1e9],    lore:'Un autre trou noir tourne autour de toi : des ondes gravitationnelles s\'échappent.' },
+  { id:'migration',   name:'MIGRATION',              age:[1e9, 3e9],    lore:'La friction dynamique te fait dériver vers le centre de la galaxie.' },
+  { id:'nucleus',     name:'NOYAU GALACTIQUE',       age:[3e9, 5e9],    lore:'Le cœur de la galaxie : des millions d\'étoiles serrées, du gaz dense, des collisions.' },
+  { id:'influence',   name:'SPHÈRE D\'INFLUENCE',     age:[5e9, 7e9],    lore:'Tu entres dans le domaine de Sagittarius A* : 4,3 millions de masses solaires.' },
+  { id:'emri',        name:'SPIRALE EXTRÊME',        age:[7e9, 1e10],   lore:'Rapport de masse extrême : tu spirales vers Sgr A*. Le futur observatoire LISA entendrait ce signal.' }
+];
+const TIER_NAMES = PHASES.slice(1).map(p => p.name);
 /* PV +1 en 0.12.2 pour compenser Écho et Vampire désormais actifs sur les boss.
    La Nuée a autant d'éclats que de PV. */
 const BOSS_TYPES = [

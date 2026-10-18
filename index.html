@@ -49,13 +49,14 @@
     <div class="row1">
       <div class="hearts" id="hearts"></div>
     </div>
-    <div class="mass-meter" id="massMeter" title="Masse du trou noir">
-      <span class="hud-label">Masse</span>
+    <div class="mass-meter" id="massMeter" title="Disque d'accrétion : débit comparé à la limite d'Eddington (repère). Valeur : masse réelle du trou noir en masses solaires">
+      <span class="hud-label">Disque</span>
       <div class="mass-track"><div class="mass-fill" id="massFill"></div></div>
       <b id="massVal">1,00</b>
       <span class="mass-edd" id="massEdd">EDDINGTON</span>
     </div>
     <div class="tier-chip" id="tierChip"></div>
+    <div class="phys-chip" id="physChip" title="Grandeurs réelles : rayon de Schwarzschild, spin, âge du trou noir (temps compressé)"></div>
     <div class="contract-chip" id="contractChip"></div>
     <div class="build-bar" id="buildBar"></div>
   </div>
@@ -91,6 +92,7 @@
     <div class="wave-line"></div>
     <div class="wave-lore" id="waveLore"></div>
   </div>
+  <div class="birth-cap" id="birthCap" aria-live="polite"></div>
   <div class="boss-bar" id="bossBar">
     <div class="boss-name" id="bossName">—</div>
     <div class="boss-track"><div class="boss-fill" id="bossFill"></div></div>
@@ -179,7 +181,8 @@
           <div class="row"><div class="ic">◎</div><div class="tx"><b>Arrête d'aspirer</b> près du trou : la poussière se met en <b>orbite</b>. L'anneau rapporte, te protège, et avalé d'un coup donne un bonus.</div></div>
           <div class="row"><div class="ic">★</div><div class="tx">Une <b>étoile</b> passe ? Aspire-la longtemps : la marée la <b>déchire</b> et l'éclair pulvérise l'antimatière.</div></div>
           <div class="row"><div class="ic">◆</div><div class="tx">Partie infinie : à chaque <b>palier</b>, <b>encaisse</b> ta banque d'éclats ou continue (si tu meurs, tu n'en gardes que la moitié). Au palier 10, <b>Sagittarius A*</b> : survis jusqu'à la <b>fusion</b>.</div></div>
-          <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : manger te fait grossir (attraction et points), mais tu t'<b>évapores</b> si tu jeûnes, et un gros trou est plus facile à toucher. Au-delà de la limite d'<b>Eddington</b> (1,4), ta lumière repousse la matière.</div></div>
+          <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : tout ce que tu avales te fait grossir (attraction et points), mais un gros trou est plus facile à toucher. Un trou noir ne maigrit jamais : si tu jeûnes, c'est ton <b>disque</b> qui s'éteint et rapporte moins. Avale trop vite et tu dépasses la limite d'<b>Eddington</b> : ta lumière souffle la matière.</div></div>
+          <div class="row"><div class="ic">✦</div><div class="tx"><b>Vraie physique</b> : ta naissance, tes phases de vie et les grandeurs affichées suivent les lois réelles, seul le temps est accéléré. <button class="link-btn" id="btnBirth" type="button">Revoir la naissance →</button></div></div>
         </div>
         <button class="btn btn-primary cta-sticky" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
       </div>
@@ -327,6 +330,16 @@
   </div>
 </div>
 
+<div id="birthScreen" class="hidden" aria-live="polite">
+  <div class="bs-top"><span class="bs-step" id="bsStep">1 / 8</span><button class="btn btn-ghost bs-skip" id="btnSkipBirth" type="button">Passer ›</button></div>
+  <div class="bs-box">
+    <div class="bs-title" id="bsTitle"></div>
+    <div class="bs-text" id="bsText"></div>
+    <div class="bs-tag" id="bsTag"></div>
+  </div>
+  <div class="bs-clock" id="bsClock"></div>
+</div>
+
 <div id="pauseScreen" class="hidden">
   <div class="pause-panel">
     <div class="pause-title">PAUSE</div>
@@ -336,6 +349,7 @@
       <div class="pause-stat"><div class="v" id="pauseAnom">0</div><div class="l">Anomalies</div></div>
       <div class="pause-stat"><div class="v" id="pauseBoss">0</div><div class="l">Boss tués</div></div>
     </div>
+    <div class="phys-panel" id="pausePhys"></div>
     <div class="pause-actions">
       <button class="btn btn-primary" id="btnResume">Reprendre</button>
       <button class="btn btn-ghost" id="btnRestart">Recommencer</button>
@@ -403,6 +417,7 @@
     <div class="over-title" id="overTitle">AVALÉ</div>
     <div class="over-wave" id="overMode">CLASSIQUE</div>
     <div class="over-stage" id="overStage"></div>
+    <div class="over-phys" id="overPhys"></div>
     <div class="over-extra" id="overExtra"></div>
     <div class="over-score" id="finalScore">0</div>
     <div class="near-miss" id="nearMiss"></div>
@@ -447,6 +462,7 @@
 <!-- Ordre de chargement : socle → données → moteur → rendu → entrées → UI → démarrage -->
 <script src="js/util.js"></script>
 <script src="js/data.js"></script>
+<script src="js/physics.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/state.js"></script>
 <script src="js/dom.js"></script>
@@ -461,6 +477,7 @@
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/alive.js"></script>
+<script src="js/birth.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/campaign.js"></script>
 <script src="js/lifecycle.js"></script>

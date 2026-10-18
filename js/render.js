@@ -128,6 +128,7 @@ function drawSceneLayer(t){
   sctx.clearRect(0, 0, W, H);
   sctx.save();
   sctx.translate(cam.dx, cam.dy);
+  if(state === 'birth'){ drawBirthScene(t); sctx.restore(); return; }   // naissance : l'étoile, puis l'horizon
   drawInfall(VIS.attract);
   if(state === 'menu'){ sctx.restore(); return; }
   if(sgr) drawSgr(t);
@@ -628,6 +629,7 @@ function drawOverlay(t, shk){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if(!useGL) drawFallbackWorld(t, shk);
+  if(state === 'birth'){ drawBirthOverlay(); return; }
   if(state === 'menu' && particles.length){   // menu : gestes avalés par le trou noir
     ctx.save(); ctx.translate(cam.dx, cam.dy); drawParticles(ctx); ctx.restore();
   }
@@ -673,19 +675,23 @@ function makeFallbackBg(){
 function drawFallbackWorld(t, shk){
   if(fbBg) ctx.drawImage(fbBg, 0, 0, W, H);
   const cx = bh.x + cam.dx + shk.x, cy = bh.y + cam.dy + shk.y;
-  const R = bh.r * cam.zoom;
-  const gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 6);
-  gl.addColorStop(0, 'rgba(255,170,80,' + clamp(0.35 * aliveVisual(t).glow, 0.08, 0.7).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
-  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 6, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(1, 0.3);
-  for(let i = 0; i < 4; i++){
-    ctx.beginPath(); ctx.arc(0, 0, R * (2.2 + i * 0.85), 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,' + (190 - i * 30) + ',' + (110 - i * 20) + ',' + (0.55 - i * 0.12) + ')';
-    ctx.lineWidth = 9 - i * 2; ctx.stroke();
+  const R = bh.r * cam.zoom * holeK(), dk = discGlowK();
+  if(R > 0.5 && dk > 0.02){
+    const gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 6);
+    gl.addColorStop(0, 'rgba(255,170,80,' + clamp(0.35 * aliveVisual(t).glow * dk, 0.02, 0.7).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 6, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(1, 0.3); ctx.globalAlpha = dk;
+    for(let i = 0; i < 4; i++){
+      ctx.beginPath(); ctx.arc(0, 0, R * (2.2 + i * 0.85), 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,' + (190 - i * 30) + ',' + (110 - i * 20) + ',' + (0.55 - i * 0.12) + ')';
+      ctx.lineWidth = 9 - i * 2; ctx.stroke();
+    }
+    ctx.restore();
   }
-  ctx.restore();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,160,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+  if(R > 0.5){
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,160,' + (0.8 * dk).toFixed(3) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
   if(state !== 'menu') ctx.drawImage(sceneCanvas, 0, 0, W, H);
 }
 
@@ -721,7 +727,7 @@ function renderFrame(dt){
   const sk = SKIN_GFX[profile.skin] || SKIN_GFX.classic;
   const hue = sk.hue === -1 ? (t * 0.45) % 6.2832 : sk.hue;
   const dilate = playing ? clamp((1 - timeScale) / 0.75, 0, 1) : 0;
-  const radius = bh.r * cam.zoom;
+  const radius = Math.max(1e-3, bh.r * cam.zoom * holeK());   // naissance : l'horizon apparaît et « sonne »
   const tint = WAVE_TINTS[waveIndex % WAVE_TINTS.length];
   const wantTint = (state === 'play' && sector) ? sector.tint : ((state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1]);
   for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] * AV.tint[i] - VTINT[i]) * Math.min(1, dt * 4);
@@ -737,7 +743,7 @@ function renderFrame(dt){
   }
   const flick = sk.flicker && !reduceFx() ? 1 + 0.22 * Math.pow(Math.max(0, Math.sin(t * 5.2)), 12) : 1;   // skin Pulsar : éclats réguliers
   const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick * (1 + AV.trance) + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * AV.glow * (state === 'finale' ? 1 + finaleT * 0.4 : 1)
-    * (1 - 0.65 * darkK()) * (1 + 0.6 * (state === 'play' ? eddK() : 0)) * (state === 'merge' ? 1 + mergeT * 0.8 : 1);
+    * (1 - 0.65 * darkK()) * (1 + 0.6 * (state === 'play' ? eddK() : 0)) * (state === 'merge' ? 1 + mergeT * 0.8 : 1) * discGlowK();
 
   const fbW = glCanvas.width, fbH = glCanvas.height;
   SpaceGL.render({

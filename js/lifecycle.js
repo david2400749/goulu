@@ -82,6 +82,7 @@ function startGame(modeId, isDaily){
   if(currentMode.beatOnly) mods.scoreMult *= 1.25;
   if(profile.options.assist && !isDaily){ lives += 2; maxLivesRun += 2; }
 
+  birthSetup(isDaily);                   // naissance (graine posée : la même pour tous au défi du jour)
   baseMods = Object.assign({}, mods);   // réglages du départ, pour pouvoir oublier une mutation
   if(mods.startAnomalies > 0 && !campaignNoAnomaly){
     for(let i=0;i<mods.startAnomalies;i++){
@@ -244,7 +245,7 @@ function gameOver(){
   ghostLineEl.classList.remove('on');
   bossBarEl.classList.remove('on');
   overEl.classList.remove('hidden');
-  showXpResult(lastXp); showNextGoal(); showStage();
+  showXpResult(lastXp); showNextGoal(); showStage(); showPhysOver();
   deathSound();
   refreshMenuBadges();
   checkModeUnlocks();

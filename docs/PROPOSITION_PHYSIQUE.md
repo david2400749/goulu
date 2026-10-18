@@ -180,8 +180,8 @@ L'écran se termine sur cette question ouverte. Ce n'est pas un échec du jeu : 
 
 | Version | Contenu | Fichiers principaux |
 |---|---|---|
-| **0.22 · Naissance** | `js/physics.js` (fonctions pures en unités réelles : Rs, T_H, L_Edd, η(a*), r_ISCO(a*), r_t, durée de vie) ; cinématique de naissance (complète + courte) et ses 3 branches de base ; nouvelles phases (`TIER_NAMES`) et stades ; jeûne = le disque s'éteint, plus d'évaporation ; vies = disque ; panneau Instruments | `physics.js`, nouveau `birth.js`, `data.js`, `cosmos.js`, `alive.js`, `hud.js`, `index.html` |
-| **0.23 · Kerr** | spin a*, efficacité radiative, accrétion rétrograde, onde = jet Blandford-Znajek, Eddington sur le débit, ergosphère pour la fronde, branchement de `uSpin` sur l'ISCO du shader | `cosmos.js`, `update.js`, `space.js`, `render.js` |
+| **0.22 · Naissance** (faite) | `js/physics.js` (fonctions pures en unités réelles : Rs, T_H, L_Edd, η(a*), r_ISCO(a*), r_t, durée de vie) ; cinématique de naissance (complète + courte) et ses 3 branches de base ; nouvelles phases (`TIER_NAMES`) et stades ; jeûne = le disque s'éteint, plus d'évaporation ; vies = disque ; panneau Instruments | `physics.js`, nouveau `birth.js`, `data.js`, `cosmos.js`, `alive.js`, `hud.js`, `index.html` |
+| **0.23 · Kerr** | spin a*, efficacité radiative, accrétion rétrograde, onde = jet Blandford-Znajek, ergosphère pour la fronde, branchement de `uSpin` sur l'ISCO du shader | `cosmos.js`, `update.js`, `space.js`, `render.js` |
 | **0.24 · Absorption et fusion** | matrice d'absorption (section 5), étoile à neutrons conditionnelle, boss Compagnon (fusion, recul, théorème des aires), entropie, EMRI Sgr A* renommée | `cosmos.js`, `endgame.js`, nouveau boss dans `data.js` |
 | **0.25 · Archives et fin** | onglet Archives, épilogue « Le long sommeil », naissances à débloquer, mode Simulation | `ui.js`, `endgame.js`, `data.js` |
 
@@ -194,7 +194,14 @@ pour que la physique ne régresse jamais en silence.
 
 ---
 
-## 9. Décisions à prendre
+## 9. Décisions prises
+
+Validées pour la 0.22 : cinématique complète la première fois puis version courte à chaque partie ; évaporation au jeûne
+supprimée ; réalisme maximal réservé au futur mode Simulation. L'onde qui coûte du spin (question 3) sera tranchée en 0.23.
+La limite d'Eddington sur le débit, prévue en 0.23, est arrivée dès la 0.22 : sans l'évaporation, la masse ne fait que
+monter, et un plafond sur la masse aurait pénalisé chaque partie longue.
+
+### Questions initiales
 
 1. **Cinématique** : complète au premier lancement + version courte à chaque partie (proposé), ou complète à chaque première partie du jour ?
 2. **Évaporation au jeûne** : la supprimer (proposé, c'est faux) ou la garder en l'étiquetant LICENCE DE JEU ?

@@ -1,9 +1,10 @@
 /* =========================================================
    GOULU — gameplay « cosmos » (0.20)
    ---------------------------------------------------------
-   • Masse et évaporation de Hawking : le trou grossit en mangeant et maigrit
-     sinon, d'autant plus vite qu'il est petit (dM/dt ∝ -1/M²). Gros = attire plus
-     fort et rapporte plus, mais se fait toucher plus facilement.
+   • Masse et disque d'accrétion (0.22) : tout ce qui tombe ajoute de la masse,
+     antimatière comprise ; un trou noir stellaire ne maigrit jamais (son
+     évaporation de Hawking prendrait ~10⁷⁰ ans). Jeûner éteint le disque.
+     Limite d'Eddington sur le débit d'accrétion, pas sur la masse.
    • Orbites : relâcher près du trou met la poussière en orbite ; l'anneau rapporte
      en continu, protège (une antimatière qui le touche est annihilée) et, avalé
      d'un coup, donne un gros bonus.
@@ -15,19 +16,19 @@
    • Fusions de mutations (effets appliqués ici et dans update.js).
    • Le Trou Blanc (boss) et le « drop » de la musique (pulses comptés double).
    ========================================================= */
-const MASS_MIN = 0.6, MASS_MAX = 1.8, MASS_DECAY = 0.0065;
+const MASS_MIN = 0.6, MASS_MAX = 1.8;
 const ORBIT_MAX = 8;
 const STAR_FIRST = 38, STAR_EVERY = 45;
 const QUASAR_HOLD = 4;
 const TIDAL_TIME = 2.2;
 let bhMass = 1, tier = 0, starTimer = STAR_FIRST, quasarHold = 0, orbiters = [];
-let ringEatN = 0, ringEatT = 0, evapWarned = false, dropShown = 0, dropOn = false, hawkT = 0;
-let runTde = 0, runOrbitEaten = 0;
+let ringEatN = 0, ringEatT = 0, discWarned = false, dropShown = 0, dropOn = false;
+let runTde = 0, runOrbitEaten = 0, accRate = 0, xrbT = 0, xrbA = 0, mqT = 0, bbhT = 0;
 
 function cosmosReset(){
   bhMass = 1; tier = 0; starTimer = STAR_FIRST; endgameReset(); quasarHold = 0; orbiters = [];
-  ringEatN = 0; ringEatT = 0; evapWarned = false; dropShown = 0; dropOn = false; hawkT = 0;
-  runTde = 0; runOrbitEaten = 0;
+  ringEatN = 0; ringEatT = 0; discWarned = false; dropShown = 0; dropOn = false;
+  runTde = 0; runOrbitEaten = 0; accRate = 0; xrbT = 0; xrbA = 0; mqT = 0; bbhT = 0;
 }
 function cosmosOn(){ return !currentCampaignLevel; }
 function seenOnce(key){
@@ -36,20 +37,37 @@ function seenOnce(key){
   profile.seen[key] = true; saveP(); return true;
 }
 
-/* ---------- masse ---------- */
-function massR(){ return Math.pow(bhMass, 0.35); }            // rayon de jeu ∝ M^0,35 (jouable), pas ∝ M
-function massPull(){ return bhMass > 1 ? Math.pow(bhMass, 0.5) : 1; }   // maigrir n'affaiblit pas l'attraction : pas de spirale perdante
-/* Limite d'Eddington : au-delà de M = 1,4, la lumière du disque repousse la matière qui tombe.
-   La meilleure masse est au milieu, pas au maximum. Score par paliers de 0,1 (lisible, stable). */
-const MASS_EDD = 1.4;
-function massScore(){ const m = Math.round(bhMass * 10) / 10; return 0.6 + 0.4 * Math.min(m, MASS_EDD) - 0.5 * Math.max(0, m - MASS_EDD); }
-function eddK(){ return clamp((bhMass - MASS_EDD) / (MASS_MAX - MASS_EDD), 0, 1); }
+/* ---------- masse et disque d'accrétion ---------- */
+/* bhMass : masse relative au départ de la partie (masse réelle en M☉ : realMass(), birth.js). */
+function massR(){ return Math.pow(bhMass, 0.35); }            // rayon de jeu ∝ M^0,35 (licence de jeu : le vrai Rs ∝ M, affiché en km)
+function massPull(){ return bhMass > 1 ? Math.pow(bhMass, 0.5) : 1; }
+/* Débit d'accrétion Ṁ : poussières avalées par seconde, lissé sur le temps visqueux du disque.
+   Limite d'Eddington : Ṁ_Edd ∝ M (L_Edd = 1,26×10³¹ W par M☉). λ = Ṁ / Ṁ_Edd. */
+const ACC_TAU = 3, EDD_RATE = 2.4;
+function eddRatio(){ return accRate / (EDD_RATE * Math.max(bhMass, MASS_MIN)); }
+/* Au-delà de λ = 1, la pression de radiation souffle la matière (0 → 1 entre λ = 1 et 2). */
+function eddK(){ return clamp(eddRatio() - 1, 0, 1); }
+/* Points : un disque brillant près de la limite d'Eddington (L = η Ṁ c²) rapporte jusqu'à +10 %,
+   rien de plus au-delà ; la croissance depuis la naissance aussi (Bondi : Ṁ ∝ M²).
+   Un disque éteint ne rapporte pas de bonus. Par paliers de 0,1 (lisible, stable). */
+function cosmosScore(){
+  const l = Math.round(Math.min(eddRatio(), 1) * 10) / 10, m = Math.round(bhMass / birthStart() * 10) / 10;
+  return (1 + 0.2 * Math.max(0, l - 0.5)) * (1 + 0.15 * (m - 1));
+}
 function massGain(dustType){
   if(!cosmosOn()) return;
-  const g = { gold:0.008, blue:0.014, red:0.01, white:0.01 }[dustType] || 0.008;
-  bhMass = Math.min(MASS_MAX, bhMass + g * (1 - eddK()));   // au-delà d'Eddington, on grossit de moins en moins
+  accRate += 1 / ACC_TAU;
+  const g = { gold:0.0035, blue:0.006, red:0.0045, white:0.0045 }[dustType] || 0.0035;
+  bhMass = Math.min(MASS_MAX, bhMass + g / Math.max(1, eddRatio()));   // au-delà d'Eddington, les vents emportent l'essentiel
 }
-function massHit(){ if(cosmosOn()) bhMass = Math.max(MASS_MIN, bhMass - 0.12); }
+/* L'antimatière s'annihile avec la matière du disque : l'éclair gamma le souffle (vie perdue).
+   Ce qui tombe dans le trou, lui, a une masse positive (ALPHA-g, CERN, 2023) : la masse monte un peu. */
+function massHit(){
+  if(!cosmosOn()) return;
+  accRate = 0;
+  bhMass = Math.min(MASS_MAX, bhMass + 0.003);
+  if(seenOnce('annihil')) addToast('ANNIHILATION · ton disque est soufflé (ta masse, elle, monte)', '#ff8aa0', H/2 + 70);
+}
 
 /* ---------- paliers ---------- */
 function tierClock(){
@@ -66,14 +84,64 @@ function tierUp(n){
   tier = n;
   if(n > (profile.bestTier || 0)){ profile.bestTier = n; saveP(); }
   if(n === SGR_TIER){ endgameTier(n); return; }
-  waveNumEl.textContent = 'PALIER ' + n;
+  waveNumEl.textContent = 'PALIER ' + n + ' · ' + PHY.age(phaseAge(n, 0));
   waveNameEl.textContent = tierName(n);
-  if(waveLoreEl) waveLoreEl.textContent = n > 1 ? 'Antimatière +' + Math.round((tierSpeed() - 1) * 100) + ' % · points ×' + tierScore().toFixed(1).replace('.', ',') : 'Chaque minute, un palier : plus dur, plus payant.';
+  const ph = PHASES[n];
+  if(waveLoreEl) waveLoreEl.textContent = (ph ? ph.lore + '\n' : '') + (n > 1 ? 'Antimatière +' + Math.round((tierSpeed() - 1) * 100) + ' % · points ×' + tierScore().toFixed(1).replace('.', ',') : 'Chaque minute, une nouvelle phase : plus dure, plus payante.');
+  phaseEnter(n);
   waveBannerEl.classList.add('on'); waveBannerTimer = 3;
   addToast('PALIER ' + n + ' · ' + tierName(n), '#ffd36b', H/2 - 150);
   shake = Math.max(shake, 12);
   if(actx && !audioMuted) [392, 523.25, 659.25, 784].forEach((f, i) => blip(f, 0.3, 'triangle', 0.1, undefined, i * 0.08));
   endgameTier(n);
+}
+
+/* ---------- phases de la vie du trou noir (PHASES, data.js) ---------- */
+/* Âge réel au début (k = 0) ou à la fin (k = 1) de la phase n, en années (échelle logarithmique). */
+function phaseAge(n, k){
+  const p = PHASES[Math.min(Math.max(n, 0), PHASES.length - 1)];
+  return Math.pow(10, Math.log10(p.age[0]) + (Math.log10(p.age[1]) - Math.log10(p.age[0])) * clamp(k, 0, 1));
+}
+function phaseId(){ return cosmosOn() && tier > 0 && tier < PHASES.length ? PHASES[tier].id : null; }
+/* < 1 : poussière plus fréquente. Retombée : dense puis de moins en moins (∝ t^−5/3) ; vagabond : milieu clairsemé. */
+function phaseDustK(){
+  const p = phaseId();
+  if(p === 'fallback') return 0.6 + 0.4 * clamp((tierClock() - 60) / 60, 0, 1);
+  if(p === 'rogue') return 1.25;
+  return 1;
+}
+function phaseEnter(n){
+  const p = PHASES[n] ? PHASES[n].id : null;
+  if(p === 'xrb'){ xrbA = rng() * Math.PI * 2; xrbT = 1.5; }
+  else if(p === 'tde') starTimer = Math.min(starTimer, 3);
+  else if(p === 'microquasar') mqT = 0;
+  else if(p === 'bbh') bbhT = 1;
+}
+/* Point d'où la compagne de la binaire X déverse sa matière (bord de l'écran). */
+function xrbPoint(){
+  const R = Math.hypot(W, H) * 0.5 + 10;
+  return { x:clamp(bh.x + Math.cos(xrbA) * R, -10, W + 10), y:clamp(bh.y + Math.sin(xrbA) * R, -10, H + 10) };
+}
+function phaseTick(gdt){
+  const p = phaseId();
+  if(p === 'xrb'){   // débordement du lobe de Roche : un flux continu, qui arrive de biais (moment cinétique)
+    xrbT -= gdt;
+    if(xrbT <= 0 && entities.length < ENTITY_CAP){
+      xrbT = 0.75;
+      const q = xrbPoint(), a = Math.atan2(bh.y - q.y, bh.x - q.x) + 0.35, sp = 60 * PHYS;
+      entities.push({ x:q.x, y:q.y, vx:Math.cos(a) * sp, vy:Math.sin(a) * sp, r:R_DUST, type:'dust', dustType:'gold', phase:rng() * Math.PI * 2, trail:[] });
+    }
+  } else if(p === 'microquasar'){   // état dur (jets) 6 s, état mou 6 s
+    mqT += gdt;
+    if(mqT % 12 < 6) aliveJet(0.45);
+  } else if(p === 'bbh'){   // le compagnon invisible émet des ondes gravitationnelles
+    bbhT -= gdt;
+    if(bbhT <= 0){
+      bbhT = 4.5;
+      const a = elapsed * 0.8, R = Math.min(W, H) * 0.42;
+      gwRipples.push({ x:bh.x + Math.cos(a) * R * 0.5, y:bh.y + Math.sin(a) * R * 0.5, r:0, a:0.8 });
+    }
+  }
 }
 
 /* ---------- nouvelles menaces ---------- */
@@ -182,7 +250,7 @@ function tidalDisruption(e){
   combo += n; comboTimer = comboWindow(); if(combo > maxCombo) maxCombo = combo;
   const pts = Math.round((300 + 25 * n) * mulK(multiplier * scoreK(false)));
   addScore(pts);
-  bhMass = Math.min(MASS_MAX, bhMass + 0.2);
+  bhMass = Math.min(MASS_MAX, bhMass + 0.06); accRate += 4;   // la moitié de l'étoile reste liée ; éclair au-delà d'Eddington
   shockCharges = Math.max(shockCharges, getMaxCharges());
   for(let k = 0; k < 6 && entities.length < ENTITY_CAP; k++){
     const a = k / 6 * Math.PI * 2;
@@ -312,30 +380,27 @@ function cosmosTick(gdt){
   orbiters = entities.filter(e => e.orbit && !e.dead);
   if(ringEatT > 0) ringEatT -= gdt;
 
-  /* masse : évaporation de Hawking, plus rapide pour un petit trou */
+  /* disque d'accrétion : sans matière, il se vide en quelques temps visqueux et s'éteint */
   if(cosmosOn()){
-    bhMass = Math.max(MASS_MIN, bhMass - MASS_DECAY / (bhMass * bhMass) * gdt);
-    if(bhMass < 0.75){
-      hawkT -= gdt;
-      if(hawkT <= 0){
-        hawkT = 0.05 + bhMass * 0.1;
-        const a = Math.random() * Math.PI * 2;
-        particles.push({ x:bh.x + Math.cos(a) * bh.r, y:bh.y + Math.sin(a) * bh.r, vx:Math.cos(a) * 120, vy:Math.sin(a) * 120, life:0.7, maxLife:0.7, r:1.4, color:'#bfe6ff' });
-      }
-      if(!evapWarned){ evapWarned = true; addToast('ÉVAPORATION DE HAWKING · mange !', '#bfe6ff', H/2 + 70); thoughtOnce('evap', 'Je fonds. Il me faut de la matière.'); }
-    } else if(bhMass > 0.9) evapWarned = false;
+    accRate *= Math.exp(-gdt / ACC_TAU);
+    const lam = eddRatio();
+    if(lam < 0.12 && elapsed > 10){
+      if(!discWarned){ discWarned = true; addToast('DISQUE ÉTEINT · mange pour le rallumer', '#9fd4ff', H/2 + 70); thoughtOnce('disc', 'Mon disque s\'éteint. Il me faut de la matière.'); }
+    } else if(lam > 0.5) discWarned = false;
+    birthTick(gdt);
+    phaseTick(gdt);
     /* l'anneau rapporte en continu */
     if(orbiters.length) addScore(orbiters.length * 0.6 * mulK(multiplier * scoreK(true)) * gdt);
     /* au-delà d'Eddington : la pression de radiation repousse la poussière proche */
     const ek = eddK();
     if(ek > 0.1){
-      if(!eddWarned){ eddWarned = true; addToast('LIMITE D\'EDDINGTON · ta lumière repousse la matière', '#ffcb4d', H/2 + 70); }
+      if(!eddWarned){ eddWarned = true; addToast('LIMITE D\'EDDINGTON · tu avales trop vite, ta lumière souffle la matière', '#ffcb4d', H/2 + 70); }
       for(const e of entities){
         if(e.type !== 'dust' || e.orbit || e.dead) continue;
         const dx = e.x - bh.x, dy = e.y - bh.y, d = Math.hypot(dx, dy) || 1;
         if(d < 220 * PHYS){ const f = 260 * PHYS * ek * gdt; e.vx += dx / d * f; e.vy += dy / d * f; }
       }
-    } else if(bhMass < 1.3) eddWarned = false;
+    } else if(eddRatio() < 0.8) eddWarned = false;
   }
 
   /* paliers */

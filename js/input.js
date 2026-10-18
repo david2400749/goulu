@@ -13,7 +13,7 @@ const inGame = () => state === 'play' || state === 'tutorial' || state === 'resu
 
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
-  if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge') return;
+  if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge' || state==='birth') return;
   if(state==='resume'){ attract = true; return; }   // on peut déjà maintenir pendant le décompte
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
@@ -195,6 +195,10 @@ window.addEventListener('keydown',e=>{
     return;
   }
   if(state==='revive'){ if(e.code==='Escape') declineRevive(); return; }
+  if(state==='birth'){   // cinématique de naissance : ESPACE / Entrée / Échap la passent
+    if(e.code==='Escape' || e.code==='Enter' || e.code==='Space'){ e.preventDefault(); if(!e.repeat) finishBirth(); }
+    return;
+  }
   if(state==='bank'){   // ESPACE / Entrée / Échap : continuer · E : encaisser
     const onBtn = document.activeElement && document.activeElement.tagName === 'BUTTON';
     if(e.code === 'KeyE'){ e.preventDefault(); cashOut(); }
@@ -249,6 +253,7 @@ function togglePause(){
     pauseBossEl.textContent = bossesKilled;
     pauseWaveEl.textContent = currentCampaignLevel ? 'NIVEAU '+currentCampaignLevel.n : (currentMode.useWaves && WAVES[waveIndex] ? 'VAGUE '+(waveIndex+1) : currentMode.label);
     if(tier > 0) pauseWaveEl.textContent += ' · PALIER ' + tier;
+    $('pausePhys').innerHTML = cosmosOn() ? physPanelHTML() : '';
     pauseScreen.classList.remove('hidden');
     if(musicMasterGain && actx){
       musicMasterGain.gain.cancelScheduledValues(actx.currentTime);

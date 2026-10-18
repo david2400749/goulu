@@ -24,8 +24,17 @@ des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : l
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
 
-Le trou noir a une **masse** : il grossit en mangeant (attraction et points en hausse) et s'**évapore** s'il jeûne
-(évaporation de Hawking, plus rapide pour un petit trou), mais un gros trou est plus facile à toucher.
+**Vraie physique (0.22)** : les lois sont réelles, seul le temps est accéléré. Chaque partie commence par une **naissance**
+réelle tirée au sort (supernova avec retombée, supernova ratée, collapsar ; la même pour tous au défi du jour) qui fixe
+la masse en masses solaires, le spin et le départ. La première fois, une **cinématique** complète montre l'étoile de
+25 M☉, ses couches de fusion, l'effondrement du cœur de fer, les neutrinos et l'apparition de l'horizon (à revoir depuis le menu).
+Les paliers sont les **phases de la vie** d'un trou noir stellaire (retombée, vagabond, binaire X, microquasar, rupture de marée,
+binaire de trous noirs, migration, noyau galactique, sphère d'influence, spirale extrême vers Sagittarius A\*), avec l'âge réel.
+Le HUD affiche Rs en km, le spin et l'âge ; la pause montre les **instruments** (ISCO, efficacité, température de Hawking, entropie…).
+
+Le trou noir a une **masse** : tout ce qu'il avale le fait grossir (attraction et points en hausse), antimatière comprise,
+mais un gros trou est plus facile à toucher. Il ne maigrit jamais (l'évaporation de Hawking d'un trou stellaire prendrait
+~10⁷⁰ ans) : s'il jeûne, c'est son **disque d'accrétion** qui s'éteint. Une antimatière qui touche souffle le disque.
 Arrêter d'aspirer près du trou met la poussière en **orbite** : l'anneau rapporte en continu, annihile l'antimatière
 qui le touche et, avalé d'un coup, donne un bonus. Une **étoile** passe parfois : aspirée assez longtemps, les forces
 de marée la déchirent et l'éclair pulvérise l'antimatière. Nouvelles menaces : **comète** (annoncée par une ligne),
@@ -39,10 +48,10 @@ rendements décroissants et portées plafonnées, scores compressés au-delà de
 essaim, matière lourde) et le choix **encaisser ou continuer** (banque d'éclats, moitié si l'on meurt). Tous les 2 paliers,
 un **secteur** (nébuleuse, ceinture d'astéroïdes, amas d'étoiles, magnétar). Au palier 10, **Sagittarius A\***, trou noir
 supermassif qui spirale vers toi : survivre jusqu'à la **fusion** termine la partie par une victoire. **Limite d'Eddington** :
-au-delà d'une masse de 1,4, la lumière repousse la matière. **Contrats** de partie au menu (récompense en éclats).
+au-delà de la limite (sur le débit d'accrétion depuis la 0.22), la lumière repousse la matière. **Contrats** de partie au menu (récompense en éclats).
 
 Le trou noir est vivant : il a faim, il jubile, il souffre, il regarde la menace, crache des jets
-polaires sur une Perfect Chain et grandit de *Graine* à *Quasar* au fil de la partie. Tu peux le nommer.
+polaires sur une Perfect Chain et grandit de *Nouveau-né* à *Microquasar* au fil de la partie. Tu peux le nommer.
 
 Les options (bouton ⚙ du menu) permettent aussi de réinitialiser sa progression ; la pause permet de recommencer la partie en cours.
 
@@ -52,7 +61,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.21.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.22.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -80,7 +89,8 @@ tests/smoke.js     tests de fumée Playwright (CI)
 css/style.css      interface « instruments de bord »
 js/
   util.js          dates, PRNG, graine
-  data.js          campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins
+  data.js          campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins, phases de vie
+  physics.js       physique en unités réelles : Rs, ombre, ISCO de Kerr, efficacité, Hawking, Eddington, entropie, affichage
   profile.js       profil et sauvegarde locale (localStorage)
   state.js dom.js  constantes, état de partie, références DOM
   core.js          canvases, caméra (menu → partie), redimensionnement, résolution adaptative
@@ -90,9 +100,10 @@ js/
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
   endgame.js       fin de partie : compression du score, Sagittarius A*, encaisser ou continuer, événements
                    cosmiques, secteurs et astéroïdes, contrats
-  cosmos.js        masse et évaporation, orbites, étoile déchirée, comète / étoile à neutrons / fronde,
-                   paliers de la partie infinie, effets des fusions, Trou Blanc, drop de la musique
+  cosmos.js        masse et disque d'accrétion (Eddington), phases de vie, orbites, étoile déchirée,
+                   comète / étoile à neutrons / fronde, paliers, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil
+  birth.js         naissance : 3 branches réelles, version courte en partie, cinématique complète, grandeurs réelles
   leaderboard.js   classement mondial du défi du jour (Supabase, actif seulement sur github.io ou avec ?lb)
   meta.js          progression de compte : niveau / XP, bonus du jour, seconde chance, prochain objectif
   entities.js progression.js campaign.js lifecycle.js update.js   logique du jeu
@@ -100,6 +111,7 @@ js/
 archive/main.v11.html   version précédente (monolithe), intacte
 supabase/daily_leaderboard.sql  schéma et fonctions du classement (copie de la migration appliquée)
 docs/GAME_DESIGN.md     analyse de game design : pourquoi jouer, rester, payer ; feuille de route
+docs/PROPOSITION_PHYSIQUE.md   proposition « vraie physique » (0.22 → 0.25)
 ```
 
 Scripts classiques (pas de modules ES) pour que le jeu s'ouvre aussi en `file://`.

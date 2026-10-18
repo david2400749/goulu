@@ -44,7 +44,7 @@ function parryEnvK(){ return cosmicEvent && cosmicEvent.id === 'magnetic' ? 0.7 
 function shockEnvK(){ return sector && sector.id === 'magnetar' ? 0.8 : 1; }
 function darkK(){ return cosmicEvent && cosmicEvent.id === 'dark' && state !== 'menu' && state !== 'over' ? 1 : 0; }
 function starEvery(){ return sector && sector.id === 'cluster' ? 12 : STAR_EVERY; }
-function dustEnvK(){ return sector && sector.id === 'nebula' ? 0.7 : 1; }   // < 1 : poussière plus fréquente
+function dustEnvK(){ return (sector && sector.id === 'nebula' ? 0.7 : 1) * phaseDustK(); }   // < 1 : poussière plus fréquente
 function heavyEvent(){ return !!cosmicEvent && cosmicEvent.id === 'heavy'; }
 function swarmEvent(){ return !!cosmicEvent && cosmicEvent.id === 'swarm'; }
 
@@ -61,7 +61,7 @@ function endgameTier(n){
   if(n >= 2 && !sgr){
     cosmicEvent = COSMIC_EVENTS[Math.floor(rng() * COSMIC_EVENTS.length)];
     eventT = 0;
-    if(waveLoreEl) waveLoreEl.textContent = cosmicEvent.name + ' · ' + cosmicEvent.desc;
+    if(waveLoreEl) waveLoreEl.textContent = (PHASES[n] ? PHASES[n].lore + '\n' : '') + cosmicEvent.name + ' · ' + cosmicEvent.desc;
     runBank += Math.ceil((n - 1) / 2);
     if(n < SGR_TIER) pendingBank = n;
   }

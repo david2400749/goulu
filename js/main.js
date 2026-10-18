@@ -41,6 +41,8 @@ function loop(now){
     /* jeu gelé : le décor continue de vivre */
     if(state === 'revive') tickRevive(dt);
     if(state === 'resume') tickResume(dt);
+  } else if(state === 'birth'){
+    birthCinemaTick(dt);
   } else if(state === 'tutorial'){
     musicTick(dt);
     updateTutorial(dt);

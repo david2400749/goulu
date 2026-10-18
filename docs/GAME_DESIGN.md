@@ -177,3 +177,22 @@ plus de but (pas de fin), et l'écran était saturé (messages répétés, cercl
   grandissent, mutations dans la colonne de gauche, messages sous la barre de boss.
 - **Variété** : un événement cosmique par palier, un secteur tous les 2 paliers, limite d'Eddington, contrats.
 
+
+## 8. Vraie physique : la naissance (0.22)
+
+Première étape de `docs/PROPOSITION_PHYSIQUE.md`. Principe : les lois sont vraies, seul le temps est accéléré.
+
+- **Naissance** : trois branches réelles tirées au sort (graine de la partie, donc identiques au défi du jour) :
+  supernova avec retombée (8 M☉, débris abondants au début, débit ∝ t^−5/3), supernova ratée (15 M☉, départ calme),
+  collapsar (10 M☉, a* = 0,85, charges pleines). Version courte à chaque partie (implosion, ondes gravitationnelles,
+  ringdown de l'horizon, légende) ; cinématique complète de 8 étapes la première fois, puis depuis le menu.
+- **Phases de vie** à la place des stades d'étoile : chaque palier est une phase réelle avec sa légende et son âge
+  (échelle logarithmique). Effets légers : retombée (poussière dense puis de moins en moins), vagabond (milieu clairsemé),
+  binaire X (flux de la compagne), microquasar (jets en état dur), rupture de marée (étoile annoncée), binaire de trous
+  noirs (ondes gravitationnelles).
+- **Corrections** : plus d'évaporation au jeûne (fausse pour un trou stellaire) ; le disque s'éteint à la place.
+  Eddington porte sur le débit d'accrétion λ = Ṁ/Ṁ_Edd (Ṁ_Edd ∝ M), pas sur la masse : au-delà de 1, la poussière est
+  soufflée et la masse progresse peu. Points : jusqu'à +10 % quand le disque brille près d'Eddington, +15 % par 100 %
+  de croissance. L'antimatière ajoute de la masse et souffle le disque. Stades réels : Nouveau-né → Microquasar.
+- **Instruments** : Rs, ombre, ISCO, η, λ, température du disque et de Hawking, durée de vie, entropie, âge (pause) ;
+  ligne Rs · a* · âge dans le HUD ; masse en M☉. Tests : constantes vérifiées contre les valeurs de référence.
