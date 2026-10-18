@@ -133,7 +133,7 @@ function killBoss(){
   shockCharges = getMaxCharges();
   if(currentCampaignLevel) heal(1);
   const card = pickFreeCard();   // carte offerte : jamais une qui demanderait un 9e emplacement
-  if(card && !campaignNoAnomaly) addAnomaly(card);
+  if(card && !campaignNoAnomaly && !currentMode.simulation) addAnomaly(card);
   burst(W/2, H/2, '#ffffff', 80, 800);
   burst(W/2, H/2, boss.type.color, 60, 650);
   flash = 1.2; shake = 34;

@@ -56,7 +56,8 @@ function hitAnti(e){
   lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR(), pulsar:!!e.pulsarBeam };
   aliveHurt();
   massHit();
-  lives--; runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
+  if(!currentMode.simulation) lives--;   // Simulation : pas de vies, l'antimatière souffle seulement le disque
+  runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
   combo=0; comboTimer=0; multiplier=1;
   parryChain=0; parryChainTimer=0; perfectChainFired=false;
   elemChain = { type:null, count:0, timer:0 };

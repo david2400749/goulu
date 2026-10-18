@@ -129,6 +129,7 @@ function drawSceneLayer(t){
   sctx.save();
   sctx.translate(cam.dx, cam.dy);
   if(state === 'birth'){ drawBirthScene(t); sctx.restore(); return; }   // naissance : l'étoile, puis l'horizon
+  if(state === 'epilogue'){ drawEpilogueScene(t); sctx.restore(); return; }
   drawInfall(VIS.attract);
   if(state === 'menu'){ sctx.restore(); return; }
   if(sgr) drawSgr(t);
@@ -642,6 +643,7 @@ function drawOverlay(t, shk){
   ctx.clearRect(0, 0, W, H);
   if(!useGL) drawFallbackWorld(t, shk);
   if(state === 'birth'){ drawBirthOverlay(); return; }
+  if(state === 'epilogue') return;
   if(state === 'menu' && particles.length){   // menu : gestes avalés par le trou noir
     ctx.save(); ctx.translate(cam.dx, cam.dy); drawParticles(ctx); ctx.restore();
   }
@@ -778,7 +780,7 @@ function renderFrame(dt){
     hot: (0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(t * 0.37)), 4)) * (reduceFx() ? 0.5 : 1),
     pull: reduceFx() ? VIS.attract * 0.3 : VIS.attract,
     holeU: (bh.x + cam.dx) / W, holeV: 1 - (bh.y + cam.dy) / H,
-    starGain: 1.0, quality: 1, tint: VTINT, ripples,
+    starGain: state === 'epilogue' ? EPI.stars : 1.0, quality: 1, tint: VTINT, ripples,
     bloomThr: 1.0, bloom: 0.8 + (state === 'play' ? 0.5 * eddK() : 0), exposure: 1.15 * (1 - 0.3 * darkK()),
     vignette: state === 'play' && sector && sector.id === 'nebula' ? 0.95 : 0.5 + 0.3 * darkK(), grain: 0.028,
     aberr: 0.0012 + Math.min(1, shake / 32) * 0.004 + parryFlash * 0.004 + flash * 0.006 + dilate * 0.003,

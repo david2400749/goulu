@@ -43,6 +43,8 @@ function loop(now){
     if(state === 'resume') tickResume(dt);
   } else if(state === 'birth'){
     birthCinemaTick(dt);
+  } else if(state === 'epilogue'){
+    epilogueTick(dt);
   } else if(state === 'tutorial'){
     musicTick(dt);
     updateTutorial(dt);

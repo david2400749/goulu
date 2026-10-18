@@ -84,7 +84,8 @@ function startGame(modeId, isDaily){
 
   birthSetup(isDaily);                   // naissance (graine posée : la même pour tous au défi du jour)
   baseMods = Object.assign({}, mods);   // réglages du départ, pour pouvoir oublier une mutation
-  if(mods.startAnomalies > 0 && !campaignNoAnomaly){
+  hudEl.classList.toggle('sim', !!currentMode.simulation);
+  if(mods.startAnomalies > 0 && !campaignNoAnomaly && !currentMode.simulation){
     for(let i=0;i<mods.startAnomalies;i++){
       const c = pickAnomalyCard();
       if(c) addAnomaly(c);
@@ -246,6 +247,7 @@ function gameOver(){
   bossBarEl.classList.remove('on');
   overEl.classList.remove('hidden');
   showXpResult(lastXp); showNextGoal(); showStage(); showPhysOver();
+  $('btnEpilogue').classList.toggle('hidden', !runWon);   // tombé dans Sgr A* : la suite de sa vie
   deathSound();
   refreshMenuBadges();
   checkModeUnlocks();

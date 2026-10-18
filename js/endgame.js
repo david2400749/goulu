@@ -58,7 +58,7 @@ function endgameTier(n){
     }
   }
   if(n === SGR_TIER){ cosmicEvent = null; startSgr(); return; }
-  if(n >= 2 && !sgr){
+  if(n >= 2 && !sgr && !currentMode.simulation){   // Simulation : ni événements de jeu ni banque
     cosmicEvent = COSMIC_EVENTS[Math.floor(rng() * COSMIC_EVENTS.length)];
     eventT = 0;
     if(waveLoreEl) waveLoreEl.textContent = (PHASES[n] ? PHASES[n].lore + '\n' : '') + cosmicEvent.name + ' · ' + cosmicEvent.desc;
@@ -108,6 +108,7 @@ function startSgr(){
   bossBarEl.classList.add('on');
   if(bossHintEl){ bossHintEl.textContent = 'Survis : il attire tout, même ta poussière'; bossHintEl.classList.remove('hidden'); }
   thoughtOnce('sgr', 'Il est immense. Il m\'appelle.');
+  unlockArchive('emri');
   shake = Math.max(shake, 30); vibrate([60, 40, 90]);
   if(actx && !audioMuted){ blip(40, 2.2, 'sawtooth', 0.22, 28); blip(80, 1.6, 'sine', 0.16, 40); }
 }
@@ -256,6 +257,7 @@ function endgameTick(gdt){
 
 /* ---------- écran de fin ---------- */
 function endgameOver(){
+  if(typeof runEvaporated !== 'undefined' && runEvaporated) return { title:'ÉVAPORÉ', causeTitle:'RAYONNEMENT DE HAWKING', cause:'Trou noir primordial : plus il maigrissait, plus il chauffait, plus il s\'évaporait vite. Il a fini en éclair de rayons gamma.' };
   if(runWon) return { title:'FUSION', causeTitle:'SAGITTARIUS A*', cause:'Spirale extrême : tu es tombé dans un trou noir de 4,3 millions de masses solaires. Tu fais désormais partie de lui. Le futur observatoire spatial LISA entendrait ce signal.' };
   if(runCashed) return { title:'ENCAISSÉ', causeTitle:'SAGESSE', cause:'Tu t\'es arrêté au palier <b>' + tier + '</b> avec toute ta banque.' };
   return null;

@@ -94,8 +94,10 @@ const PHY = (() => {
     const ms = mant.toFixed(d === undefined ? 1 : d).replace('.', ',');
     return (ms === '1,0' || ms === '1' ? '' : ms + '×') + '10' + String(e).split('').map(ch => SUP[ch]).join('');
   }
+  /* Longueur : « 24 km », « 350 m », « 7,4×10⁻¹³ m » (trou primordial). */
+  function km(x){ return x >= 1 ? num(x, 0) + ' km' : x >= 0.001 ? num(x * 1000, 0) + ' m' : sci(x * 1000) + ' m'; }
   /* Masse en masses solaires : « 15,3 M☉ », « 4,3×10⁶ M☉ » pour un trou supermassif. */
-  function msun(m){ return (m < 1e5 ? num(m, 1) : sci(m, 1)) + ' M☉'; }
+  function msun(m){ return (m < 1e5 && m >= 0.01 ? num(m, 1) : sci(m, 1)) + ' M☉'; }
   /* Âge lisible : « 0,25 s », « 3 h », « 12 jours », « 4 ans », « 3,2 millions d'années ». */
   function age(yr){
     const s = yr * YEAR;
@@ -109,5 +111,5 @@ const PHY = (() => {
     return num(yr / 1e9, 1) + ' milliards d\'années';
   }
 
-  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, iscoL, iscoE, spinRate, horizonRg, irrK, spinAfter, rotFrac, entropyKerr, nsRemnant, merger, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, msun, age };
+  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, iscoL, iscoE, spinRate, horizonRg, irrK, spinAfter, rotFrac, entropyKerr, nsRemnant, merger, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, msun, km, age };
 })();

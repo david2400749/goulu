@@ -233,3 +233,21 @@ Première étape de `docs/PROPOSITION_PHYSIQUE.md`. Principe : les lois sont vra
   Sagittarius A\* ajoute 4,3 millions de M☉.
 - **Entropie** S ∝ aire ∝ masse irréductible² : record de partie (fin de partie) et de compte (profil), avec le nombre de
   kilonovas et de fusions. Bilan de ce qui a été absorbé dans les instruments.
+
+## 11. Archives, épilogue, simulation (0.25)
+
+- **Archives** : 28 fiches (naissance, horizon, calvitie, disque, Eddington, antimatière, Bondi, binaire X, microquasar,
+  rupture de marée, Kerr, Blandford-Znajek, Penrose, ondes gravitationnelles, étoile à neutrons, fusion et théorème des aires,
+  entropie, EMRI, Hawking, ères futures, paradoxe de l'information…), débloquées par l'événement lui-même. Chacune : loi, observation
+  datée, « dans le jeu » (y compris les licences), étiquette. Une fiche verrouillée montre comment la débloquer : un objectif de
+  plus, qui apprend quelque chose.
+- **Naissances à débloquer** (choix dans les Archives, jamais au défi du jour) : fusion d'étoiles à neutrons (1 kilonova ;
+  2,7 M☉, nuage d'or au départ), trou noir primordial (épilogue vu ; 5×10¹¹ kg, il s'évapore : dM/dt ∝ −1/M², fin
+  « ÉVAPORÉ » après environ 50 s de jeûne), graine supermassive (chute dans Sgr A* ; 10⁵ M☉).
+- **Épilogue** (palier 5 ou chute dans Sgr A*) : 8 étapes, 49 s, pour la masse réelle du dernier trou noir. Le moment où le fond
+  cosmologique devient plus froid que le trou est calculé (refroidissement en e^(−t/τ), τ = 1/H d'un univers dominé par
+  l'énergie noire, ≈ 17 milliards d'années) ; la durée d'évaporation aussi (formule photons seuls). Le ciel s'éteint
+  (nébuleuses comprises), le disque se vide, l'horizon fond en chauffant, éclair final, puis noir.
+- **Mode Simulation** : une phase toutes les 30 s (Sgr A* à 5 min, chute à 6 min 15), pas de boss tournants (seul le Compagnon
+  de la phase binaire), pas de mutations ni de banque, pas de vies : l'antimatière souffle le disque. Vérifié au robot : la partie
+  va jusqu'à la chute, 0 mutation.

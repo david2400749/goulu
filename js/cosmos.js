@@ -88,6 +88,7 @@ function spinAccrete(dlnM, e){
   if(spinWarned < 1 && spinRel() < -0.2 && Math.abs(discJ) > 0.3){ spinWarned = 1; addToast('DISQUE RÉTROGRADE · il tourne à contre-sens, ton spin ralentit', '#c99cff', H/2 + 70); }
   if(Math.abs(a) >= 0.9 && Math.abs(bhSpin) < 0.9 && spinWarned < 2){ spinWarned = 2; addToast('SPIN 0,9 · efficacité ' + PHY.num(PHY.eta(0.9) * 100, 0) + ' % · jets puissants', '#9fd4ff', H/2 + 70); thoughtOnce('spin', 'Je tourne si vite que l\'espace tourne avec moi.'); }
   bhSpin = a;
+  if(Math.abs(a) >= 0.7) unlockArchive('kerr');
 }
 /* Extraction d'énergie de rotation (jet, Penrose) : la masse irréductible ne bouge pas, M et a* baissent. */
 function extractRot(frac){
@@ -103,6 +104,7 @@ function jetFired(){
   const a2 = bhSpin * bhSpin;
   runJetE += extractRot(0.002 * a2);
   if(a2 > 0.3) aliveJet(0.5 * a2);
+  if(a2 > 0.25) unlockArchive('bz');
   if(a2 > 0.25 && seenOnce('jetbz')) addToast('JET · ton onde puise dans ta rotation (Blandford-Znajek)', '#9fd4ff', H/2 + 70);
 }
 /* Ergosphère : entre l'horizon (r₊) et 2 GM/c² à l'équateur. Ici l'horizon est bh.r. */
@@ -111,7 +113,7 @@ function ergoR(){ return bh.r * 2 / PHY.horizonRg(Math.abs(bhSpin)); }
 function penroseCheck(e, d){
   if(e.kind !== 'sling' || e.penrose || !cosmosOn() || Math.abs(bhSpin) < 0.3) return;
   if(d - e.r > ergoR() || d < bh.r + e.r * 0.5) return;
-  e.penrose = true; runPenrose++;
+  e.penrose = true; runPenrose++; unlockArchive('penrose');
   e.vx *= 1.4; e.vy *= 1.4;
   extractRot(0.004);
   burst(e.x, e.y, '#c99cff', 12, 300);
@@ -124,6 +126,7 @@ function massGain(dustType, e){
   /* la masse gagnée est l'énergie qui reste (1 − η) : un trou qui tourne vite rayonne plus et grossit moins */
   const dm = g / Math.max(1, eddRatio()) * (1 - etaNow()) / (1 - ETA0);
   absorbed.gas += dm / bhMass * realMass();
+  if(eddRatio() > 0.5) unlockArchive('disc');
   spinAccrete(dm / bhMass, e);                       // le spin suit la matière, même au plafond de masse (licence de jeu)
   bhMass = Math.min(MASS_MAX, bhMass + dm);
 }
@@ -131,7 +134,7 @@ function massGain(dustType, e){
    Ce qui tombe dans le trou, lui, a une masse positive (ALPHA-g, CERN, 2023) : la masse monte un peu. */
 function massHit(){
   if(!cosmosOn()) return;
-  accRate = 0; absorbed.anti++;
+  accRate = 0; absorbed.anti++; unlockArchive('antimatter');
   bhMass = Math.min(MASS_MAX, bhMass + 0.003);
   if(seenOnce('annihil')) addToast('ANNIHILATION · ton disque est soufflé (ta masse, elle, monte)', '#ff8aa0', H/2 + 70);
 }
@@ -140,7 +143,7 @@ function massHit(){
 function tierClock(){
   if(currentCampaignLevel || currentMode.duration > 0) return -1;
   if(currentMode.useWaves) return waveIndex === WAVES.length - 1 ? waveTimer + 60 : -1;
-  return elapsed;
+  return currentMode.simulation ? elapsed * 2 : elapsed;   // Simulation : une phase toutes les 30 s
 }
 function tierName(n){ return n <= TIER_NAMES.length ? TIER_NAMES[n - 1] : TIER_NAMES[TIER_NAMES.length - 1] + ' +' + (n - TIER_NAMES.length); }
 function tierSpeed(){ return tier > 1 ? 1 + 0.07 * (tier - 1) : 1; }
@@ -179,6 +182,7 @@ function phaseDustK(){
 }
 function phaseEnter(n){
   const p = PHASES[n] ? PHASES[n].id : null;
+  unlockArchive({ fallback:'fallback', rogue:'bondi', xrb:'xrb', microquasar:'microquasar' }[p]);
   if(p === 'xrb'){ xrbA = rng() * Math.PI * 2; xrbT = 1.5; }
   else if(p === 'tde') starTimer = Math.min(starTimer, 3);
   else if(p === 'microquasar') mqT = 0;
@@ -305,7 +309,7 @@ function updateStar(e, gdt, d, ux, uy){
   return e.tidal >= 1 || d < bh.r + e.r;
 }
 function tidalDisruption(e){
-  e.dead = true; runTde++; absorbed.stars++;
+  e.dead = true; runTde++; absorbed.stars++; unlockArchive('tde');
   profile.tde = (profile.tde || 0) + 1; saveP();
   let n = 0;
   for(const o of entities){
@@ -461,7 +465,7 @@ function cosmosTick(gdt){
     /* au-delà d'Eddington : la pression de radiation repousse la poussière proche */
     const ek = eddK();
     if(ek > 0.1){
-      if(!eddWarned){ eddWarned = true; addToast('LIMITE D\'EDDINGTON · tu avales trop vite, ta lumière souffle la matière', '#ffcb4d', H/2 + 70); }
+      if(!eddWarned){ eddWarned = true; unlockArchive('eddington'); addToast('LIMITE D\'EDDINGTON · tu avales trop vite, ta lumière souffle la matière', '#ffcb4d', H/2 + 70); }
       for(const e of entities){
         if(e.type !== 'dust' || e.orbit || e.dead) continue;
         const dx = e.x - bh.x, dy = e.y - bh.y, d = Math.hypot(dx, dy) || 1;

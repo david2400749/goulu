@@ -9,6 +9,8 @@
      d'oignon, cœur de fer, effondrement, neutrinos, horizon. Jouée une fois
      avant la première partie, puis depuis le menu (« Revoir la naissance »).
    • Grandeurs réelles de la partie : masse en M☉, spin, âge, panneau d'instruments.
+   • 0.25 : trois naissances à débloquer (fusion d'étoiles à neutrons, trou noir
+     primordial qui s'évapore, graine supermassive) et choix de la naissance.
    Les lois sont vraies, seul le temps est accéléré.
    ========================================================= */
 const BIRTHS = [
@@ -20,8 +22,22 @@ const BIRTHS = [
     cine:'L\'onde de choc échoue : l\'étoile entière s\'effondre sans exploser et s\'éteint dans le ciel.' },
   { id:'collapsar', name:'COLLAPSAR', tag:'THÉORIE ÉTABLIE · sursauts gamma longs observés', msun:10, start:1, a:0.85,
     line:'L\'étoile tournait vite : deux jets l\'ont transpercée (sursaut gamma).', perk:'Jets : charges d\'onde pleines.',
-    cine:'L\'étoile tournait vite : la matière forme un disque et deux jets percent l\'étoile. Vu de la Terre : un sursaut gamma long.' }
+    cine:'L\'étoile tournait vite : la matière forme un disque et deux jets percent l\'étoile. Vu de la Terre : un sursaut gamma long.' },
+  /* à débloquer (0.25) : jamais au défi du jour, qui reste identique pour tous */
+  { id:'nsmerger', short:'étoiles à neutrons', name:'FUSION D\'ÉTOILES À NEUTRONS', tag:'OBSERVÉ · GW170817 (2017)', msun:2.7, start:0.85, a:0.7,
+    line:'Deux étoiles à neutrons ont fusionné : le plus petit trou noir possible.', perk:'Agile, dans un nuage de kilonova à avaler.',
+    unlock:() => (profile.kilonovas || 0) >= 1, unlockLabel:'1 kilonova' },
+  { id:'primordial', short:'primordial', name:'TROU NOIR PRIMORDIAL', tag:'HYPOTHÈSE · jamais observé', msun:2.5e-19, start:1, a:0,
+    line:'Né juste après le Big Bang, 5×10¹¹ kg : brûlant (2×10¹¹ K), il s\'évapore.', perk:'Rayonnement de Hawking : mange sans cesse ou disparais.',
+    unlock:() => !!profile.epilogueSeen, unlockLabel:'voir l\'épilogue' },
+  { id:'seed', short:'graine supermassive', name:'GRAINE SUPERMASSIVE', tag:'HYPOTHÈSE · soutenue par JWST (UHZ1, 2023)', msun:1e5, start:1.2, a:0.3,
+    line:'Un nuage de gaz de l\'univers jeune s\'est effondré d\'un bloc.', perk:'Gaz dense partout.',
+    unlock:() => (profile.sgrWins || 0) >= 1, unlockLabel:'tomber dans Sgr A*' }
 ];
+const BIRTHS_BASE = BIRTHS.filter(b => !b.unlock);   // effondrement d'étoile : défi du jour, cinématique
+function birthUnlocked(b){ return !b.unlock || b.unlock(); }
+const HAWKING_DECAY = 0.005;   // trou primordial : dM/dt ∝ −1/M² (en unités de jeu)
+let runEvaporated = false;
 let birth = null, pendingBirth = null, fallbackAcc = 0;
 
 /* ---------- grandeurs réelles de la partie ---------- */
@@ -37,7 +53,7 @@ function realAge(){
 }
 function physLine(){
   const m = realMass();
-  return 'Rs ' + PHY.num(PHY.rsKm(m), 0) + ' km · a* ' + PHY.num(realSpin(), 2) + (spinRel() < -0.05 ? ' rétro' : '') + ' · η ' + PHY.num(etaNow() * 100, 1) + ' % · ' + PHY.age(realAge());
+  return 'Rs ' + PHY.km(PHY.rsKm(m)) + ' · a* ' + PHY.num(realSpin(), 2) + (spinRel() < -0.05 ? ' rétro' : '') + ' · η ' + PHY.num(etaNow() * 100, 1) + ' % · ' + PHY.age(realAge());
 }
 /* Panneau « Instruments » (pause) : uniquement des nombres calculés, aucun texte saisi. */
 function physPanelHTML(){
@@ -45,21 +61,21 @@ function physPanelHTML(){
   const sense = Math.abs(discJ) < 0.25 ? 'désordonné (accrétion chaotique)' : ar >= 0 ? 'prograde' : 'rétrograde';
   const rows = [
     ['Naissance', birth ? birth.name.toLowerCase() : '—'],
-    ['Masse', PHY.msun(m)],
+    ['Masse', PHY.msun(m) + (m < 1e-3 ? ' (' + PHY.sci(m * PHY.MSUN) + ' kg)' : '')],
     ['Spin a* (Kerr)', PHY.num(a, 3)],
     ['Sens du disque', sense],
-    ['Horizon r₊', PHY.num(PHY.horizonRg(a) * rs / 2, 0) + ' km (Rs = ' + PHY.num(rs, 0) + ' km)'],
-    ['Ombre (≈ 3√3/2 Rs)', PHY.num(PHY.shadowKm(m), 0) + ' km'],
-    ['Dernière orbite stable', PHY.num(PHY.iscoRg(ar) * rs / 2, 0) + ' km'],
+    ['Horizon r₊', PHY.km(PHY.horizonRg(a) * rs / 2) + ' (Rs = ' + PHY.km(rs) + ')'],
+    ['Ombre (≈ 3√3/2 Rs)', PHY.km(PHY.shadowKm(m))],
+    ['Dernière orbite stable', PHY.km(PHY.iscoRg(ar) * rs / 2)],
     ['Efficacité du disque η', PHY.num(PHY.eta(ar) * 100, 1) + ' %'],
-    ['Masse irréductible', PHY.num(m * PHY.irrK(a), 2) + ' M☉'],
+    ['Masse irréductible', PHY.msun(m * PHY.irrK(a))],
     ['Énergie de rotation', PHY.num(PHY.rotFrac(a) * 100, 1) + ' % de la masse'],
     ['Puissance des jets (∝ a*²)', PHY.num(a * a * 100, 0) + ' % du maximum'],
     ['Accrétion', PHY.num(lam, 2) + ' × Eddington'],
     ['Bord interne du disque', '≈ ' + PHY.sci(PHY.discK(m, Math.max(lam, 0.01))) + ' K'],
     ['Température de Hawking', PHY.sci(th) + ' K'],
-    ['Évaporation', th < 2.725 ? 'non : plus froid que le fond cosmologique (2,7 K)' : 'oui'],
-    ['Durée de vie (Hawking)', PHY.sci(PHY.lifeYears(m)) + ' ans'],
+    ['Évaporation', th < 2.725 ? 'non : plus froid que le fond cosmologique (2,7 K)' : 'oui : plus chaud que le fond cosmologique'],
+    ['Durée de vie (Hawking, photons seuls)', PHY.sci(PHY.lifeYears(m)) + ' ans' + (m < 1e-10 ? ' (≈ 10 fois moins avec toutes les particules)' : '')],
     ['Entropie (∝ aire, ne baisse jamais)', PHY.sci(PHY.entropyKerr(m, a)) + ' k_B'],
     ['Âge', PHY.age(realAge())]
   ].concat(absorbedRows().map(r => ['Absorbé · ' + r[0], r[1]]));
@@ -71,7 +87,9 @@ function showPhysOver(){
   const el = $('overPhys'); if(!el) return;
   if(!(cosmosOn() && birth)){ el.textContent = ''; return; }
   const S = Math.max(runEntropy, entropyNow()), rec = S > (profile.bestEntropy || 0);
-  if(rec){ profile.bestEntropy = S; saveP(); }
+  if(rec) profile.bestEntropy = S;
+  profile.lastBH = { m:realMass(), a:realSpin() }; saveP();
+  unlockArchive('entropy');
   el.textContent = 'Né d\'une ' + birth.name.toLowerCase() + ' · ' + PHY.msun(realMass()) + ' · a* ' + PHY.num(realSpin(), 2) + ' · âge ' + PHY.age(realAge())
     + '\nEntropie ' + PHY.sci(S) + ' k_B' + (rec ? ' · ★ record' : '');
 }
@@ -83,12 +101,24 @@ function birthSetup(isDaily){
   const cap = $('birthCap'); if(cap) cap.classList.remove('on');
   if(currentCampaignLevel){ birth = null; pendingBirth = null; return; }
   const r = rng();
-  birth = (!isDaily && pendingBirth) ? pendingBirth : BIRTHS[Math.floor(r * BIRTHS.length)];
+  runEvaporated = false;
+  const pick = !isDaily && profile.birthPick ? BIRTHS.find(b => b.id === profile.birthPick && birthUnlocked(b)) : null;
+  const pool = isDaily ? BIRTHS_BASE : BIRTHS.filter(birthUnlocked);
+  birth = (!isDaily && pendingBirth) ? pendingBirth : pick || pool[Math.floor(r * pool.length)];
   pendingBirth = null;
   bhMass = birth.start;
   bhSpin = birth.a; discJ = 0.6;                                    // le disque hérité de l'étoile tourne avec elle
   if(birth.id === 'direct') antiTimer += 2.5;                       // l'étoile s'est éteinte sans bruit : départ calme
   else if(birth.id === 'collapsar'){ shockCharges = getMaxCharges(); aliveJet(1); }
+  else if(birth.id === 'nsmerger'){   // nuage de kilonova autour du trou
+    for(let i = 0; i < 10 && entities.length < ENTITY_CAP; i++){
+      const a = i / 10 * Math.PI * 2, R0 = Math.min(W, H) * 0.22;
+      entities.push({ x:bh.x + Math.cos(a) * R0, y:bh.y + Math.sin(a) * R0, vx:-Math.sin(a) * 50 * PHYS, vy:Math.cos(a) * 50 * PHYS, r:R_DUST, type:'dust', dustType:'gold', phase:rng() * Math.PI * 2, trail:[] });
+    }
+  }
+  unlockArchive('horizon');
+  unlockArchive({ fallback:'fallback', direct:'failed_sn', collapsar:'collapsar', nsmerger:'gw170817', primordial:'pbh', seed:'seed' }[birth.id]);
+  if(birth.id === 'primordial') unlockArchive('hawking');
   /* implosion : la matière tombe vers le centre, une bouffée d'ondes gravitationnelles */
   const R = Math.min(W, H) * 0.36;
   for(let i = 0; i < 36; i++){
@@ -102,7 +132,7 @@ function birthSetup(isDaily){
     const m = realMass();
     for(const [cls, txt] of [
       ['bc-k', 'NAISSANCE · ' + birth.name],
-      ['bc-v', PHY.num(m, 1) + ' M☉ · a* = ' + PHY.num(birth.a, 2) + ' · Rs = ' + PHY.num(PHY.rsKm(m), 0) + ' km'],
+      ['bc-v', PHY.msun(m) + ' · a* = ' + PHY.num(birth.a, 2) + ' · Rs = ' + PHY.km(PHY.rsKm(m))],
       ['bc-l', birth.line + ' ' + birth.perk],
       ['bc-t', birth.tag]
     ]){ const d = document.createElement('div'); d.className = cls; d.textContent = txt; cap.appendChild(d); }
@@ -114,20 +144,40 @@ function birthSetup(isDaily){
 function birthTick(gdt){
   if(!birth) return;
   if(elapsed > 5.5){ const cap = $('birthCap'); if(cap && cap.classList.contains('on')) cap.classList.remove('on'); }
+  if(birth.id === 'primordial'){   // le seul trou noir du jeu qui s'évapore pour de vrai : T_H ≈ 2×10¹¹ K
+    bhMass -= HAWKING_DECAY / (bhMass * bhMass) * gdt;
+    if(Math.random() < gdt * 30 / bhMass){
+      const a = Math.random() * Math.PI * 2;
+      particles.push({ x:bh.x + Math.cos(a) * bh.r, y:bh.y + Math.sin(a) * bh.r, vx:Math.cos(a) * 160, vy:Math.sin(a) * 160, life:0.7, maxLife:0.7, r:1.4, color:'#cfe8ff' });
+    }
+    if(bhMass <= MASS_MIN && state === 'play') evaporateRun();
+    return;
+  }
   if(birth.id === 'fallback' && elapsed < 40){
     fallbackAcc += 2.2 * Math.pow(1 + elapsed / 4, -5 / 3) * gdt;
     while(fallbackAcc >= 1){ fallbackAcc--; if(entities.length < ENTITY_CAP) spawnEntity('dust'); }
   }
 }
 
+/* Trou primordial évaporé : éclair de rayons gamma, fin de la partie. */
+function evaporateRun(){
+  runEvaporated = true; bhMass = MASS_MIN;
+  burst(bh.x, bh.y, '#ffffff', 120, 1100); burst(bh.x, bh.y, '#bfe6ff', 80, 800);
+  flash = 1; shake = 30; vibrate([80, 40, 120]);
+  if(actx && !audioMuted){ blip(2400, 0.8, 'triangle', 0.12, 200); blip(60, 1.2, 'sine', 0.2, 30); }
+  gameOver();
+}
+
 /* ---------- facteurs visuels (rendu GL et 2D) ; la zone de collision bh.r ne change jamais ---------- */
 function holeK(){
   if(state === 'birth') return CINE.hole;
+  if(state === 'epilogue') return EPI.hole;
   if(birth && state === 'play' && elapsed < 1.6) return Math.max(0.05, 1 - Math.exp(-elapsed / 0.3) * Math.cos(elapsed * 11));   // ringdown
   return 1;
 }
 function discGlowK(){
   if(state === 'birth') return CINE.disc;
+  if(state === 'epilogue') return EPI.disc;
   if(birth && state === 'play' && elapsed < 1.2) return 0.3 + 0.7 * elapsed / 1.2;
   return 1;
 }
@@ -176,7 +226,7 @@ function cineStart(i){ let s = 0; for(let k = 0; k < i; k++) s += CINE_STEPS[k].
 const callOr = (v, b) => typeof v === 'function' ? v(b) : v;
 
 function startBirthCinema(branchId, done){
-  const b = BIRTHS.find(x => x.id === branchId) || BIRTHS[Math.floor(Math.random() * BIRTHS.length)];
+  const b = BIRTHS_BASE.find(x => x.id === branchId) || BIRTHS_BASE[Math.floor(Math.random() * BIRTHS_BASE.length)];
   Object.assign(CINE, { on:true, t:0, step:-1, b, done, hole:0.0001, disc:0, flash:0, parts:[], clock:'' });
   state = 'birth'; cam.menuTarget = 0; attract = false;
   entities.length = 0; particles.length = 0; shockwaves.length = 0; toasts.length = 0; gwRipples.length = 0; boss = null;
@@ -191,6 +241,7 @@ function finishBirth(){
   CINE.on = false; CINE.hole = 1; CINE.disc = 1; CINE.parts = [];
   if(!profile.seen) profile.seen = {};
   profile.seen.birthFull = true; saveP();
+  for(const id of ['massive_star', 'core_collapse', 'nohair']) unlockArchive(id);
   $('birthScreen').classList.add('hidden');
   gwRipples.length = 0; shake = 0;
   state = 'menu';

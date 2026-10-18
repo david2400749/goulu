@@ -69,7 +69,7 @@ function renderModeGrid(){
   modeGridEl.innerHTML='';
   for(const id in MODES){
     const m = MODES[id];
-    const unlocked = profile.unlockedModes.includes(id);
+    const unlocked = profile.unlockedModes.includes(id) || !m.unlock;
     const selected = profile.selectedMode === id;
     const rec = profile.modeRecords[id] || 0;
     const el = document.createElement('div');
@@ -293,6 +293,7 @@ document.querySelectorAll('.mtab').forEach(btn=>{
       if(tab==='daily'){ refreshDaily(); renderDailyBoard(); }
       if(tab==='ach') renderAch();
       if(tab==='skins') renderSkins();
+      if(tab==='archives') renderArchives();
       if(tab==='quests') renderQuests();
       if(tab==='stats'){ renderStats(); renderAch(); }
       if(tab==='play') renderModeGrid();
@@ -476,7 +477,12 @@ $('btnBirth').addEventListener('click', e=>{
   try{ initAudio(); }catch(err){}
   startBirthCinema(null, () => backToMenu());
 });
-$('btnSkipBirth').addEventListener('click', e=>{ e.stopPropagation(); finishBirth(); });
+$('btnSkipBirth').addEventListener('click', e=>{ e.stopPropagation(); if(state === 'epilogue') finishEpilogue(); else finishBirth(); });
+$('btnBirth2').addEventListener('click', e=>{ e.stopPropagation(); try{ initAudio(); }catch(err){} startBirthCinema(null, () => backToMenu()); });
+for(const id of ['btnEpilogue', 'btnEpilogue2']) $(id).addEventListener('click', e=>{
+  e.stopPropagation(); if(!epilogueUnlocked()) return;
+  try{ initAudio(); }catch(err){} startEpilogue();
+});
 $('btnDaily').addEventListener('click', e=>{
   e.stopPropagation();
   try{ initAudio(); updateStreakOnPlay(); }catch(err){}

@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.24.0-dev';
+const GAME_VERSION = '0.25.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -113,6 +113,9 @@ const MODES = {
     unlock:'plays_30', unlockLabel:'30 parties', duration:30, anomalyInterval:10, bossInterval:25, noShock:false, label:'BLITZ', useWaves:false },
   chaos: { id:'chaos', name:'Chaos', icon:'🌀', desc:'Anomalies, boss et antis en rafale · score sans plafond',
     unlock:'perfect_1', unlockLabel:'1 PERFECT CHAIN', duration:0, anomalyInterval:10, bossInterval:30, noShock:false, label:'CHAOS', useWaves:false },
+  /* 0.25 : la vie entière en ≈ 6 min, lois réelles, ni vies ni mutations ; le record qui compte : l'entropie */
+  simulation: { id:'simulation', name:'Simulation', icon:'⚛️', desc:'Toute une vie en 6 min · ni vies ni mutations · vise l\'entropie',
+    unlock:null, unlockLabel:'', duration:0, anomalyInterval:1e9, bossInterval:1e9, noShock:false, label:'SIMULATION', useWaves:false, simulation:true },
   metronome: { id:'metronome', name:'Métronome', icon:'🎵', desc:'L\'onde ne frappe fort que sur le tempo',
     unlock:'pulse_20', unlockLabel:'20 pulses', duration:0, anomalyInterval:20, bossInterval:60, noShock:false, label:'MÉTRONOME', useWaves:true, beatOnly:true }
 };

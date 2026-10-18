@@ -35,7 +35,7 @@ function nsSpinNeeded(m){ for(let a = 0; a <= 0.998; a += 0.02) if(PHY.nsRemnant
 function spawnNS(){
   const R0 = Math.min(W, H) * 0.44;
   const e = { type:'nstar', x:0, y:0, vx:0, vy:0, r:8, ang:rng() * Math.PI * 2, R0, R:R0, t:0, T:13, gwT:0.5, phase:0, trail:[] };
-  nsPlace(e); entities.push(e);
+  nsPlace(e); entities.push(e); unlockArchive('gw');
   const m = realMass(), need = nsSpinNeeded(m);
   const txt = PHY.nsRemnant(m, bhSpin) > 0.01 ? 'ton spin va la déchirer : kilonova'
     : need !== null ? 'spin ≥ ' + PHY.num(need, 2) + ' : kilonova, sinon avalée sans lumière'
@@ -63,7 +63,7 @@ function updateNS(e, gdt){
 function nsPlunge(e){
   e.dead = true;
   const m = realMass(), f = PHY.nsRemnant(m, bhSpin), out = 1.4 * f, inn = 1.4 - out;
-  addRealMass(inn); spinAccrete(inn / m, { orbit:true });
+  addRealMass(inn); spinAccrete(inn / m, { orbit:true }); unlockArchive('nsbh');
   gwRipples.push({ x:bh.x, y:bh.y, r:0, a:1 });
   if(f > 0.01){   // déchirée avant l'ISCO : disque, éjecta riches en neutrons, kilonova
     absorbed.kilonova++; runKilonova++;
@@ -115,6 +115,7 @@ function spawnCompanion(){
   const R0 = Math.min(250, Math.min(W, H) * 0.4);
   const e = { x:0, y:0, vx:0, vy:0, r:24, type:'boss', bossPart:true, isMain:true, companion:true,
     ang:rng() * Math.PI * 2, R:R0, R0, q:0.45 + rng() * 0.45, gwT:0.5, phase:0, trail:[] };
+  unlockArchive('gw');
   compPlace(e);
   return e;
 }
@@ -157,7 +158,7 @@ function companionMerge(e){
   const r = PHY.merger(m1, m2, a1);
   addRealMass(r.mf - m1);
   bhSpin = r.af; discJ = Math.max(discJ, 0.3);   // le moment cinétique orbital devient le spin (sens des orbites)
-  absorbed.bh++; runMergers++; lastMerger = Object.assign({ m1, m2 }, r);
+  absorbed.bh++; runMergers++; unlockArchive('bbh'); lastMerger = Object.assign({ m1, m2 }, r);
   profile.bbhMergers = (profile.bbhMergers || 0) + 1; saveP();
   for(let k = 0; k < 3; k++) gwRipples.push({ x:bh.x, y:bh.y, r:-k * 60, a:1 });
   shake = Math.max(shake, 18 + Math.min(24, r.kick / 8)); aliveJet(1);
@@ -182,7 +183,7 @@ function drawCompanion(e, t){
 /* ---------- une image de jeu ---------- */
 function mergerTick(gdt){
   runEntropy = Math.max(runEntropy, entropyNow());
-  if(boss || sgr || !cosmosOn()) return;
+  if(boss || sgr || !cosmosOn() || (birth && birth.id === 'primordial')) return;   // un trou de 5×10¹¹ kg ne croise pas d'étoile à neutrons
   nsTimer -= gdt;
   if(nsTimer <= 0){
     nsTimer = 85 + rng() * 25;

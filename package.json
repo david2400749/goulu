@@ -1,6 +1,6 @@
 {
   "name": "goulu",
-  "version": "0.24.0-dev",
+  "version": "0.25.0-dev",
   "private": true,
   "description": "GOULU — Le trou noir affamé : jeu d'arcade WebGL2 sans build. Ce fichier ne sert qu'aux tests.",
   "scripts": {

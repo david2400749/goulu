@@ -1252,6 +1252,91 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  await test('Archives : fiches débloquées en jouant, onglet, fiches verrouillées avec un indice', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { horizon: archOwned('horizon'), birthCard: archOwned({ fallback:'fallback', direct:'failed_sn', collapsar:'collapsar' }[birth.id]) };
+      massHit(); out.anti = archOwned('antimatter');
+      out.total = ARCHIVES.length; out.ids = new Set(ARCHIVES.map(a => a.id)).size;
+      out.tags = ARCHIVES.every(a => TAGS[a.tag] && a.law && a.obs && a.game && a.hint);
+      return out;
+    });
+    await page.evaluate(() => { backToMenu(); });
+    await page.click('.mtab[data-tab="archives"]');
+    const ui = await page.evaluate(() => ({ count: +document.getElementById('archCount').textContent, cards: document.querySelectorAll('#archList .arc-card').length,
+      locked: document.querySelectorAll('#archList .arc-card.locked').length, hint: document.querySelector('#archList .arc-card.locked .arc-hint').textContent,
+      epi: document.getElementById('btnEpilogue2').disabled }));
+    await ctx.close();
+    assert(r.horizon && r.birthCard && r.anti && r.total >= 25 && r.ids === r.total && r.tags, 'fiches : ' + JSON.stringify(r));
+    assert(ui.count >= 3 && ui.cards === r.total && ui.locked === r.total - ui.count && ui.hint.length > 5 && ui.epi, 'onglet : ' + JSON.stringify(ui));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissances à débloquer : choix, fusion d\'étoiles à neutrons, primordial qui s\'évapore ; jamais au défi', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, seen: { birthFull: true }, kilonovas: 1, epilogueSeen: true, birthPick: 'nsmerger' } });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { ns: { id: birth.id, m: realMass(), dust: entities.filter(e => e.type === 'dust').length, card: archOwned('gw170817') } };
+      lastGameWasDaily = true; startGame('classic', true); out.daily = BIRTHS_BASE.includes(birth); lastGameWasDaily = false;
+      out.seedLocked = !birthUnlocked(BIRTHS.find(b => b.id === 'seed'));
+      profile.birthPick = 'primordial'; startGame('simulation', false);   // sans écran de mutation
+      out.pbh = { id: birth.id, hot: PHY.hawkingK(realMass()) > 1e10, life: PHY.lifeYears(realMass()) };
+      togglePause(); out.pbh.panel = document.getElementById('pausePhys').textContent; togglePause();
+      for(let i = 0; i < 60 * 90 && state === 'play'; i++){ antiTimer = dustTimer = 999; entities.length = 0; hitstop = 0; update(1 / 60); }
+      out.end = { state, title: document.getElementById('overTitle').textContent, t: Math.round(elapsed) };
+      return out;
+    });
+    await ctx.close();
+    assert(r.ns.id === 'nsmerger' && Math.abs(r.ns.m - 2.7) < 0.01 && r.ns.dust >= 10 && r.ns.card, 'fusion d\'étoiles à neutrons : ' + JSON.stringify(r.ns));
+    assert(r.daily && r.seedLocked, 'défi / verrou : ' + JSON.stringify(r));
+    assert(r.pbh.id === 'primordial' && r.pbh.hot && r.pbh.life > 1e11 && r.pbh.life < 1e12 && /oui : plus chaud/.test(r.pbh.panel), 'primordial : ' + JSON.stringify(r.pbh));
+    assert(r.end.state === 'over' && r.end.title === 'ÉVAPORÉ' && r.end.t > 20, 'évaporation : ' + JSON.stringify(r.end));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Épilogue « Le long sommeil » : débloqué au palier 5, les étoiles s\'éteignent, l\'horizon s\'évapore, retour au menu', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: { tutorialDone: true, seen: { birthFull: true }, bestTier: 5, lastBH: { m: 4.3e6, a: 0.5 } } });
+    await page.click('.mtab[data-tab="archives"]');
+    await page.click('#btnEpilogue2');
+    const r = await page.evaluate(() => {
+      const out = { state, titles: [], stars: [], holes: [], text6: '' };
+      for(let k = 0; k < 70 * 20 && state === 'epilogue'; k++){
+        attract = k % 40 < 20; epilogueTick(1 / 20);
+        const t = document.getElementById('bsTitle').textContent;
+        if(out.titles[out.titles.length - 1] !== t){ out.titles.push(t); out.stars.push(+EPI.stars.toFixed(2)); out.holes.push(+EPI.hole.toFixed(3)); if(out.titles.length === 6) out.text6 = document.getElementById('bsText').textContent; }
+        if(k % 25 === 0) renderFrame(1 / 20);
+      }
+      out.end = { state, seen: profile.epilogueSeen, cards: ['hawking', 'future', 'info'].every(archOwned), eaten: EPI.eaten };
+      return out;
+    });
+    await page.waitForTimeout(200);
+    await ctx.close();
+    assert(r.state === 'epilogue' && r.titles.length === 8 && r.titles[7] === 'ET APRÈS ?', 'étapes : ' + r.titles.join(' / '));
+    assert(r.stars[0] === 1 && r.stars[5] < 0.1 && r.holes[4] === 1, 'étoiles / horizon : ' + JSON.stringify(r));
+    assert(/10⁸⁷ ans/.test(r.text6), 'durée de vie pour 4,3×10⁶ M☉ : ' + r.text6);
+    assert(r.end.state === 'menu' && r.end.seen && r.end.cards, 'fin : ' + JSON.stringify(r.end));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Mode Simulation : disponible d\'emblée, une phase toutes les 30 s, pas de vie perdue, pas de mutation', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      renderModeGrid();
+      const card = [...document.querySelectorAll('.mode-card')].find(c => /Simulation/.test(c.textContent));
+      startGame('simulation', false); entities.length = 0;
+      const l0 = lives; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 5, y:bh.y });
+      const out = { open: !!card && !card.classList.contains('locked'), lives: lives === l0, disc: eddRatio() === 0, sim: document.getElementById('hud').classList.contains('sim') };
+      for(let i = 0; i < 60 * 31; i++){ antiTimer = dustTimer = 999; hitstop = 0; if(state === 'play') update(1 / 60); }
+      out.tier = tier; out.state = state; out.anom = activeAnomalies.length;
+      return out;
+    });
+    await ctx.close();
+    assert(r.open && r.lives && r.disc && r.sim, 'mode : ' + JSON.stringify(r));
+    assert(r.tier === 1 && r.state === 'play' && r.anom === 0, 'phases : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   await test('Naissances : la même pour tous au défi du jour, effets de départ, légende et instruments', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');
@@ -1583,7 +1668,7 @@ const inView = (page, id) => page.evaluate(id => {
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
-    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['trou blanc', 60], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
+    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['trou blanc', 60], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60], ['simulation', 400]
   ];
   for(const [mode, seconds] of SIMS){
     await test('Simulation ' + seconds + ' s : ' + mode, async () => {
@@ -1620,6 +1705,7 @@ const inView = (page, id) => page.evaluate(id => {
       assert(!errors.length, errors.join('\n'));
       if(mode === 'campagne 9') assert(r.state === 'campdone', 'niveau 9 non terminé : ' + JSON.stringify(r));
       if(mode === 'blitz') assert(r.state === 'over', 'le chrono Blitz ne termine pas la partie : ' + r.state);
+      if(mode === 'simulation') assert(r.state === 'merge' && r.anomalies === 0, 'la Simulation doit finir dans Sgr A*, sans mutation : ' + JSON.stringify(r));
       if(mode.startsWith('classique')) assert(r.bosses.includes('pulsar'), 'pas de Pulsar en vague infinie : ' + JSON.stringify(r));
       return r.state + ', ' + r.elapsed + ' s, score ' + r.score + ', vague ' + r.wave + ', boss ' + r.bosses + ', anomalies ' + r.anomalies;
     });

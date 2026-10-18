@@ -19,7 +19,7 @@ Deux commandes séparées :
 - L'ancien mode à un seul bouton (relâcher = onde) reste disponible dans les options.
 
 Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous avec son classement mondial,
-5 modes de jeu, 6 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme, et le Trou Blanc), des mutations à chaque vague (avec une relance par partie),
+6 modes de jeu, 6 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme, et le Trou Blanc), des mutations à chaque vague (avec une relance par partie),
 des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : le trou noir monte de niveau
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
@@ -45,6 +45,16 @@ le rapproche, tes ondes resserrent son orbite, et la **fusion** suit les ajustem
 inférieure à la somme, énergie partie en ondes, spin final, recul, aire de l'horizon en hausse). L'**entropie** (∝ aire de
 l'horizon, elle ne baisse jamais) devient un record ; la pause et la fin de partie font le bilan de ce qui a été absorbé.
 Au palier 10, la **spirale extrême** vers Sagittarius A\* se termine par ta chute en lui.
+
+**Archives, épilogue, simulation (0.25)** : l'onglet **Archives** réunit 28 fiches de physique, débloquées en vivant chaque
+phénomène (loi, observation réelle datée, ce que le jeu simplifie, étiquette observé / théorie établie / hypothèse / question
+ouverte), et permet de choisir sa naissance. Trois naissances se débloquent : **fusion d'étoiles à neutrons** (GW170817),
+**trou noir primordial** (le seul qui s'évapore pour de vrai : il faut manger sans cesse) et **graine supermassive** (JWST).
+L'épilogue **« Le long sommeil »** (palier 5 atteint, ou chute dans Sgr A\*) suit la fin de ton trou noir, calculée pour sa
+masse réelle : fond cosmologique plus froid que lui, dernières étoiles, galaxies défaites, ère des trous noirs, évaporation de
+Hawking, dernière seconde, puis la question ouverte. Le mode **Simulation** (disponible d'emblée) fait vivre toute une vie en
+6 minutes, une phase toutes les 30 s, sans vies ni mutations : l'antimatière souffle seulement le disque, et l'objectif est
+l'entropie.
 
 Le trou noir a une **masse** : tout ce qu'il avale le fait grossir (attraction et points en hausse), antimatière comprise,
 mais un gros trou est plus facile à toucher. Il ne maigrit jamais (l'évaporation de Hawking d'un trou stellaire prendrait
@@ -75,7 +85,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.24.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.25.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -116,6 +126,8 @@ js/
   endgame.js       fin de partie : compression du score, Sagittarius A*, encaisser ou continuer, événements
                    cosmiques, secteurs et astéroïdes, contrats
   merger.js        étoile à neutrons (kilonova ou avalée entière), le Compagnon (fusion de trous noirs), entropie, bilan
+  archives.js      28 fiches de physique débloquées en jouant, onglet Archives, choix de la naissance
+  epilogue.js      « Le long sommeil » : fin de l'univers et évaporation de Hawking pour la masse du dernier trou noir
   cosmos.js        masse et disque d'accrétion (Eddington), spin de Kerr, jets, Penrose, phases de vie, orbites, étoile déchirée,
                    comète / étoile à neutrons / fronde, paliers, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil

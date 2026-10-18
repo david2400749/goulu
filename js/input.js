@@ -14,6 +14,7 @@ const inGame = () => state === 'play' || state === 'tutorial' || state === 'resu
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
   if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge' || state==='birth') return;
+  if(state==='epilogue'){ attract = true; return; }   // dernières miettes
   if(state==='resume'){ attract = true; return; }   // on peut déjà maintenir pendant le décompte
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
@@ -39,7 +40,7 @@ function onUp(){
     attract = false;
     return;
   }
-  if(state==='resume'){ attract = false; return; }
+  if(state==='resume' || state==='epilogue'){ attract = false; return; }
   if(state!=='play') return;
   if(attract && !dualControls()) fireWave();
   attract=false;
@@ -198,6 +199,11 @@ window.addEventListener('keydown',e=>{
   if(state==='revive'){ if(e.code==='Escape') declineRevive(); return; }
   if(state==='birth'){   // cinématique de naissance : ESPACE / Entrée / Échap la passent
     if(e.code==='Escape' || e.code==='Enter' || e.code==='Space'){ e.preventDefault(); if(!e.repeat) finishBirth(); }
+    return;
+  }
+  if(state==='epilogue'){   // épilogue : Échap le passe, ESPACE aspire les dernières miettes
+    if(e.code==='Escape'){ e.preventDefault(); if(!e.repeat) finishEpilogue(); }
+    else if(isHoldKey(e.code)){ e.preventDefault(); attract = true; }
     return;
   }
   if(state==='bank'){   // ESPACE / Entrée / Échap : continuer · E : encaisser

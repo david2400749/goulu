@@ -155,7 +155,7 @@ vec3 skyEval(vec3 d){
           + starLayer(d,  46., 31., .34, 0.95, 1.5, 0.)
           + starLayer(d, 105., 77., .20, 0.80, .9, 0.)
           + starLayer(d, 230., 13., .10, 0.70, .6, 0.);
-  return neb + st*uStarGain;
+  return neb*min(1., uStarGain) + st*uStarGain;   /* épilogue : nébuleuses et galaxies s'éteignent aussi */
 }
 `;
 
