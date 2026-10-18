@@ -50,7 +50,7 @@ function startGame(modeId, isDaily){
   campaignReducedStats = !!(currentCampaignLevel && currentCampaignLevel.constraint === 'reducedStats');
   runTechniques = { dashparry: false, echochain: false, momentum: false };
   pulsarDailyDone = false; endlessBossAt = 30; resumeT = 0; $('resumeScreen').classList.add('hidden');
-  aliveReset();
+  aliveReset(); cosmosReset();
   reviveUsed = false; runRevives = 0; rerollsLeft = RUN_REROLLS; lastXp = null;
   $('reviveScreen').classList.add('hidden');
   parryTimes = [];

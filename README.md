@@ -19,10 +19,19 @@ Deux commandes séparées :
 - L'ancien mode à un seul bouton (relâcher = onde) reste disponible dans les options.
 
 Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous avec son classement mondial,
-5 modes de jeu, 4 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme), des mutations à chaque vague (avec une relance par partie),
+5 modes de jeu, 5 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme, et le Trou Blanc), des mutations à chaque vague (avec une relance par partie),
 des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : le trou noir monte de niveau
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
+
+Le trou noir a une **masse** : il grossit en mangeant (attraction et points en hausse) et s'**évapore** s'il jeûne
+(évaporation de Hawking, plus rapide pour un petit trou), mais un gros trou est plus facile à toucher.
+Arrêter d'aspirer près du trou met la poussière en **orbite** : l'anneau rapporte en continu, annihile l'antimatière
+qui le touche et, avalé d'un coup, donne un bonus. Une **étoile** passe parfois : aspirée assez longtemps, les forces
+de marée la déchirent et l'éclair pulvérise l'antimatière. Nouvelles menaces : **comète** (annoncée par une ligne),
+**étoile à neutrons** (deux ondes), **fronde** (elle se sert de ta gravité). Cinquième boss : **le Trou Blanc**.
+En partie infinie, un **palier** par minute (plus dur, plus payant). Quand deux mutations sont au maximum, une carte
+**fusion** les combine (7 fusions). Sur le *drop* de la musique, les pulses comptent double.
 
 Le trou noir est vivant : il a faim, il jubile, il souffre, il regarde la menace, crache des jets
 polaires sur une Perfect Chain et grandit de *Graine* à *Quasar* au fil de la partie. Tu peux le nommer.
@@ -35,7 +44,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.19.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.20.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -71,6 +80,8 @@ js/
   render.js        couche scène (entités), overlay (repères), paramètres envoyés au GPU, repli 2D
   hud.js audio.js  HUD, audio synthétisé (SFX, musique générative adaptative, grondement gravitationnel)
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
+  cosmos.js        masse et évaporation, orbites, étoile déchirée, comète / étoile à neutrons / fronde,
+                   paliers de la partie infinie, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil
   leaderboard.js   classement mondial du défi du jour (Supabase, actif seulement sur github.io ou avec ?lb)
   meta.js          progression de compte : niveau / XP, bonus du jour, seconde chance, prochain objectif

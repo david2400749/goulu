@@ -25,7 +25,7 @@ function checkSpecialization(){
   if(activeAnomalies.length < SPEC_THRESHOLD) return;
   const cats = {};
   for(const a of activeAnomalies){
-    const def = ANOMALIES.find(x=>x.id===a.id); if(!def) continue;
+    const def = anomDef(a.id); if(!def) continue;
     cats[def.cat] = (cats[def.cat]||0) + a.stacks;
   }
   let bestCat = null, bestCount = 0;
@@ -305,12 +305,19 @@ function applyAnomalyEffect(card){
   buildPips();
   if(actx && !audioMuted) blip(660,0.2,'sine',0.14,990);
 }
-function pickAnomalyCard(){
+/* Cartes encore tirables : mutations pas au maximum, et fusions dont les deux mutations le sont. */
+function availableFusions(owned){
+  return FUSIONS.filter(f => !owned[f.id] && f.needs.every(id => { const d = ANOMALIES.find(x => x.id === id); return d && (owned[id]||0) >= d.max; }));
+}
+function availableCards(){
   const owned={};
   for(const a of activeAnomalies) owned[a.id]=a.stacks;
-  const available = ANOMALIES.filter(c => (owned[c.id]||0) < c.max);
+  return ANOMALIES.filter(c => (owned[c.id]||0) < c.max).concat(availableFusions(owned));
+}
+function pickAnomalyCard(){
+  const available = availableCards();
   if(available.length===0) return null;
-  const weights = { common:1, rare:0.55, legendary:0.25 };
+  const weights = { common:1, rare:0.55, legendary:0.25, fusion:0.4 };
   const pool=[];
   for(const c of available){
     const w = Math.max(1, Math.round(weights[c.rarity]*10));
@@ -321,7 +328,11 @@ function pickAnomalyCard(){
 function drawAnomalyCards(){
   anomCards.innerHTML='';
   const seen=new Set(); const chosen=[];
-  for(let i=0;i<3;i++){
+  /* une fusion disponible est toujours proposée : c'est la récompense d'un build abouti */
+  const owned={}; for(const a of activeAnomalies) owned[a.id]=a.stacks;
+  const fus = availableFusions(owned);
+  if(fus.length){ const f = fus[Math.floor(cardRng()*fus.length)]; seen.add(f.id); chosen.push(f); }
+  for(let i=chosen.length;i<3;i++){
     let c=pickAnomalyCard(); if(!c) break;
     let guard=0;
     while(seen.has(c.id) && guard<20){ c=pickAnomalyCard(); guard++; }
@@ -377,7 +388,20 @@ function tickResume(dt){
     if(actx && !audioMuted) blip(990, 0.12, 'sine', 0.09, 1320);
   }
 }
+/* Toutes les mutations et fusions prises (très longues parties) : plus rien à choisir. Au lieu
+   d'ouvrir un écran vide sans issue, on donne une récompense et la partie continue. */
+function anomaliesExhausted(){ return availableCards().length === 0; }
+function evolutionMaxReward(){
+  heal(1);
+  shockCharges = getMaxCharges();
+  const pts = 2000 * Math.max(1, multiplier);
+  addScore(pts);
+  addToast('ÉVOLUTION COMPLÈTE · +1 vie · charges pleines · +' + pts, '#ffd36b');
+  parryFlash = Math.max(parryFlash, 0.5);   // éclat doré (flash est réservé aux dégâts)
+  if(actx && !audioMuted) [660, 880, 1320].forEach((f,i)=>blip(f,0.18,'sine',0.11,undefined,i*0.07));
+}
 function openAnomalyScreen(){
+  if(anomaliesExhausted()){ evolutionMaxReward(); return; }
   state='anomaly'; anomalyScreenOpen=true; attract=false;
   drawAnomalyCards(); syncRerollBtn();
   anomalyScreen.classList.remove('hidden');

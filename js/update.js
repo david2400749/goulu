@@ -18,6 +18,8 @@ function collectDust(e){
     }
   }
   aliveEat(e.dustType);
+  massGain(e.dustType);
+  if(e.orbit) orbitEaten();
   if(e.dustType === 'blue'){ slowmoT = 1.0; timeScale = 0.4; flash = Math.max(flash, 0.25); }
   else if(e.dustType === 'red'){
     for(let i=entities.length-1;i>=0;i--){
@@ -53,6 +55,7 @@ function hitAnti(e){
   const d=Math.sqrt(dx*dx+dy*dy);
   lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR(), pulsar:!!e.pulsarBeam };
   aliveHurt();
+  massHit();
   lives--; runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
   combo=0; comboTimer=0; multiplier=1;
   parryChain=0; parryChainTimer=0; perfectChainFired=false;
@@ -65,12 +68,20 @@ function hitAnti(e){
 }
 function spawnShockwave(isEcho, pulse){
   const weak = !!(currentMode.beatOnly && !pulse && !isEcho);
+  const nova = !!(isEcho && mods.supernova);
+  const maxR = SHOCK_MAX_R * mods.shockRadiusMult * (currentMode.noShock ? 0.5 : 1) * (pulse ? 1.2 : 1) * (weak ? 0.45 : 1) * (nova ? 1.6 : 1);
   shockwaves.push({
-    r:bh.r,
-    maxR:SHOCK_MAX_R * mods.shockRadiusMult * (currentMode.noShock ? 0.5 : 1) * (pulse ? 1.2 : 1) * (weak ? 0.45 : 1),
+    r:bh.r, maxR,
     life:SHOCK_LIFE, maxLife:SHOCK_LIFE,
-    hit:new Set(), isEcho:!!isEcho, pulse:!!pulse, weak, counted:false
+    hit:new Set(), isEcho:!!isEcho, pulse:!!pulse, weak, counted:false, drop:!!pulse && dropActive()
   });
+  if(nova){   // Supernova : l'écho aspire la poussière qu'il traverse
+    for(const e of entities){
+      if(e.type !== 'dust' || e.orbit) continue;
+      const dx = bh.x - e.x, dy = bh.y - e.y, d = Math.hypot(dx, dy) || 1;
+      if(d < maxR){ e.vx = dx / d * 320 * PHYS; e.vy = dy / d * 320 * PHYS; }
+    }
+  }
   shake=Math.max(shake,6);
   if(!isEcho) blip(180,0.22,'sawtooth',0.13,90);
   else blip(280,0.18,'sine',0.09,180);
@@ -106,10 +117,12 @@ function doParry(e, pm, kind, fromEcho){
     else if(mods.echochainEnabled && (++echoParryCount % 3 === 0)) pendingEchoes.push({time:0.4});
   }
   if(mods.vampire) vampireTick();   // Vampire compte tous les parry, boss compris
+  if(mods.wormhole && parryCount % 2 === 0 && shockCharges < getMaxCharges()){ shockCharges++; addToast('🪐 +1 CHARGE', '#c99cff', H/2 + 40); }
   checkTechniques();
   if(parryChain >= CHAIN_THRESHOLD && !perfectChainFired){
     perfectChainFired = true; runHasPerfect = true; runPerfects++; aliveJet(1); thoughtOnce('perfect','Plus rien ne peut me toucher.');
     invincibleT = INVINCIBLE_DURATION + (mods.invincBonus||0);
+    if(mods.reaction) reactionBlast();
     slowmoT = reduceFx()?0.5:0.9; timeScale = 0.25;
     addToast('★ PERFECT CHAIN ★', '#ffffff', H/2 - 130);
     burst(e.x, e.y, '#ffffff', 48, 780);
@@ -182,6 +195,7 @@ function update(dt){
   if(state!=='play'){ danger=0; return; }
   elapsed+=gdt;
   aliveTick(gdt);
+  cosmosTick(gdt);
 
   if(specialization === 'fantome'){
     fantomeTimer += gdt;
@@ -243,7 +257,7 @@ function update(dt){
 
   if(combo>0){ comboTimer-=gdt; if(comboTimer<=0){ combo=0; comboTimer=0; } }
   multiplier = Math.min(MAX_MULT, 1+Math.floor(combo/6));
-  bh.rTarget = 20+(multiplier-1)*2.3;
+  bh.rTarget = (20+(multiplier-1)*2.3) * massR();
   musicSetBpm(70 + multiplier*10);
   beatBpm += (70 + multiplier*10 - beatBpm) * (1 - Math.exp(-dt*3));
   if(resonanceT > 0) resonanceT = Math.max(0, resonanceT - gdt);
@@ -271,8 +285,8 @@ function update(dt){
         addToast('SALVE', '#ff8aa0');
       }
       if(antiTimer<=0 && entities.length<ENTITY_CAP){
-        antiTimer = antiRate / (mods.antiSpawnMult||1) * ((boss && !currentWave) ? 2.2 : 1);
-        spawnEntity('anti');
+        antiTimer = antiRate / (mods.antiSpawnMult||1) / tierSpawn() * ((boss && !currentWave) ? 2.2 : 1);
+        spawnAnti();
       }
     }
   }
@@ -309,18 +323,32 @@ function update(dt){
       }
     }
 
-    if(e.pulsar){
+    if(e.type==='star'){
+      if(updateStar(e, gdt, d, ux, uy)){ tidalDisruption(e); entities.splice(i,1); }
+      else if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260) entities.splice(i,1);
+      continue;
+    }
+    if(e.kind==='comet'){
+      updateComet(e, gdt);
+    } else if(e.orbit){
+      updateOrbit(e, gdt);
+    } else if(e.pulsar){
       if(boss) updatePulsar(e, gdt);
       if(state!=='play') break;
+    } else if(e.whitehole){
+      if(boss) updateWhiteHole(e, gdt);
     } else if(e.bossPart && boss && boss.type.id==='eye'){
       e.eyeAngle += gdt*0.35;
       if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45*PHYS);
       else e.eyeR = Math.min(e.eyeR0, e.eyeR + gdt*30*PHYS);
       e.x = bh.x + Math.cos(e.eyeAngle)*e.eyeR; e.y = bh.y + Math.sin(e.eyeAngle)*e.eyeR;
     } else if(!e.bossPart || (boss && boss.type.id !== 'swarm')){
-      let effectiveAttract = ATTRACT_F*PHYS*PHYS*mods.attractMult;   // a = F/d : F ∝ PHYS² quand d ∝ PHYS
+      let effectiveAttract = ATTRACT_F*PHYS*PHYS*mods.attractMult*massPull();   // a = F/d : F ∝ PHYS² quand d ∝ PHYS
       if(specialization === 'devoreur' && e.type === 'anti') effectiveAttract *= 0.6;
+      if(e.kind === 'sling') effectiveAttract *= 1.9;          // fronde : ta gravité l'accélère
+      else if(e.kind === 'neutron') effectiveAttract *= 0.5;   // étoile à neutrons : très dense, lourde
       const hostileE = (e.type==='anti' || e.bossPart);
+      if(e.type==='dust' && boss && boss.type.id==='whitehole') whiteHolePush(e, gdt);
       if(attract){
         const f=effectiveAttract/Math.max(d, MIN_D*PHYS);
         e.vx+=ux*f*gdt; e.vy+=uy*f*gdt;
@@ -330,15 +358,18 @@ function update(dt){
         e.vy-=uy*REPEL_F*PHYS*mods.repelMult*rf*gdt;
       }
       if(hostileE && !e.isProjectile){
-        const seek = (e.bossPart ? (boss && boss.enraged ? 100 : 60) : 120) * PHYS * (profile.options.assist ? 0.55 : 1);
+        const seek = (e.bossPart ? (boss && boss.enraged ? 100 : 60) : 120 * tierSpeed() * (e.kind === 'sling' ? 0.35 : e.kind === 'neutron' ? 0.7 : 1)) * PHYS * (profile.options.assist ? 0.55 : 1);
         e.vx+=ux*seek*gdt; e.vy+=uy*seek*gdt;
       }
-      if(!e.isProjectile){ const dr=Math.pow(DRAG,gdt); e.vx*=dr; e.vy*=dr; }
+      if(!e.isProjectile){ const dr=Math.pow(DRAG,gdt*(e.kind==='sling'?0.45:1)); e.vx*=dr; e.vy*=dr; }
       const sp2=e.vx*e.vx+e.vy*e.vy;
       const vmax=MAX_SPEED*PHYS;
       if(sp2>vmax*vmax){ const sp=Math.sqrt(sp2); e.vx=e.vx/sp*vmax; e.vy=e.vy/sp*vmax; }
       e.x+=e.vx*gdt; e.y+=e.vy*gdt;
+      if(e.type==='dust') tryCapture(e, d);
     }
+    if(e.hitFlash > 0) e.hitFlash -= gdt;
+    if(e.type==='anti' && !e.bossPart && orbiters.length && orbitShield(e)){ entities.splice(i,1); continue; }
 
     if(!e.trail) e.trail = [];
     const sp2t = e.vx*e.vx+e.vy*e.vy;
@@ -359,13 +390,16 @@ function update(dt){
       for(let s=0;s<shockwaves.length;s++){
         const sw=shockwaves[s];
         if(!sw.hit.has(e) && d<sw.r+e.r*0.6){
-          sw.hit.add(e); killedByShock=true;
-          const pm = sw.pulse ? 1.5 : 1;
+          sw.hit.add(e);
+          if(neutronAbsorb(e, ux, uy)) break;
+          killedByShock=true;
+          const pm = sw.pulse ? (sw.drop ? 3 : 1.5) : 1;
           if(sw.pulse && !sw.counted){ sw.counted = true; registerPulse(); }
           const isParry = !sw.weak && d < parryR();
           if(e.bossPart){
             damageBoss(1, e.x, e.y);
             if(boss && boss.type.id === 'consumer'){ e.vx = -ux*420*PHYS; e.vy = -uy*420*PHYS; }
+            if(boss && boss.type.id === 'whitehole') e.eyeR = Math.min(e.eyeR0, e.eyeR + 70*PHYS);
             if(boss && boss.type.id === 'swarm'){
               boss.parts = boss.parts.filter(p => p !== e);
               if(boss.parts.length === 0) killBoss();
@@ -432,7 +466,7 @@ function update(dt){
       else if(e.near && d > hitR + 48){ e.grazed = true; aliveGraze(); }
     }
     if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260){
-      if(!e.bossPart) entities.splice(i,1);
+      if(!e.bossPart && !(e.kind==='comet' && e.warnT>0)) entities.splice(i,1);
       continue;
     }
     if((e.type==='anti' || (e.bossPart && !e.pulsar)) && d<nearDanger) nearDanger=d;

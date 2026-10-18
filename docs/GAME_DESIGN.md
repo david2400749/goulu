@@ -137,3 +137,26 @@ exprime son état sans qu'on ait à lire un chiffre :
 - **Accueil** selon l'absence (« Tu es revenu. J'avais faim. », « J'ai cru que tu m'avais oublié. »).
 - **Menu** : toucher près du trou noir l'attire, il avale le geste.
 
+## 6. Fin de partie et physique jouable (0.20)
+
+Une partie infinie de 3,6 millions de points avait épuisé les 15 mutations (25 niveaux) : l'écran de choix
+s'ouvrait vide et bloquait le jeu (corrigé en 0.19.1). Au-delà du correctif, la fin de partie manquait de décisions.
+
+- **Fusions** (7) : deux mutations au maximum se combinent (Supernova, Horizon, Trou de ver, Quasar, Trésor stellaire,
+  Singularité nue, Réaction en chaîne). Une fusion disponible est toujours proposée. Quand tout est pris :
+  « Évolution complète » (+1 vie, charges pleines, points) au lieu d'un écran.
+- **Paliers** : en partie infinie (et dans les modes sans fin), un palier par minute nommé d'après la vie des
+  étoiles : antimatière +7 % par palier, points +20 %, musique plus intense. Record de palier gardé au profil.
+- **Masse / évaporation de Hawking** : choix risque / récompense permanent. Équilibrage vérifié par simulation :
+  maigrir n'affaiblit pas l'attraction (sinon spirale perdante), seule la croissance la renforce.
+- **Orbites** : relâcher au bon moment place la poussière en orbite (8 au plus). Récompense l'adresse du relâché ;
+  en simulation, le bouclier réduit nettement les coups reçus.
+- **Étoile déchirée** (événement de rupture par effet de marée) : la « bombe » gagnée en aspirant longtemps, au
+  risque d'aspirer aussi l'antimatière.
+- **Menaces** : comète (lecture de la ligne d'avertissement), étoile à neutrons (gestion des charges), fronde
+  (aspirer au mauvais moment l'accélère vers toi).
+- **Le Trou Blanc** : boss « bras de fer » qui repousse la poussière, crache de l'antimatière et fuit dès qu'on
+  relâche ; il faut l'aspirer longtemps, donc s'exposer, pour le frapper.
+- **Drop** : la première mesure de chaque phrase musicale (intensité ≥ 2) double les pulses ; l'anneau du kick
+  devient rose.
+

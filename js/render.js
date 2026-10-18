@@ -168,9 +168,12 @@ function drawEntity(e, t, cb){
   const s = VIS_SCALE;   // > 1 sur petit écran : dessin agrandi autour de l'entité, collisions inchangées
   if(s !== 1){ sctx.save(); sctx.translate(e.x, e.y); sctx.scale(s, s); sctx.translate(-e.x, -e.y); }
   if(e.type === 'dust') drawDust(e, t);
+  else if(e.type === 'star') drawStar(e, t);
   else if(e.bossPart) drawBossPart(e, t);
   else if(e.isProjectile) drawBolt(e, t);
-  else drawAnti(e, t, cb);
+  else if(e.kind === 'comet') drawComet(e, t);
+  else if(e.kind === 'neutron') drawNeutron(e, t);
+  else drawAnti(e, t, cb, e.kind === 'sling');
   if(s !== 1) sctx.restore();
 }
 
@@ -180,9 +183,10 @@ function drawDust(e, t){
   drawTrail(e, DUST_RGB[d.id] || DUST_RGB.gold);
   const dx = bh.x - e.x, dy = bh.y - e.y;
   const dist = Math.hypot(dx, dy);
-  const ang = Math.atan2(dy, dx);
+  /* en orbite : étirée le long de sa course ; sinon vers le trou (spaghettification) */
+  const ang = e.orbit ? Math.atan2(e.vy, e.vx) : Math.atan2(dy, dx);
   const near = clamp(1 - (dist - bh.r) / 300, 0, 1);
-  const stretch = 1 + near * near * 3.2;
+  const stretch = e.orbit ? 1.7 : 1 + near * near * 3.2;
   const gz = 1 - Math.min(0.95, bh.r / 2.598 / Math.max(dist, 1));   // g² = 1 - Rs/r : rougit et s'éteint à l'horizon
   const flick = (0.8 + 0.2 * Math.sin(t * 9 + e.phase * 3)) * (0.35 + 0.65 * gz * gz);
   const R3 = e.r * 3.6;
@@ -215,13 +219,64 @@ function drawDust(e, t){
 }
 
 /* Antimatière : sphère de vide cernée d'une couronne d'annihilation */
-function drawAnti(e, t, cb){
-  const rgb = cb ? '90,170,255' : '255,60,110';
+/* Étoile de passage : étirée vers le trou à mesure que la marée la déchire */
+function drawStar(e, t){
+  const dx = bh.x - e.x, dy = bh.y - e.y, ang = Math.atan2(dy, dx);
+  const st = 1 + e.tidal * 1.6, R = e.r * 2.8;
+  const flick = 0.9 + 0.1 * Math.sin(t * 7 + e.phase);
+  sctx.save(); sctx.translate(e.x, e.y); sctx.rotate(ang); sctx.scale(st, 1 / Math.sqrt(st));
+  sctx.globalCompositeOperation = 'lighter';
+  sctx.drawImage(glowSprite('star', [[0, 'rgba(255,255,240,1)'], [0.18, 'rgba(255,236,170,.85)'], [0.45, 'rgba(255,190,90,.25)'], [1, 'rgba(255,150,60,0)']], R), -R, -R, R * 2, R * 2);
+  sctx.globalAlpha = flick;
+  sctx.beginPath(); sctx.arc(0, 0, e.r * 0.55, 0, Math.PI * 2); sctx.fillStyle = '#fffdf2'; sctx.fill();
+  sctx.globalAlpha = 1;
+  sctx.restore();
+  sctx.globalCompositeOperation = 'source-over';
+}
+/* Comète : noyau glacé et longue queue opposée à sa course */
+function drawComet(e, t){
+  const sp = Math.hypot(e.vx, e.vy);
+  if(sp > 1){
+    const ux = e.vx / sp, uy = e.vy / sp, L = 70 + sp * 0.06;
+    const g = sctx.createLinearGradient(e.x, e.y, e.x - ux * L, e.y - uy * L);
+    g.addColorStop(0, 'rgba(200,245,255,.9)'); g.addColorStop(1, 'rgba(120,200,255,0)');
+    sctx.globalCompositeOperation = 'lighter';
+    sctx.strokeStyle = g; sctx.lineWidth = e.r * 1.3; sctx.lineCap = 'round';
+    sctx.beginPath(); sctx.moveTo(e.x, e.y); sctx.lineTo(e.x - ux * L, e.y - uy * L); sctx.stroke();
+  }
+  const R = e.r * 3.4;
+  sctx.globalCompositeOperation = 'lighter';
+  sctx.drawImage(glowSprite('comet', [[0, 'rgba(240,252,255,1)'], [0.3, 'rgba(140,220,255,.6)'], [1, 'rgba(80,160,255,0)']], R), e.x - R, e.y - R, R * 2, R * 2);
+  sctx.globalCompositeOperation = 'source-over';
+  sctx.beginPath(); sctx.arc(e.x, e.y, e.r * 0.7, 0, Math.PI * 2); sctx.fillStyle = '#f2fbff'; sctx.fill();
+  sctx.strokeStyle = 'rgba(255,60,110,.9)'; sctx.lineWidth = 1.6; sctx.stroke();
+}
+/* Étoile à neutrons : sphère dense, lignes de champ, un anneau par PV restant */
+function drawNeutron(e, t){
+  const R = e.r * 3.6;
+  sctx.globalCompositeOperation = 'lighter';
+  sctx.drawImage(glowSprite('neutron', [[0, 'rgba(230,240,255,.9)'], [0.3, 'rgba(150,180,255,.45)'], [1, 'rgba(90,110,255,0)']], R), e.x - R, e.y - R, R * 2, R * 2);
+  sctx.save(); sctx.translate(e.x, e.y); sctx.rotate(t * 3 + e.phase);
+  sctx.strokeStyle = 'rgba(190,210,255,.55)'; sctx.lineWidth = 1;
+  for(const k of [-1, 1]){ sctx.beginPath(); sctx.ellipse(0, k * e.r * 0.9, e.r * 0.7, e.r * 1.5, 0, 0, Math.PI * 2); sctx.stroke(); }
+  sctx.restore();
+  sctx.globalCompositeOperation = 'source-over';
+  sctx.beginPath(); sctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+  sctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : '#dfe8ff'; sctx.fill();
+  sctx.strokeStyle = 'rgba(255,60,110,.95)'; sctx.lineWidth = 2; sctx.stroke();
+  for(let k = 0; k < (e.hp || 1); k++){
+    sctx.beginPath(); sctx.arc(e.x, e.y, e.r * (1.5 + k * 0.45), 0, Math.PI * 2);
+    sctx.strokeStyle = 'rgba(207,227,255,' + (0.7 - k * 0.2) + ')'; sctx.lineWidth = 1.2; sctx.stroke();
+  }
+}
+
+function drawAnti(e, t, cb, sling){
+  const rgb = cb ? '90,170,255' : (sling ? '201,120,255' : '255,60,110');
   drawTrail(e, rgb);
   const pulse = 1 + Math.sin(t * 5 + e.phase) * 0.1;
   const R3 = e.r * 3.8 * pulse;
   sctx.globalCompositeOperation = 'lighter';
-  sctx.drawImage(glowSprite(cb ? 'anti_cb' : 'anti', [[0, 'rgba(' + rgb + ',0)'], [0.34, 'rgba(' + rgb + ',0.55)'], [0.5, 'rgba(' + rgb + ',0.2)'], [1, 'rgba(' + rgb + ',0)']], R3 / pulse), e.x - R3, e.y - R3, R3 * 2, R3 * 2);
+  sctx.drawImage(glowSprite(cb ? 'anti_cb' : (sling ? 'anti_sling' : 'anti'), [[0, 'rgba(' + rgb + ',0)'], [0.34, 'rgba(' + rgb + ',0.55)'], [0.5, 'rgba(' + rgb + ',0.2)'], [1, 'rgba(' + rgb + ',0)']], R3 / pulse), e.x - R3, e.y - R3, R3 * 2, R3 * 2);
   sctx.globalCompositeOperation = 'source-over';
   sctx.save(); sctx.translate(e.x, e.y);
   sctx.beginPath();
@@ -254,6 +309,7 @@ function drawBolt(e, t){
 
 function drawBossPart(e, t){
   if(e.pulsar){ drawPulsar(e, t); return; }
+  if(e.whitehole){ drawWhiteHole(e, t); return; }
   const color = boss ? boss.type.color : '#ff2d6f';
   const bid = boss ? boss.type.id : 'consumer';
   const flashAmt = boss && boss.hitFlash > 0 ? boss.hitFlash / 0.18 : 0;
@@ -326,6 +382,67 @@ function drawBossPart(e, t){
   }
 }
 
+/* Trou blanc : l'inverse du joueur, une fontaine de lumière d'où tout jaillit */
+function drawWhiteHole(e, t){
+  const flashAmt = boss && boss.hitFlash > 0 ? boss.hitFlash / 0.18 : 0;
+  const rage = boss && boss.enraged;
+  const R = e.r * 2.6;
+  sctx.globalCompositeOperation = 'lighter';
+  sctx.drawImage(glowSprite('whitehole', [[0, 'rgba(255,255,255,.9)'], [0.25, 'rgba(220,240,255,.5)'], [0.6, 'rgba(160,210,255,.12)'], [1, 'rgba(120,170,255,0)']], R), e.x - R, e.y - R, R * 2, R * 2);
+  sctx.save(); sctx.translate(e.x, e.y);
+  /* rayons qui jaillissent */
+  sctx.rotate(t * (rage ? -0.9 : 0.5));
+  sctx.lineCap = 'round';
+  for(let i = 0; i < 14; i++){
+    const a = i / 14 * Math.PI * 2, p = (t * 0.9 + i * 0.37) % 1;
+    const r0 = e.r * (1.1 + p * 1.6), r1 = r0 + e.r * 0.7;
+    sctx.strokeStyle = (rage ? 'rgba(255,170,170,' : 'rgba(220,240,255,') + (0.7 * (1 - p)).toFixed(2) + ')';
+    sctx.lineWidth = 1.6;
+    sctx.beginPath(); sctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); sctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); sctx.stroke();
+  }
+  sctx.restore();
+  /* anneaux expulsés */
+  for(let k = 0; k < 3; k++){
+    const p = (t * 0.6 + k / 3) % 1;
+    sctx.beginPath(); sctx.arc(e.x, e.y, e.r * (1 + p * 2.4), 0, Math.PI * 2);
+    sctx.strokeStyle = 'rgba(234,246,255,' + (0.45 * (1 - p)).toFixed(2) + ')'; sctx.lineWidth = 1.4; sctx.stroke();
+  }
+  sctx.globalCompositeOperation = 'source-over';
+  sctx.beginPath(); sctx.arc(e.x, e.y, e.r * 0.62, 0, Math.PI * 2);
+  sctx.fillStyle = '#ffffff'; sctx.fill();
+  if(rage){ sctx.lineWidth = 3; sctx.strokeStyle = 'rgba(255,90,90,' + (0.45 + 0.4 * Math.sin(t * 12)).toFixed(2) + ')'; sctx.beginPath(); sctx.arc(e.x, e.y, e.r * 1.25, 0, Math.PI * 2); sctx.stroke(); }
+  if(flashAmt > 0){ sctx.fillStyle = 'rgba(255,200,220,' + (flashAmt * 0.8).toFixed(2) + ')'; sctx.beginPath(); sctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); sctx.fill(); }
+}
+
+/* Repères des nouveautés : ligne d'avertissement des comètes, jauge de marée de l'étoile */
+function drawCosmosMarks(t){
+  for(let i = 0; i < entities.length; i++){
+    const e = entities[i];
+    if(e.dead) continue;
+    if(e.kind === 'comet' && e.warnT > 0){
+      const a = 0.35 + 0.45 * Math.abs(Math.sin(t * 14));
+      ctx.save();
+      ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 60;
+      ctx.strokeStyle = 'rgba(160,232,255,' + a.toFixed(2) + ')'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(bh.x, bh.y); ctx.stroke();
+      ctx.restore();
+      const cx = Math.max(24, Math.min(W - 24, e.x)), cy = Math.max(24, Math.min(H - 24, e.y));
+      ctx.fillStyle = 'rgba(160,232,255,' + (a + 0.3).toFixed(2) + ')';
+      ctx.font = '700 22px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('☄', cx, cy);
+    } else if(e.type === 'star' && e.tidal > 0.01){
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 2.6, -Math.PI / 2, -Math.PI / 2 + e.tidal * Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,233,163,.9)'; ctx.lineWidth = 2.4; ctx.stroke();
+    }
+  }
+  /* poussière en orbite : un fin anneau doré */
+  if(orbiters.length){
+    let rr = 0; for(const o of orbiters) rr += o.orbitR; rr /= orbiters.length;
+    ctx.beginPath(); ctx.arc(bh.x, bh.y, rr, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,203,90,' + (0.08 + 0.03 * orbiters.length).toFixed(3) + ')'; ctx.lineWidth = 1; ctx.stroke();
+  }
+}
+
 /* ---------- OVERLAY (repères en monde, non déformés) ---------- */
 const TICK_N = 96;
 function nearestThreat(pr){
@@ -370,7 +487,8 @@ function drawPlayerHud(t){
   ctx.strokeStyle = 'rgba(' + col + ',' + baseA.toFixed(3) + ')';
   ctx.lineWidth = 1.2; ctx.stroke();
   if(kick > 0.02 && !reduceFx()){
-    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,225,150,' + (kick * 0.3).toFixed(2) + ')';
+    const drop = dropActive();
+    ctx.lineWidth = drop ? 2 : 1; ctx.strokeStyle = (drop ? 'rgba(255,156,240,' : 'rgba(255,225,150,') + (kick * (drop ? 0.6 : 0.3)).toFixed(2) + ')';
     ctx.beginPath(); ctx.arc(0, 0, bh.r + 10 + (1 - kick) * pr * 0.9, 0, Math.PI * 2); ctx.stroke();
   }
 
@@ -493,6 +611,7 @@ function drawOverlay(t, shk){
       ctx.strokeStyle = 'rgba(255,92,138,' + ha.toFixed(3) + ')'; ctx.lineWidth = 2; ctx.stroke();
     }
     if(state === 'play' || (state === 'tutorial' && tutorialStep >= 1)) drawPlayerHud(t);
+    if(state === 'play' || state === 'paused' || state === 'anomaly' || state === 'resume') drawCosmosMarks(t);
     drawPulsarWarnings(t);
     ctx.restore();
     if(state === 'play') drawOffscreenWarnings();

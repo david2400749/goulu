@@ -49,6 +49,12 @@
     <div class="row1">
       <div class="hearts" id="hearts"></div>
     </div>
+    <div class="mass-meter" id="massMeter" title="Masse du trou noir">
+      <span class="hud-label">Masse</span>
+      <div class="mass-track"><div class="mass-fill" id="massFill"></div></div>
+      <b id="massVal">1,00</b>
+    </div>
+    <div class="tier-chip" id="tierChip"></div>
   </div>
   <div class="hud-center">
     <div class="hud-label">Masse absorbée</div>
@@ -164,6 +170,9 @@
           <div class="row"><div class="ic">⌖</div><div class="tx"><b>Parry</b> au timing : chaînes ×2, ×4 et <span style="color:var(--gold)">PERFECT CHAIN</span>.</div></div>
           <div class="row"><div class="ic">♪</div><div class="tx" id="howtoBeat"><b>Relâche sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.</div></div>
           <div class="row"><div class="ic">◈</div><div class="tx" id="howtoBoss">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
+          <div class="row"><div class="ic">◎</div><div class="tx"><b>Arrête d'aspirer</b> près du trou : la poussière se met en <b>orbite</b>. L'anneau rapporte, te protège, et avalé d'un coup donne un bonus.</div></div>
+          <div class="row"><div class="ic">★</div><div class="tx">Une <b>étoile</b> passe ? Aspire-la longtemps : la marée la <b>déchire</b> et l'éclair pulvérise l'antimatière.</div></div>
+          <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : manger te fait grossir (attraction et points), mais tu t'<b>évapores</b> si tu jeûnes, et un gros trou est plus facile à toucher.</div></div>
         </div>
         <button class="btn btn-primary cta-sticky" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
       </div>
@@ -424,6 +433,7 @@
 <script src="js/audio.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/pulsar.js"></script>
+<script src="js/cosmos.js"></script>
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/alive.js"></script>

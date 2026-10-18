@@ -56,6 +56,9 @@ function spawnBossByName(bossId){
       const e={ x:bh.x+Math.cos(a)*R, y:bh.y+Math.sin(a)*R, vx:0, vy:0, r:12, type:'boss', bossPart:true, phase:rng()*Math.PI*2, swarmAngle:a, swarmR:R, swarmR0:R, isMain:false, trail:[] };
       entities.push(e); boss.parts.push(e);
     }
+  } else if(type.id==='whitehole'){
+    const e = spawnWhiteHole();
+    entities.push(e); boss.parts.push(e);
   } else if(type.id==='pulsar'){
     const e = makePulsar();
     entities.push(e); boss.parts.push(e);
@@ -167,7 +170,7 @@ function addToast(text,color,y){
 function reduceFx(){ return !!profile.options.reduceFx; }
 function fm(){ let m = 1; if(mods && mods.fureur && timeSinceRelease > 5) m *= 2; if(kamikazeTimer > 0) m *= 2; return m; }
 function isEngaged(){ return parryCount > 0 || runDust >= 10; }
-function vampireTick(){ vampireCount++; if(vampireCount >= 3){ vampireCount = 0; heal(1); } }
+function vampireTick(){ vampireCount++; if(vampireCount >= (mods.vampireEvery || 3)){ vampireCount = 0; heal(1); } }
 function knockBoss(e, ux, uy, hitR){
   e.x = bh.x - ux*(hitR+110); e.y = bh.y - uy*(hitR+110); e.vx = 0; e.vy = 0;
   if(e.eyeR0 !== undefined) e.eyeR = Math.min(e.eyeR0, bh.r+140);
@@ -195,7 +198,9 @@ function beatWindow(len){ return Math.min(0.09, len*0.14) * (currentMode.beatOnl
 function isOnBeat(){ const b = beatInfo(); return b.dist <= beatWindow(b.len); }
 function registerPulse(){
   runPulses++; profile.pulses = (profile.pulses||0) + 1; pulseStreak++;
-  addToast(pulseStreak > 1 ? 'PULSE ×' + pulseStreak : 'SUR LE TEMPO', '#ffd36b');
+  const drop = dropActive();
+  if(drop) pulseStreak++;   // drop de la musique : le pulse compte double vers la Résonance
+  addToast(drop ? 'DROP · PULSE ×' + pulseStreak : (pulseStreak > 1 ? 'PULSE ×' + pulseStreak : 'SUR LE TEMPO'), drop ? '#ff9cf0' : '#ffd36b');
   if(actx && !audioMuted){
     const k = Math.min(pulseStreak, 8);
     blip(660 + k*90, 0.22, 'triangle', 0.15);
@@ -228,7 +233,8 @@ function thoughtHit(){
   if(lives > 0 && lives <= 1) thoughtOnce('low', 'Pas encore.');
   else thought(pick(persona().hit));
 }
-const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.', pulsar:'Il tourne. Il bat. Comme moi.' };
+const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.', pulsar:'Il tourne. Il bat. Comme moi.',
+  whitehole:'Mon contraire. Il rend tout ce que je prends.' };
 function a11y(el){
   el.tabIndex = 0; el.setAttribute('role','button');
   el.addEventListener('keydown', ev=>{ if(ev.code==='Space'||ev.code==='Enter'){ ev.preventDefault(); ev.stopPropagation(); el.click(); } });

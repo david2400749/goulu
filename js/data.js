@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.19.0-dev';
+const GAME_VERSION = '0.20.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -225,6 +225,28 @@ const ANOMALIES = [
   { id:'pacte', name:'Pacte Noir', icon:'🖤', cat:'risk', rarity:'legendary', desc:'<b>+150% pts</b> mais <b>-1 vie</b>', max:1, apply:(m)=>{ m.anomScore *= 2.5; m.bonusLives -= 1; } },
   { id:'echo', name:'Écho', icon:'🔊', cat:'special', rarity:'legendary', desc:'Chaque parry crée une <b>2e onde</b>', max:1, apply:(m)=>{ m.echo = true; } },
 ];
+/* 0.20 : fusions. Quand les deux mutations requises sont au maximum, une carte « fusion »
+   les combine en un effet nouveau : il reste des choix à faire même en fin de partie. */
+const FUSIONS = [
+  { id:'supernova', name:'Supernova', icon:'💥', cat:'force', rarity:'fusion', needs:['onde','echo'], max:1,
+    desc:'Ondes d\'écho <b>×1,6</b> plus grandes, elles <b>aspirent la poussière</b>', apply:(m)=>{ m.supernova = true; } },
+  { id:'horizon', name:'Horizon', icon:'🕳️', cat:'def', rarity:'fusion', needs:['carapace','vampire'], max:1,
+    desc:'<b>+1 vie</b> et Vampire tous les <b>2 parry</b>', apply:(m)=>{ m.bonusLives += 1; m.vampireEvery = 2; } },
+  { id:'trouver', name:'Trou de ver', icon:'🪐', cat:'mob', rarity:'fusion', needs:['instinct','reflexe'], max:1,
+    desc:'Un parry sur deux <b>rend une charge</b>', apply:(m)=>{ m.wormhole = true; } },
+  { id:'quasar', name:'Quasar', icon:'🔆', cat:'force', rarity:'fusion', needs:['force','souffle'], max:1,
+    desc:'4 s d\'aspiration continue : les <b>jets polaires</b> pulvérisent l\'antimatière sur leur axe', apply:(m)=>{ m.quasar = true; } },
+  { id:'tresor', name:'Trésor stellaire', icon:'💎', cat:'eco', rarity:'fusion', needs:['mine','capital'], max:1,
+    desc:'Poussière <b>+3 pts</b> et <b>+1</b> charge max', apply:(m)=>{ m.dustValue += 3; m.maxCharges += 1; } },
+  { id:'singularite', name:'Singularité nue', icon:'⚫', cat:'risk', rarity:'fusion', needs:['pacte','fureur'], max:1,
+    desc:'Plafond des multiplicateurs de score <b>×4 → ×6</b>', apply:(m)=>{ m.scoreCap = 6; } },
+  { id:'reaction', name:'Réaction en chaîne', icon:'☢️', cat:'mob', rarity:'fusion', needs:['chaine','rendement'], max:1,
+    desc:'Chaque <b>Perfect Chain</b> pulvérise l\'antimatière autour de toi', apply:(m)=>{ m.reaction = true; } },
+];
+function anomDef(id){ return ANOMALIES.find(x => x.id === id) || FUSIONS.find(x => x.id === id); }
+
+/* 0.20 : paliers de la partie infinie (un toutes les 60 s), nommés d'après la vie des étoiles */
+const TIER_NAMES = ['NÉBULEUSE', 'PROTO-ÉTOILE', 'NAINE ROUGE', 'GÉANTE ROUGE', 'NAINE BLANCHE', 'ÉTOILE À NEUTRONS', 'MAGNÉTAR', 'HYPERNOVA', 'QUASAR', 'SINGULARITÉ'];
 /* PV +1 en 0.12.2 pour compenser Écho et Vampire désormais actifs sur les boss.
    La Nuée a autant d'éclats que de PV. */
 const BOSS_TYPES = [
@@ -233,4 +255,7 @@ const BOSS_TYPES = [
   { id:'eye', name:'L\'Œil', icon:'🌀', hp:5, color:'#7ee7ff', pts:1000 },
   /* 0.15 : boss de rythme, ne se frappe qu'en renvoyant son faisceau (js/pulsar.js) */
   { id:'pulsar', name:'Le Pulsar', icon:'✴️', hp:5, color:'#a9dcff', pts:1200 },
+  /* 0.20 : un trou blanc, l'inverse du joueur : il repousse la poussière, crache de
+     l'antimatière et fuit dès qu'on cesse de l'aspirer (js/cosmos.js) */
+  { id:'whitehole', name:'Le Trou Blanc', icon:'⚪', hp:6, color:'#eaf6ff', pts:1400 },
 ];
