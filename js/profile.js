@@ -60,6 +60,10 @@ function migrate(p){
   p.xp = p.xp || 0;
   p.xpBonusDate = p.xpBonusDate || '';
   p.pulsarsKilled = p.pulsarsKilled || 0;
+  /* 0.16 : trou noir vivant */
+  p.bhName = typeof p.bhName === 'string' ? p.bhName.slice(0, 16) : '';
+  p.namePromptSeen = !!p.namePromptSeen;
+  p.lastSeen = p.lastSeen || 0;
   p.specUnlocked = p.specUnlocked || {};
   p.tutorialDone = p.tutorialDone || false;
   p.bossTutorialDone = p.bossTutorialDone || false;

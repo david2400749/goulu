@@ -644,6 +644,112 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.16 : trou noir vivant ---------- */
+  await test('Humeurs : repu après un festin, affamé après un jeûne', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      entities.length = 0; elemChain = { type: null, count: 0, timer: 0 };
+      for(let i = 0; i < 10; i++){ collectDust({ dustType: 'gold', x: bh.x, y: bh.y }); }
+      const fed = { sated: aliveMood().sated, glow: aliveVisual(1).glow };
+      ALIVE.satiety = 0; elapsed = 30; ALIVE.lastEat = 15;
+      const starved = { hungry: aliveMood().hungry, glow: aliveVisual(1).glow, spin: aliveVisual(1).spin };
+      return { fed, starved };
+    });
+    await ctx.close();
+    assert(r.fed.sated >= 0.6 && r.fed.glow > 1.1, 'repu : ' + JSON.stringify(r.fed));
+    assert(r.starved.hungry === 1 && r.starved.glow < 0.8 && r.starved.spin < 0.7, 'affamé : ' + JSON.stringify(r.starved));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Stades : Graine → Quasar selon la masse, affiché en fin de partie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      runDust = 45; aliveTick(0.016); const s1 = ALIVE.stage;
+      runDust = 300; aliveTick(0.016); const s3 = ALIVE.stage;
+      const hpR = bh.r;                                   // la zone de collision ne bouge pas
+      lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y });
+      return { s1, s3, jet: ALIVE.jet, sameR: bh.r === hpR, over: document.getElementById('overStage').textContent };
+    });
+    await ctx.close();
+    assert(r.s1 === 1 && r.s3 === 3 && r.jet > 0.5 && r.sameR, JSON.stringify(r));
+    assert(/QUASAR/.test(r.over), 'écran de fin : ' + r.over);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Frôlement : sursaut quand une antimatière passe tout près sans toucher', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      entities.length = 0; attract = false; antiTimer = dustTimer = 999;
+      const e = { x: bh.x + 50, y: bh.y, vx: 0, vy: 0, r: R_ANTI, type: 'anti', phase: 0, trail: [] };
+      entities.push(e); hitstop = 0; update(1 / 60);
+      e.x = bh.x + 130; e.y = bh.y; e.vx = e.vy = 0; hitstop = 0; update(1 / 60);
+      return { near: !!e.near, grazed: !!e.grazed, flinch: ALIVE.flinch, lives };
+    });
+    await ctx.close();
+    assert(r.near && r.grazed && r.flinch > 0.9 && r.lives === 3, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Jets polaires sur une Perfect Chain ; personnalité selon le niveau', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      entities.length = 0; ALIVE.jet = 0; parryChain = CHAIN_THRESHOLD - 1; perfectChainFired = false;
+      doParry({ x: bh.x + 40, y: bh.y }, 1, 'shock');
+      const jet = ALIVE.jet;
+      const p = lv => { profile.level = lv; return PERSONAS.indexOf(persona()); };
+      return { jet, p1: p(1), p7: p(7), p20: p(20) };
+    });
+    await ctx.close();
+    assert(r.jet === 1 && r.p1 === 0 && r.p7 === 1 && r.p20 === 2, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Nom du trou noir : proposé après la 1re partie, Entrée valide sans lancer de partie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.evaluate(() => { lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y }); });
+    await page.waitForTimeout(300);
+    await page.click('#btnMenu');
+    const shown = await page.evaluate(() => !document.getElementById('nameModal').classList.contains('hidden'));
+    await page.fill('#nameInput', '');
+    await page.type('#nameInput', 'Nox Prime<');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({ name: profile.bhName, hidden: document.getElementById('nameModal').classList.contains('hidden'),
+      state, greet: document.getElementById('menuGreet').textContent, again: profile.namePromptSeen }));
+    await page.evaluate(() => { backToMenu(); });
+    const reshown = await page.evaluate(() => !document.getElementById('nameModal').classList.contains('hidden'));
+    const share = await page.evaluate(() => { score = 4400; return buildShareText(); });
+    await ctx.close();
+    assert(shown, 'pas de proposition de nom');
+    assert(r.name === 'Nox Prime' && r.hidden && r.state === 'menu' && r.greet.includes('Nox Prime'), JSON.stringify(r));
+    assert(!reshown, 'proposé une deuxième fois');
+    assert(share.includes('Nox Prime a avalé 4400 pts'), share);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Accueil selon l\'absence ; le menu avale un toucher près du trou noir', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, lastSeen: Date.now() - 2.5 * 86400000 } });
+    const greet = await page.evaluate(() => document.getElementById('menuGreet').textContent);
+    const g = await page.evaluate(() => { const n = Date.now(); return [greetingFor(0, n), greetingFor(n - 1.2 * 86400000, n), greetingFor(n - 9 * 86400000, n)]; });
+    await page.waitForTimeout(800);                       // la caméra du menu est en place
+    const pos = await page.evaluate(() => ({ x: bh.x + cam.dx + bh.r * cam.zoom * 2.5, y: bh.y + cam.dy + 10 }));   // à côté de l'ombre
+    const before = await page.evaluate(() => state);
+    await page.mouse.click(pos.x, pos.y);
+    const r = await page.evaluate(() => ({ sink: particles.filter(p => p.sink).length, pull: ALIVE.menuPull, state }));
+    const left = await page.evaluate(() => { for(let i = 0; i < 150; i++) update(1 / 60); return particles.filter(p => p.sink).length; });   // 2,5 s de jeu
+    await ctx.close();
+    assert(greet.includes('2 jours'), 'accueil : ' + greet);
+    assert(/souviens/.test(g[0]) && /revenu/.test(g[1]) && /oublié/.test(g[2]), JSON.stringify(g));
+    assert(before === 'menu' && r.state === 'menu' && r.sink >= 10 && r.pull > 0.5, 'toucher au menu : ' + JSON.stringify(r));
+    assert(left === 0, left + ' particules jamais avalées');
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [

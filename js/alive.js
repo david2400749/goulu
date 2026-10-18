@@ -234,3 +234,15 @@ function sinkParticle(p, dt){
   p.vx += -dy / d * 60 * dt; p.vy += dx / d * 60 * dt;          // un peu de rotation, comme un disque
   if(d < bh.r * Math.max(1, cam.zoom) * 0.9) p.life = 0;
 }
+
+/* Stade atteint, sur l'écran de fin */
+function showStage(){
+  const el = $('overStage'); if(!el) return;
+  const st = STAGES[ALIVE.stage];
+  el.textContent = (bhName() || 'Ton trou noir') + ' · stade ' + st.name;
+  el.classList.toggle('top', ALIVE.stage >= STAGES.length - 1);
+}
+/* Un toucher sur le fond du menu (pas sur un bouton, un onglet ou un panneau). */
+function menuTapTarget(t){
+  return !(t && t.closest && t.closest('button, input, .mtab, .mbadge, .panel, .mode-card, .menu-tabs, #nameModal, #optionsScreen'));
+}

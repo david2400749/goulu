@@ -204,7 +204,7 @@ function setOverBase(title, modeTxt, nearHtml, nearClose, causeT, causeH, recTxt
   hudEl.classList.remove('active');
   ghostLineEl.classList.remove('on');
   overEl.classList.remove('hidden');
-  showXpResult(lastXp); showNextGoal();
+  showXpResult(lastXp); showNextGoal(); showStage();
 }
 function runSummaryObj(){
   return {
@@ -213,7 +213,7 @@ function runSummaryObj(){
     wasDaily:lastGameWasDaily,
     wave:(currentMode.useWaves && !currentCampaignLevel) ? waveIndex+1 : 0,
     elemChains:runElemChains, elemTypes:elemTypesCollected.size, engaged:isEngaged(),
-    perfects:runPerfects, revived:runRevives > 0
+    perfects:runPerfects, revived:runRevives > 0, stage:STAGES[ALIVE.stage].name
   };
 }
 function bookkeepRun(run){

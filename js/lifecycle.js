@@ -50,6 +50,7 @@ function startGame(modeId, isDaily){
   campaignReducedStats = !!(currentCampaignLevel && currentCampaignLevel.constraint === 'reducedStats');
   runTechniques = { dashparry: false, echochain: false, momentum: false };
   pulsarDailyDone = false; endlessBossAt = 30; resumeT = 0; $('resumeScreen').classList.add('hidden');
+  aliveReset();
   reviveUsed = false; runRevives = 0; rerollsLeft = RUN_REROLLS; lastXp = null;
   $('reviveScreen').classList.add('hidden');
   parryTimes = [];
@@ -124,7 +125,7 @@ function startGame(modeId, isDaily){
   }
   spawnTutorialRing();
   if(activeDailyRule) addToast(activeDailyRule.name + ' · ' + activeDailyRule.desc, '#7ee7ff');
-  setTimeout(()=>{ if(state==='play') thoughtOnce('start', ['J\'ai faim.','Encore.','Le silence a un goût.'][Math.floor(Math.random()*3)]); }, 1400);
+  setTimeout(()=>{ if(state==='play') thoughtOnce('start', pick(persona().start)); }, 1400);
 
   const ghost = getBestGhostPace();
   ghostLineEl.classList.toggle('on', !!(ghost && ghost.length >= 3));
@@ -239,7 +240,7 @@ function gameOver(){
   ghostLineEl.classList.remove('on');
   bossBarEl.classList.remove('on');
   overEl.classList.remove('hidden');
-  showXpResult(lastXp); showNextGoal();
+  showXpResult(lastXp); showNextGoal(); showStage();
   deathSound();
   refreshMenuBadges();
   checkModeUnlocks();
@@ -269,4 +270,5 @@ function backToMenu(){
   refreshMenuBadges(); refreshDaily(); renderAch(); renderSkins();
   renderModeGrid(); renderQuests(); renderStats();
   renderCampaign(); renderJournal(); renderEvolution();
+  renderGreeting(); maybeAskName();
 }

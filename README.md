@@ -24,13 +24,16 @@ des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : l
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
 
+Le trou noir est vivant : il a faim, il jubile, il souffre, il regarde la menace, crache des jets
+polaires sur une Perfect Chain et grandit de *Graine* à *Quasar* au fil de la partie. Tu peux le nommer.
+
 Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'écran d'accueil »).
 
 ---
 
 ## Développement
 
-**Version actuelle : 0.15.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.16.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -66,6 +69,7 @@ js/
   render.js        couche scène (entités), overlay (repères), paramètres envoyés au GPU, repli 2D
   hud.js audio.js  HUD, audio synthétisé (SFX, musique, grondement gravitationnel)
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
+  alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil
   meta.js          progression de compte : niveau / XP, bonus du jour, seconde chance, prochain objectif
   entities.js progression.js campaign.js lifecycle.js update.js   logique du jeu
   input.js ui.js boot.js main.js                                    entrées, menus, démarrage, boucle

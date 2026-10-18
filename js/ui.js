@@ -305,6 +305,7 @@ function buildSummary(){
   if(runBossesKilled > 0) bits.push(runBossesKilled + ' boss');
   bits.push(runHits === 0 ? 'sans dégât' : runHits + ' dégât' + (runHits > 1 ? 's' : ''));
   if(parryCount > 0) bits.push(parryCount + ' parry');
+  if(ALIVE.stage > 0) bits.push('stade ' + STAGES[ALIVE.stage].name.toLowerCase());
   return bits.join(' · ');
 }
 function shareLabel(){
@@ -321,7 +322,7 @@ function shareUrl(){
 }
 function buildShareText(){
   const header = '🕳️ GOULU · ' + shareLabel();
-  const parts = [header, score + ' pts', buildSummary()];
+  const parts = [header, (bhName() ? bhName() + ' a avalé ' : '') + score + ' pts', buildSummary()];
   if(profile.streak.current >= 2) parts.push('🔥 ' + profile.streak.current + ' jours');
   parts.push('Bats-moi : ' + shareUrl());
   return parts.join('\n');
@@ -505,6 +506,10 @@ $('btnQuit').addEventListener('click', ()=>{
   }
 });
 $('btnSkipTut').addEventListener('click', e=>{ e.stopPropagation(); if(tutorialActive) endTutorial(); });
+$('btnNameSave').addEventListener('click', e=>{ e.stopPropagation(); saveName(); });
+$('btnNameLater').addEventListener('click', e=>{ e.stopPropagation(); closeNameModal(); });
+$('nameInput').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); saveName(); } });
+$('menuGreet').addEventListener('click', e=>{ e.stopPropagation(); openNameModal(); });
 $('btnRevive').addEventListener('click', e=>{ e.stopPropagation(); acceptRevive(); });
 $('btnReviveNo').addEventListener('click', e=>{ e.stopPropagation(); declineRevive(); });
 $('btnReroll').addEventListener('click', e=>{ e.stopPropagation(); rerollAnomalies(); });
