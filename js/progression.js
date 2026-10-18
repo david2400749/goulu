@@ -58,7 +58,7 @@ function triggerElementalChain(type){
   runElemChains++; profile.elemChains++; saveP();
   let msg = '', color = d.color;
   switch(type){
-    case 'gold': addScore(5 * multiplier * scoreK(false)); msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
+    case 'gold': addScore(5 * mulK(multiplier * scoreK(false))); msg = '★ TRIO DORÉ'; burst(bh.x, bh.y, '#ffcb4d', 30, 400); break;
     case 'blue': overkillFreeze = 2.0; msg = '❄️ FREEZE GLOBAL'; burst(bh.x, bh.y, '#7ee7ff', 40, 500); break;
     case 'red': chainExplosion(); msg = '🔥 EXPLOSION EN CHAÎNE'; burst(bh.x, bh.y, '#ff5c2d', 50, 600); break;
     case 'white': shockCharges = Math.min(getMaxCharges()*2, shockCharges + getMaxCharges()); msg = '⚪ OVERCHARGE'; burst(bh.x, bh.y, '#ffffff', 40, 500); break;
@@ -81,7 +81,7 @@ function chainExplosion(){
   }
   for(const e of toKill){
     burst(e.x, e.y, '#ff5c2d', 15, 400);
-    addScore(10 * multiplier * scoreK(false)); combo++; if(combo>maxCombo) maxCombo=combo;
+    addScore(10 * mulK(multiplier * scoreK(false))); combo++; if(combo>maxCombo) maxCombo=combo;
     e.dead = true;
   }
 }
@@ -294,8 +294,8 @@ function showAchToast(a){
 /* =========================================================
    Anomaly
    ========================================================= */
-function applyAnomalyEffect(card){
-  card.apply(mods);
+function applyAnomalyEffect(card, k){
+  card.apply(mods, k || 0);
   if(mods.bonusLives !== 0){
     const delta = mods.bonusLives;
     mods.bonusLives = 0;
@@ -305,13 +305,24 @@ function applyAnomalyEffect(card){
   buildPips();
   if(actx && !audioMuted) blip(660,0.2,'sine',0.14,990);
 }
+/* Mutations possédées (les deux mutations d'une fusion comptent comme possédées, au maximum). */
+function ownedMap(){
+  const owned={};
+  for(const a of activeAnomalies){
+    owned[a.id]=a.stacks;
+    if(a.parts) for(const p of a.parts) owned[p.id]=p.stacks;
+  }
+  return owned;
+}
+function slotsUsed(){ return activeAnomalies.length; }
+function slotsFull(){ return slotsUsed() >= MUT_SLOTS; }
+function anomalyCount(){ let n = 0; for(const a of activeAnomalies) n += 1 + (a.parts ? a.parts.length : 0); return n; }
 /* Cartes encore tirables : mutations pas au maximum, et fusions dont les deux mutations le sont. */
 function availableFusions(owned){
-  return FUSIONS.filter(f => !owned[f.id] && f.needs.every(id => { const d = ANOMALIES.find(x => x.id === id); return d && (owned[id]||0) >= d.max; }));
+  return FUSIONS.filter(f => !owned[f.id] && f.needs.every(id => { const d = ANOMALIES.find(x => x.id === id); return d && (owned[id]||0) >= d.max && activeAnomalies.some(a => a.id === id); }));
 }
 function availableCards(){
-  const owned={};
-  for(const a of activeAnomalies) owned[a.id]=a.stacks;
+  const owned=ownedMap();
   return ANOMALIES.filter(c => (owned[c.id]||0) < c.max).concat(availableFusions(owned));
 }
 function pickAnomalyCard(){
@@ -325,12 +336,22 @@ function pickAnomalyCard(){
   }
   return pool[Math.floor(cardRng()*pool.length)];
 }
+function pickFreeCard(){
+  const ok = availableCards().filter(c => !needsSlot(c));
+  return ok.length ? ok[Math.floor(cardRng() * ok.length)] : null;
+}
+/* Une carte qui demanderait un 9e emplacement : il faudra oublier une mutation. */
+function needsSlot(c){ return !c.needs && !activeAnomalies.some(a => a.id === c.id) && slotsFull(); }
+function setAnomSub(){
+  const el = document.querySelector('#anomalyScreen .anom-sub');
+  if(el) el.textContent = 'Choisis une mutation · emplacements ' + slotsUsed() + ' / ' + MUT_SLOTS;
+}
 function drawAnomalyCards(){
   anomCards.innerHTML='';
+  setAnomSub();
   const seen=new Set(); const chosen=[];
   /* une fusion disponible est toujours proposée : c'est la récompense d'un build abouti */
-  const owned={}; for(const a of activeAnomalies) owned[a.id]=a.stacks;
-  const fus = availableFusions(owned);
+  const fus = availableFusions(ownedMap());
   if(fus.length){ const f = fus[Math.floor(cardRng()*fus.length)]; seen.add(f.id); chosen.push(f); }
   for(let i=chosen.length;i<3;i++){
     let c=pickAnomalyCard(); if(!c) break;
@@ -341,17 +362,63 @@ function drawAnomalyCards(){
   }
   for(const c of chosen){
     const el=document.createElement('div');
-    el.className='card c-'+c.rarity;
+    el.className='card c-'+c.rarity + (needsSlot(c) ? ' c-replace' : '');
     const stacks=(activeAnomalies.find(a=>a.id===c.id)||{stacks:0}).stacks;
     el.innerHTML = (stacks>0 ? '<span class="card-stack">×'+(stacks+1)+'</span>' : '')
       + '<div class="card-head"><div class="card-icon">'+c.icon+'</div>'
       + '<div><div class="card-name">'+c.name+'</div><div class="card-rarity">'+c.rarity+'</div></div></div>'
-      + '<div class="card-desc">'+c.desc+'</div>';
+      + '<div class="card-desc">'+c.desc+'</div>'
+      + (needsSlot(c) ? '<div class="card-swap">⇄ remplace une mutation</div>' : (c.needs ? '<div class="card-swap">libère un emplacement</div>' : ''));
     a11y(el); el.addEventListener('click', () => chooseAnomaly(c));
     anomCards.appendChild(el);
   }
 }
+/* Emplacements pleins : on choisit la mutation à oublier (ses effets disparaissent). */
+function openReplace(card){
+  anomCards.innerHTML='';
+  const sub = document.querySelector('#anomalyScreen .anom-sub');
+  if(sub) sub.textContent = 'Emplacements pleins : quelle mutation oublier pour ' + card.name + ' ?';
+  for(const a of activeAnomalies){
+    const d = anomDef(a.id); if(!d) continue;
+    const el=document.createElement('div');
+    el.className='card c-' + d.rarity + ' c-forget';
+    el.innerHTML = (a.stacks>1 ? '<span class="card-stack">×'+a.stacks+'</span>' : '')
+      + '<div class="card-head"><div class="card-icon">'+d.icon+'</div><div><div class="card-name">'+d.name+'</div><div class="card-rarity">oublier</div></div></div>';
+    a11y(el); el.addEventListener('click', () => { removeAnomaly(a.id); chooseAnomaly(card); });
+    anomCards.appendChild(el);
+  }
+  const back=document.createElement('div');
+  back.className='card c-back';
+  back.innerHTML='<div class="card-head"><div class="card-icon">↩</div><div><div class="card-name">Retour</div><div class="card-rarity">autres cartes</div></div></div>';
+  a11y(back); back.addEventListener('click', () => drawAnomalyCards());
+  anomCards.appendChild(back);
+}
+/* Oublier une mutation : on repart des réglages du début de partie et on réapplique le reste. */
+function removeAnomaly(id){
+  const idx = activeAnomalies.findIndex(a => a.id === id); if(idx < 0) return;
+  const lifeDelta = entryLifeDelta(activeAnomalies[idx]);
+  activeAnomalies.splice(idx, 1);
+  rebuildMods();
+  if(lifeDelta){ maxLivesRun = Math.max(1, maxLivesRun - lifeDelta); lives = Math.max(1, Math.min(maxLivesRun, lives)); }
+  if(shockCharges > getMaxCharges()) shockCharges = getMaxCharges();
+  buildPips(); renderBuildBar();
+}
+function applyEntry(a, m){
+  if(a.parts) for(const p of a.parts) applyEntry(p, m);
+  const d = anomDef(a.id); if(!d) return;
+  for(let k = 0; k < a.stacks; k++) d.apply(m, k);
+}
+function entryLifeDelta(a){ const m = { bonusLives:0, attractMult:1, shockRadiusMult:1, repelMult:1, dustValue:1, dustPerCharge:4, maxCharges:3, parryRangeMult:1, chainCap:4, chainWindow:2, anomScore:1, antiSpawnMult:1 }; applyEntry(a, m); return m.bonusLives; }
+function rebuildMods(){
+  const m = Object.assign({}, baseMods || newMods(true));
+  for(const a of activeAnomalies) applyEntry(a, m);
+  m.bonusLives = 0;
+  if(specialization === 'danseur') m.parryRangeMult *= 1.3;
+  if(campaignReducedStats){ m.dustValue *= 0.5; m.scoreMult *= 0.7; }
+  mods = m;
+}
 function chooseAnomaly(card){
+  if(needsSlot(card)){ openReplace(card); return; }
   addAnomaly(card);
   renderBuildBar();
   const rareSound = card.rarity === 'legendary' ? 1320 : card.rarity === 'rare' ? 990 : 660;
@@ -394,7 +461,7 @@ function anomaliesExhausted(){ return availableCards().length === 0; }
 function evolutionMaxReward(){
   heal(1);
   shockCharges = getMaxCharges();
-  const pts = 2000 * Math.max(1, multiplier);
+  const pts = Math.round(2000 * mulK(Math.max(1, multiplier)));
   addScore(pts);
   addToast('ÉVOLUTION COMPLÈTE · +1 vie · charges pleines · +' + pts, '#ffd36b');
   parryFlash = Math.max(parryFlash, 0.5);   // éclat doré (flash est réservé aux dégâts)

@@ -33,6 +33,14 @@ de marée la déchirent et l'éclair pulvérise l'antimatière. Nouvelles menace
 En partie infinie, un **palier** par minute (plus dur, plus payant). Quand deux mutations sont au maximum, une carte
 **fusion** les combine (7 fusions). Sur le *drop* de la musique, les pulses comptent double.
 
+**Fin de partie (0.21)** : 8 emplacements de mutation (une 9e en fait oublier une, une fusion en libère un),
+rendements décroissants et portées plafonnées, scores compressés au-delà de ×8 et affichés court (« 325,4 k »).
+À chaque palier : un **événement cosmique** (pluie de comètes, champ magnétique, nuit noire, ondes gravitationnelles,
+essaim, matière lourde) et le choix **encaisser ou continuer** (banque d'éclats, moitié si l'on meurt). Tous les 2 paliers,
+un **secteur** (nébuleuse, ceinture d'astéroïdes, amas d'étoiles, magnétar). Au palier 10, **Sagittarius A\***, trou noir
+supermassif qui spirale vers toi : survivre jusqu'à la **fusion** termine la partie par une victoire. **Limite d'Eddington** :
+au-delà d'une masse de 1,4, la lumière repousse la matière. **Contrats** de partie au menu (récompense en éclats).
+
 Le trou noir est vivant : il a faim, il jubile, il souffre, il regarde la menace, crache des jets
 polaires sur une Perfect Chain et grandit de *Graine* à *Quasar* au fil de la partie. Tu peux le nommer.
 
@@ -44,7 +52,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.20.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.21.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -80,6 +88,8 @@ js/
   render.js        couche scène (entités), overlay (repères), paramètres envoyés au GPU, repli 2D
   hud.js audio.js  HUD, audio synthétisé (SFX, musique générative adaptative, grondement gravitationnel)
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
+  endgame.js       fin de partie : compression du score, Sagittarius A*, encaisser ou continuer, événements
+                   cosmiques, secteurs et astéroïdes, contrats
   cosmos.js        masse et évaporation, orbites, étoile déchirée, comète / étoile à neutrons / fronde,
                    paliers de la partie infinie, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil

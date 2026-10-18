@@ -82,6 +82,7 @@ function startGame(modeId, isDaily){
   if(currentMode.beatOnly) mods.scoreMult *= 1.25;
   if(profile.options.assist && !isDaily){ lives += 2; maxLivesRun += 2; }
 
+  baseMods = Object.assign({}, mods);   // réglages du départ, pour pouvoir oublier une mutation
   if(mods.startAnomalies > 0 && !campaignNoAnomaly){
     for(let i=0;i<mods.startAnomalies;i++){
       const c = pickAnomalyCard();
@@ -194,9 +195,10 @@ function gameOver(){
   updateQuestsProgress(run);
   checkQuestRewards();
 
-  finalScoreEl.textContent = score;
+  finalScoreEl.textContent = fmtScore(score);
   overModeEl.textContent = lastGameWasDaily ? 'DÉFI DU JOUR' : currentMode.label;
-  overTitleEl.textContent = timeUp ? 'TEMPS ÉCOULÉ' : 'AVALÉ';
+  const eg = endgameOver();
+  overTitleEl.textContent = eg ? eg.title : (timeUp ? 'TEMPS ÉCOULÉ' : 'AVALÉ');
   const ref = Math.max(prevModeRec, currentMode.id==='classic' ? (profile.bestRun?profile.bestRun.score:0) : prevModeRec);
   if(!isNewRecord && ref > score){
     const delta = ref - score;
@@ -209,9 +211,9 @@ function gameOver(){
     nearMissEl.innerHTML += (nearMissEl.innerHTML ? '<br>' : '') + (score >= challenge.score ? '🏁 Défi ami relevé (' + challenge.score + ')' : '🎯 Défi ami : encore ' + (challenge.score - score) + ' pts');
   }
 
-  const cause = timeUp
+  const cause = eg ? { title:eg.causeTitle, text:eg.cause } : (timeUp
     ? { title:'CHRONO', text:'Tu as tenu <b>' + currentMode.duration + ' secondes</b>. Bien joué.' }
-    : analyzeDeath(lastDeathContext);
+    : analyzeDeath(lastDeathContext));
   causeTitleEl.textContent = cause.title;
   causeTextEl.innerHTML = cause.text;
   statParryEl.textContent = parryCount;

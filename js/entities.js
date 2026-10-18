@@ -127,7 +127,7 @@ function killBoss(){
   addScore(bonus);
   shockCharges = getMaxCharges();
   if(currentCampaignLevel) heal(1);
-  const card = pickAnomalyCard();
+  const card = pickFreeCard();   // carte offerte : jamais une qui demanderait un 9e emplacement
   if(card && !campaignNoAnomaly) addAnomaly(card);
   burst(W/2, H/2, '#ffffff', 80, 800);
   burst(W/2, H/2, boss.type.color, 60, 650);
@@ -163,9 +163,17 @@ function burst(x,y,color,n,spd){
     particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life,maxLife:life,r:1.4+Math.random()*3.2,color});
   }
 }
-function addToast(text,color,y){
+/* Messages : 3 au plus à l'écran ; un message « clé » (chaîne, pulse) remplace le précédent au lieu de s'empiler. */
+const TOAST_MAX = 3;
+function addToast(text,color,y,key){
+  if(key){
+    const ex = toasts.find(t => t.key === key && t.life > 0.15);
+    if(ex){ ex.text = text; ex.color = color || ex.color; ex.life = ex.maxLife; return; }
+  }
+  while(toasts.length >= TOAST_MAX) toasts.shift();
   let slot = 0; for(const t of toasts) if(t.life > 0.2) slot++;
-  toasts.push({text,color:color||'#fff',life:1.4,maxLife:1.4,x:W/2,y:H*0.2+Math.min(slot,4)*34,vy:-12});
+  const top = H*0.2 + (bossBarEl && bossBarEl.classList.contains('on') ? 64 : 0);   // sous la barre de boss
+  toasts.push({text,color:color||'#fff',life:1.4,maxLife:1.4,x:W/2,y:top+Math.min(slot,4)*34,vy:-12,key});
 }
 function reduceFx(){ return !!profile.options.reduceFx; }
 function fm(){ let m = 1; if(mods && mods.fureur && timeSinceRelease > 5) m *= 2; if(kamikazeTimer > 0) m *= 2; return m; }
@@ -177,10 +185,17 @@ function knockBoss(e, ux, uy, hitR){
 }
 function addAnomaly(card){
   const ex = activeAnomalies.find(a=>a.id===card.id);
-  if(ex) ex.stacks++; else activeAnomalies.push({id:card.id, stacks:1});
-  applyAnomalyEffect(card);
+  if(ex) ex.stacks++;
+  else if(card.needs){
+    /* fusion : ses deux mutations fusionnent dans un seul emplacement (leurs effets restent) */
+    const parts = activeAnomalies.filter(a => card.needs.includes(a.id));
+    activeAnomalies = activeAnomalies.filter(a => !card.needs.includes(a.id));
+    activeAnomalies.push({id:card.id, stacks:1, parts});
+  }
+  else activeAnomalies.push({id:card.id, stacks:1});
+  applyAnomalyEffect(card, ex ? ex.stacks - 1 : 0);
 }
-function parryR(){ return PARRY_RANGE * (mods ? mods.parryRangeMult : 1) * (resonanceT > 0 ? 1.4 : 1); }
+function parryR(){ return PARRY_RANGE * Math.min(PARRY_CAP, (mods ? mods.parryRangeMult : 1) * (resonanceT > 0 ? 1.4 : 1)) * parryEnvK(); }
 function beatInfo(){
   const len = 60/Math.max(60, beatBpm);
   const off = (profile.options.beatOffset||0)/1000;
@@ -200,7 +215,7 @@ function registerPulse(){
   runPulses++; profile.pulses = (profile.pulses||0) + 1; pulseStreak++;
   const drop = dropActive();
   if(drop) pulseStreak++;   // drop de la musique : le pulse compte double vers la Résonance
-  addToast(drop ? 'DROP · PULSE ×' + pulseStreak : (pulseStreak > 1 ? 'PULSE ×' + pulseStreak : 'SUR LE TEMPO'), drop ? '#ff9cf0' : '#ffd36b');
+  addToast(drop ? 'DROP · PULSE ×' + pulseStreak : (pulseStreak > 1 ? 'PULSE ×' + pulseStreak : 'SUR LE TEMPO'), drop ? '#ff9cf0' : '#ffd36b', undefined, 'pulse');
   if(actx && !audioMuted){
     const k = Math.min(pulseStreak, 8);
     blip(660 + k*90, 0.22, 'triangle', 0.15);

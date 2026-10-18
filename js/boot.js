@@ -4,7 +4,7 @@
   ['sound', ()=>{ soundBtn.classList.toggle('muted', audioMuted); }],
   ['badges', refreshMenuBadges], ['daily', refreshDaily], ['ach', renderAch], ['skins', renderSkins],
   ['options', syncOptionsUI], ['dailyQuests', initDailyQuests], ['modes', renderModeGrid], ['quests', renderQuests],
-  ['stats', renderStats], ['campaign', renderCampaign], ['journal', renderJournal], ['evolution', renderEvolution],
+  ['stats', renderStats], ['contracts', renderContracts], ['campaign', renderCampaign], ['journal', renderJournal], ['evolution', renderEvolution],
   ['a11y', ()=>{
     document.body.classList.toggle('big-text', !!profile.options.bigText);
     document.querySelectorAll('.icon-btn').forEach(b=>b.setAttribute('aria-label', b.title || 'bouton'));

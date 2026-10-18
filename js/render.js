@@ -130,6 +130,7 @@ function drawSceneLayer(t){
   sctx.translate(cam.dx, cam.dy);
   drawInfall(VIS.attract);
   if(state === 'menu'){ sctx.restore(); return; }
+  if(sgr) drawSgr(t);
   drawJets(t);
   const cb = profile.options.colorblind;
   for(let i = 0; i < entities.length; i++){ const e = entities[i]; if(!e.dead) drawEntity(e, t, cb); }
@@ -169,6 +170,7 @@ function drawEntity(e, t, cb){
   if(s !== 1){ sctx.save(); sctx.translate(e.x, e.y); sctx.scale(s, s); sctx.translate(-e.x, -e.y); }
   if(e.type === 'dust') drawDust(e, t);
   else if(e.type === 'star') drawStar(e, t);
+  else if(e.type === 'rock') drawRock(e);
   else if(e.bossPart) drawBossPart(e, t);
   else if(e.isProjectile) drawBolt(e, t);
   else if(e.kind === 'comet') drawComet(e, t);
@@ -219,6 +221,39 @@ function drawDust(e, t){
 }
 
 /* Antimatière : sphère de vide cernée d'une couronne d'annihilation */
+/* Sagittarius A* : ombre immense, anneau de photons et disque violet qui tourne de plus en plus vite */
+function drawSgr(t){
+  const x = sgr.x, y = sgr.y, r = sgr.r, spin = sgr.a * 2;
+  sctx.globalCompositeOperation = 'lighter';
+  const R = r * 4;
+  sctx.drawImage(glowSprite('sgr', [[0, 'rgba(0,0,0,0)'], [0.24, 'rgba(201,166,255,.65)'], [0.4, 'rgba(140,110,255,.25)'], [1, 'rgba(80,60,200,0)']], R), x - R, y - R, R * 2, R * 2);
+  sctx.save(); sctx.translate(x, y); sctx.rotate(-0.25); sctx.scale(1, 0.32);
+  for(let k = 0; k < 3; k++){
+    sctx.beginPath(); sctx.arc(0, 0, r * (1.6 + k * 0.55), spin + k, spin + k + Math.PI * 1.4);
+    sctx.strokeStyle = 'rgba(' + (220 - k * 30) + ',' + (180 - k * 30) + ',255,' + (0.7 - k * 0.18) + ')';
+    sctx.lineWidth = 6 - k * 1.5; sctx.stroke();
+  }
+  sctx.restore();
+  sctx.globalCompositeOperation = 'source-over';
+  sctx.beginPath(); sctx.arc(x, y, r, 0, Math.PI * 2); sctx.fillStyle = '#000'; sctx.fill();
+  sctx.lineWidth = 2; sctx.strokeStyle = 'rgba(235,220,255,.9)'; sctx.stroke();
+}
+/* Astéroïde : rocher irrégulier qui tourne sur lui-même */
+function drawRock(e){
+  sctx.save(); sctx.translate(e.x, e.y); sctx.rotate(e.rot);
+  sctx.beginPath();
+  for(let k = 0; k < e.shape.length; k++){
+    const a = k / e.shape.length * Math.PI * 2, rr = e.r * e.shape[k];
+    if(k === 0) sctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); else sctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  sctx.closePath();
+  const g = sctx.createLinearGradient(-e.r, -e.r, e.r, e.r);
+  g.addColorStop(0, '#5e554b'); g.addColorStop(1, '#16120f');
+  sctx.fillStyle = g; sctx.fill();
+  sctx.strokeStyle = 'rgba(255,190,140,.55)'; sctx.lineWidth = 1.2; sctx.stroke();
+  sctx.restore();
+}
+
 /* Étoile de passage : étirée vers le trou à mesure que la marée la déchire */
 function drawStar(e, t){
   const dx = bh.x - e.x, dy = bh.y - e.y, ang = Math.atan2(dy, dx);
@@ -471,7 +506,7 @@ function drawPlayerHud(t){
   if(reso) col = '255,211,107';
   else if(armed || (attract && inWin)) col = '255,226,140';
   else col = '160,205,255';
-  const baseA = (attract ? 0.42 : 0.2) + kick * 0.3 + (armed ? 0.35 : 0);
+  const baseA = ((attract ? 0.42 : 0.2) + kick * 0.3 + (armed ? 0.35 : 0)) * clamp(150 / pr, 0.4, 1);   // grand cercle = plus discret
   ctx.lineWidth = 1;
   ctx.strokeStyle = 'rgba(' + col + ',' + (baseA * 0.55).toFixed(3) + ')';
   ctx.beginPath(); ctx.arc(0, 0, pr, 0, Math.PI * 2); ctx.stroke();
@@ -530,7 +565,7 @@ function drawShockRings(){
   for(let i = 0; i < shockwaves.length; i++){
     const sw = shockwaves[i];
     const p = 1 - sw.life / sw.maxLife;
-    const a = (1 - p) * 0.95;
+    const a = (1 - p) * 0.95 * clamp(320 / sw.maxR, 0.45, 1);
     const col = sw.pulse ? '255,215,120' : (sw.weak ? '130,140,180' : (sw.isEcho ? '200,180,255' : '170,225,255'));
     ctx.beginPath(); ctx.arc(bh.x, bh.y, sw.r, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(' + col + ',' + (a * 0.25).toFixed(3) + ')';
@@ -657,7 +692,7 @@ function drawFallbackWorld(t, shk){
 /* ---------- IMAGE COMPLÈTE ---------- */
 function renderFrame(dt){
   const t = performance.now() / 1000;
-  const playing = state === 'play' || state === 'tutorial' || state === 'finale';
+  const playing = state === 'play' || state === 'tutorial' || state === 'finale' || state === 'merge';
 
   /* état visuel lissé */
   VIS.attract += (((attract && playing) ? 1 : 0) - VIS.attract) * (1 - Math.exp(-dt * 6));
@@ -688,7 +723,7 @@ function renderFrame(dt){
   const dilate = playing ? clamp((1 - timeScale) / 0.75, 0, 1) : 0;
   const radius = bh.r * cam.zoom;
   const tint = WAVE_TINTS[waveIndex % WAVE_TINTS.length];
-  const wantTint = (state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1];
+  const wantTint = (state === 'play' && sector) ? sector.tint : ((state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1]);
   for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] * AV.tint[i] - VTINT[i]) * Math.min(1, dt * 4);
 
   const ripples = [];
@@ -696,8 +731,13 @@ function renderFrame(dt){
     const sw = shockwaves[i], p = 1 - sw.life / sw.maxLife;
     ripples.push({ r: sw.r, w: 14 + sw.r * 0.08, s: (sw.pulse ? 34 : 24) * (1 - p) * (sw.weak ? 0.4 : 1), a: 1 });
   }
+  for(let i = gwRipples.length - 1; i >= 0 && ripples.length < 4; i--){   // ondes gravitationnelles
+    const g = gwRipples[i];
+    ripples.push({ r: g.r + Math.hypot(g.x - bh.x, g.y - bh.y), w: 40, s: 26 * g.a, a: 1 });
+  }
   const flick = sk.flicker && !reduceFx() ? 1 + 0.22 * Math.pow(Math.max(0, Math.sin(t * 5.2)), 12) : 1;   // skin Pulsar : éclats réguliers
-  const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick * (1 + AV.trance) + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * AV.glow * (state === 'finale' ? 1 + finaleT * 0.4 : 1);
+  const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick * (1 + AV.trance) + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * AV.glow * (state === 'finale' ? 1 + finaleT * 0.4 : 1)
+    * (1 - 0.65 * darkK()) * (1 + 0.6 * (state === 'play' ? eddK() : 0)) * (state === 'merge' ? 1 + mergeT * 0.8 : 1);
 
   const fbW = glCanvas.width, fbH = glCanvas.height;
   SpaceGL.render({
@@ -717,7 +757,8 @@ function renderFrame(dt){
     pull: reduceFx() ? VIS.attract * 0.3 : VIS.attract,
     holeU: (bh.x + cam.dx) / W, holeV: 1 - (bh.y + cam.dy) / H,
     starGain: 1.0, quality: 1, tint: VTINT, ripples,
-    bloomThr: 1.0, bloom: 0.8, exposure: 1.15, vignette: 0.5, grain: 0.028,
+    bloomThr: 1.0, bloom: 0.8 + (state === 'play' ? 0.5 * eddK() : 0), exposure: 1.15 * (1 - 0.3 * darkK()),
+    vignette: state === 'play' && sector && sector.id === 'nebula' ? 0.95 : 0.5 + 0.3 * darkK(), grain: 0.028,
     aberr: 0.0012 + Math.min(1, shake / 32) * 0.004 + parryFlash * 0.004 + flash * 0.006 + dilate * 0.003,
     flashHurt: reduceFx() ? flash * 0.4 : flash,
     flashGold: parryFlash * (reduceFx() ? 0.4 : 1),

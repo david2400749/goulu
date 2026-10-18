@@ -13,7 +13,7 @@ const inGame = () => state === 'play' || state === 'tutorial' || state === 'resu
 
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
-  if(state==='anomaly' || state==='paused' || state==='revive') return;
+  if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge') return;
   if(state==='resume'){ attract = true; return; }   // on peut déjà maintenir pendant le décompte
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
@@ -195,6 +195,12 @@ window.addEventListener('keydown',e=>{
     return;
   }
   if(state==='revive'){ if(e.code==='Escape') declineRevive(); return; }
+  if(state==='bank'){   // ESPACE / Entrée / Échap : continuer · E : encaisser
+    const onBtn = document.activeElement && document.activeElement.tagName === 'BUTTON';
+    if(e.code === 'KeyE'){ e.preventDefault(); cashOut(); }
+    else if(!onBtn && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')){ e.preventDefault(); if(!e.repeat) continueRun(); }
+    return;
+  }
   if(e.code==='Escape'){
     if(state==='play') togglePause();
     else if(state==='paused') togglePause();

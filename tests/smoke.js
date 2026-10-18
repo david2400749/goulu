@@ -1121,7 +1121,7 @@ const inView = (page, id) => page.evaluate(id => {
     });
     await ctx.close();
     assert(r.tier === 3 && r.banner === 'NAINE ROUGE' && r.best === 3, 'palier : ' + JSON.stringify(r));
-    assert(r.k > 1.35 && r.level === 3 && /PALIER 3/.test(r.chip), 'effets : ' + JSON.stringify(r));
+    assert(r.k > 1.15 && r.level === 3 && /PALIER 3/.test(r.chip), 'effets : ' + JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1170,6 +1170,150 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.21 : fin de partie ---------- */
+  await test('8 emplacements : une 9e mutation demande d\'en oublier une, ses effets disparaissent', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const ids = ['force','onde','souffle','mine','rendement','capital','carapace','instinct'];
+      for(const id of ids) addAnomaly(ANOMALIES.find(c => c.id === id));
+      const out = { used: slotsUsed(), full: slotsFull(), lives0: maxLivesRun, parry0: mods.parryRangeMult };
+      state = 'anomaly'; anomalyScreenOpen = true;
+      chooseAnomaly(ANOMALIES.find(c => c.id === 'reflexe'));
+      out.forgetCards = document.querySelectorAll('#anomCards .c-forget').length;
+      out.stillAnomaly = state === 'anomaly';
+      [...document.querySelectorAll('#anomCards .c-forget')].find(el => /Instinct/.test(el.textContent)).click();
+      out.after = { used: slotsUsed(), hasReflexe: activeAnomalies.some(a => a.id === 'reflexe'), hasInstinct: activeAnomalies.some(a => a.id === 'instinct'), parry: mods.parryRangeMult, state };
+      tickResume(RESUME_DELAY + 0.01);
+      removeAnomaly('carapace'); out.lives1 = maxLivesRun;
+      out.free = pickFreeCard() ? !needsSlot(pickFreeCard()) : true;
+      return out;
+    });
+    await ctx.close();
+    assert(r.used === 8 && r.full, 'emplacements : ' + JSON.stringify(r));
+    assert(r.stillAnomaly && r.forgetCards === 8, 'écran d\'oubli : ' + JSON.stringify(r));
+    assert(r.after.used === 8 && r.after.hasReflexe && !r.after.hasInstinct && Math.abs(r.after.parry - r.parry0 / 1.5) < 1e-6 && r.after.state === 'resume', 'oubli : ' + JSON.stringify(r));
+    assert(r.lives1 === r.lives0 - 1 && r.free, 'vies / carte offerte : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Plafonds et rendements décroissants : parry ≤ ×2,4, onde ≤ ×2,2, score compressé et affiché court', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const ins = ANOMALIES.find(c => c.id === 'instinct'), onde = ANOMALIES.find(c => c.id === 'onde');
+      addAnomaly(ins); addAnomaly(ins); addAnomaly(onde); addAnomaly(onde);
+      specialization = 'danseur'; mods.parryRangeMult *= 1.3; resonanceT = 5;
+      mods.supernova = true; spawnShockwave(true, true);
+      return { parry: parryR() / PARRY_RANGE, shock: shockwaves[shockwaves.length - 1].maxR / SHOCK_MAX_R, mulBig: mulK(1000), mulSmall: mulK(5),
+        f: [fmtScore(14715), fmtScore(325400), fmtScore(32543679)] };
+    });
+    await ctx.close();
+    assert(r.parry <= 2.4 + 1e-9 && r.shock <= 2.2 + 1e-9, 'plafonds : ' + JSON.stringify(r));
+    assert(r.mulSmall === 5 && r.mulBig > 25 && r.mulBig < 45, 'compression : ' + JSON.stringify(r));
+    assert(r.f.join('|') === '14715|325,4 k|32,5 M', 'affichage : ' + r.f.join('|'));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Encaisser ou continuer : banque à chaque palier, moitié si l\'on meurt, tout si l\'on encaisse', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      applyWave(WAVES.length - 1); waveTimer = 5; antiTimer = dustTimer = 999; update(1 / 60);
+      out.t1 = { tier, state };
+      waveTimer = 65; antiTimer = dustTimer = 999; update(1 / 60);
+      out.t2 = { tier, state, bank: runBank, shown: !document.getElementById('bankScreen').classList.contains('hidden'), event: !!cosmicEvent };
+      continueRun(); out.cont = state; tickResume(RESUME_DELAY + 0.01);
+      waveTimer = 125; antiTimer = dustTimer = 999; update(1 / 60);
+      out.t3 = { tier, state, bank: runBank };
+      const s0 = profile.shards; cashOut();
+      out.cash = { state, title: document.getElementById('overTitle') ? document.getElementById('overTitle').textContent : overTitleEl.textContent, gained: profile.shards - s0, extra: document.getElementById('overExtra').textContent };
+      return out;
+    });
+    await ctx.close();
+    assert(r.t1.tier === 1 && r.t1.state === 'play', 'palier 1 sans banque : ' + JSON.stringify(r.t1));
+    assert(r.t2.tier === 2 && r.t2.state === 'bank' && r.t2.shown && r.t2.bank === 1 && r.t2.event, 'palier 2 : ' + JSON.stringify(r.t2));
+    assert(r.cont === 'resume' && r.t3.state === 'bank' && r.t3.bank === 2, 'palier 3 : ' + JSON.stringify(r));
+    assert(r.cash.state === 'over' && r.cash.title === 'ENCAISSÉ' && r.cash.gained >= 2 && /2 ◆ encaissés/.test(r.cash.extra), 'encaisser : ' + JSON.stringify(r.cash));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Sagittarius A* au palier 10 : il spirale, attire tout, et survivre mène à la FUSION', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      applyWave(WAVES.length - 1); tier = 9; waveTimer = 545; antiTimer = dustTimer = 999; update(1 / 60);
+      const out = { tier, sgr: !!sgr, bar: bossNameEl.textContent, level: musicWantedLevel() };
+      const R0 = sgr.R;
+      for(let i = 0; i < 60 * 40; i++){ antiTimer = dustTimer = 999; if(lives < 2) lives = 3; hurtT = 1; hitstop = 0; update(1 / 60); }
+      out.closer = sgr && sgr.R < R0;
+      for(let i = 0; i < 60 * 40 && state !== 'over'; i++){ antiTimer = dustTimer = 999; if(lives < 2) lives = 3; hurtT = 1; hitstop = 0; update(1 / 60); }
+      out.end = { state, won: runWon, title: overTitleEl.textContent, wins: profile.sgrWins };
+      return out;
+    });
+    await ctx.close();
+    assert(r.tier === 10 && r.sgr && /SAGITTARIUS/.test(r.bar) && r.level === 3, 'début : ' + JSON.stringify(r));
+    assert(r.closer, 'il ne se rapproche pas');
+    assert(r.end.state === 'over' && r.end.won && r.end.title === 'FUSION' && r.end.wins === 1, 'fin : ' + JSON.stringify(r.end));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Événements et secteurs : champ magnétique, astéroïdes (l\'onde les repousse, le contact blesse), Eddington', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      const p0 = parryR(); cosmicEvent = COSMIC_EVENTS.find(e => e.id === 'magnetic'); out.mag = parryR() / p0;
+      cosmicEvent = null; sector = SECTORS.find(x => x.id === 'belt');
+      rockTimer = 0; antiTimer = dustTimer = 999; update(1 / 60);
+      out.rocks = entities.filter(e => e.type === 'rock').length;
+      entities.length = 0;
+      entities.push({ x:bh.x + 100, y:bh.y, vx:0, vy:0, r:16, type:'rock', shape:[1,1,1,1,1,1,1], spin:0, rot:0, phase:0, trail:[] });
+      shockwaves.push({ r:110, maxR:130, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      rockTimer = 99; antiTimer = dustTimer = 999; update(1 / 60);
+      const rock = entities.find(e => e.type === 'rock'); out.pushed = !!rock && rock.vx > 100;
+      rock.x = bh.x + 5; rock.vx = 0; const l0 = lives; invincibleT = 0; hurtT = 0;
+      antiTimer = dustTimer = 999; update(1 / 60); out.hurt = lives === l0 - 1;
+      sector = null;
+      const gain = m => { bhMass = m; const a = bhMass; massGain('gold'); return bhMass - a; };
+      out.edd = { low: gain(1.0), high: gain(1.7) };
+      const ms = m => { bhMass = m; return massScore(); };
+      out.peak = ms(1.4) > ms(1.8) && ms(1.4) > ms(1.0);
+      return out;
+    });
+    await ctx.close();
+    assert(Math.abs(r.mag - 0.7) < 1e-6, 'champ magnétique : ' + r.mag);
+    assert(r.rocks === 1 && r.pushed && r.hurt, 'astéroïdes : ' + JSON.stringify(r));
+    assert(r.edd.high < r.edd.low * 0.4 && r.peak, 'Eddington : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Contrats : 3 proposés au menu, réussite = éclats, nouvelle offre après la partie ; messages dédoublonnés', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const offer = await page.evaluate(() => [...document.querySelectorAll('#contractOpts .contract-opt')].map(b => b.textContent));
+    const pick = await page.evaluate(() => { const i = contractOffer().findIndex(c => c.id === 'parry40'); return i; });
+    await page.evaluate(i => { profile.contractPick = i >= 0 ? i : 0; renderContracts(); }, pick);
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const c = contract; const s0 = profile.shards;
+      runTde = 3; tier = 5; runHits = 0; runOrbitEaten = 20; parryCount = 40; runBossesKilled = 2; runResonances = 2; runComets = 5; bhMass = 1.6;
+      contractTick(1);
+      const done = contractDone, gained = profile.shards - s0;
+      toasts.length = 0; for(let k = 0; k < 6; k++) addToast('CHAIN ×' + k, '#fff', 100, 'chain');
+      addToast('a'); addToast('b'); addToast('c'); addToast('d');
+      const roll0 = profile.contractRoll || 0;
+      lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x, y:bh.y }); if(state === 'revive') declineRevive();
+      return { name: c && c.name, done, gained, reward: c && c.reward, toasts: toasts.length, chainN: toasts.filter(t => t.key === 'chain').length, roll: (profile.contractRoll || 0) - roll0, pick: profile.contractPick };
+    });
+    await ctx.close();
+    assert(offer.length === 3, 'offre : ' + offer.join(' | '));
+    assert(r.name && r.done && r.gained === r.reward, 'contrat : ' + JSON.stringify(r));
+    assert(r.toasts <= 3 && r.chainN <= 1, 'messages : ' + JSON.stringify(r));
+    assert(r.roll === 1 && r.pick === -1, 'nouvelle offre : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
@@ -1190,7 +1334,8 @@ const inView = (page, id) => page.evaluate(id => {
         /* le temps de jeu ralentit pendant les parry / gels : on simule jusqu'au temps visé */
         const maxSteps = Math.round(seconds * 60 * 4);
         for(let i = 0; i < maxSteps && elapsed < seconds; i++){
-          if(state === 'anomaly'){ const c = document.querySelector('#anomCards .card'); if(c) c.click(); }
+          for(let k = 0; k < 2 && state === 'anomaly'; k++){ const c = document.querySelector('#anomCards .card'); if(c) c.click(); }   // 2e clic : écran d'oubli
+          if(state === 'bank') continueRun();
           if(state === 'resume') tickResume(RESUME_DELAY + 0.01);
           if(state !== 'play') break;
           const holding = (i % 80) < 50;

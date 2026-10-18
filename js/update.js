@@ -2,7 +2,7 @@
 function collectDust(e){
   const dt = DUST_TYPES[e.dustType] || DUST_TYPES.gold;
   const gain = dt.pts * mods.dustValue;
-  addScore(multiplier * gain * scoreK(true));
+  addScore(gain * mulK(multiplier * scoreK(true)));
   combo++; comboTimer=comboWindow(); runDust++;
   if(combo>maxCombo) maxCombo=combo;
   dustSinceCharge++;
@@ -25,7 +25,7 @@ function collectDust(e){
     for(let i=entities.length-1;i>=0;i--){
       const o = entities[i]; if(o.type !== 'anti' || o.dead) continue;
       const dx=o.x-e.x, dy=o.y-e.y;
-      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); addScore(5 * multiplier * scoreK(false)); o.dead = true; }
+      if(dx*dx+dy*dy < 80*80){ burst(o.x,o.y,'#ff5c2d',12,300); addScore(5 * mulK(multiplier * scoreK(false))); o.dead = true; }
     }
   } else if(e.dustType === 'white'){ if(shockCharges < getMaxCharges()) shockCharges++; }
   elemTypesCollected.add(e.dustType);
@@ -46,7 +46,7 @@ function heal(amount){
 }
 function hitAnti(e){
   if(invincibleT > 0 || hurtT > 0){
-    if(invincibleT > 0) addScore(5 * multiplier);
+    if(invincibleT > 0) addScore(5 * mulK(multiplier));
     burst(e.x,e.y,'#ffffff',20,420);
     blip(660,0.1,'sine',0.1,990);
     return;
@@ -69,7 +69,7 @@ function hitAnti(e){
 function spawnShockwave(isEcho, pulse){
   const weak = !!(currentMode.beatOnly && !pulse && !isEcho);
   const nova = !!(isEcho && mods.supernova);
-  const maxR = SHOCK_MAX_R * mods.shockRadiusMult * (currentMode.noShock ? 0.5 : 1) * (pulse ? 1.2 : 1) * (weak ? 0.45 : 1) * (nova ? 1.6 : 1);
+  const maxR = SHOCK_MAX_R * Math.min(SHOCK_CAP, mods.shockRadiusMult * (pulse ? 1.2 : 1) * (nova ? 1.6 : 1)) * (currentMode.noShock ? 0.5 : 1) * (weak ? 0.45 : 1) * shockEnvK();
   shockwaves.push({
     r:bh.r, maxR,
     life:SHOCK_LIFE, maxLife:SHOCK_LIFE,
@@ -101,7 +101,7 @@ function doParry(e, pm, kind, fromEcho){
   parryChain++;
   parryChainTimer = mods.chainWindow + (mods.dashparryEnabled ? 0.5 : 0);
   const chainMult = Math.min(mods.chainCap, Math.pow(2, Math.min(parryChain-1, 5)));
-  addScore(20 * multiplier * chainMult * scoreK(true) * pm);
+  addScore(20 * mulK(multiplier * chainMult * scoreK(true) * pm));
   hitstop = PARRY_HITSTOP;
   parryCount++; parryTimes.push(performance.now());
   if(parryTimes.length > 5) parryTimes.shift();
@@ -131,10 +131,10 @@ function doParry(e, pm, kind, fromEcho){
     vibrate([30, 40, 60, 40, 30]);
     shake = Math.max(shake, 32);
   } else if(parryChain > 1){
-    addToast('CHAIN ×' + chainMult, '#ffdd44', H/2 - 100);
+    addToast('CHAIN ×' + chainMult, '#ffdd44', H/2 - 100, 'chain');
     blip(880*chainMult, 0.18, 'sine', 0.14, 1400);
   } else {
-    addToast('★ PARRY ! ★', '#ffdd44', H/2 - 70);
+    addToast('★ PARRY ! ★', '#ffdd44', H/2 - 70, 'chain');
     blip(880, 0.18, 'sine', 0.16, 1400);
   }
 }
@@ -192,10 +192,13 @@ function update(dt){
     if(finaleT > 3.6){ state='victory'; showVictory(currentCampaignLevel); }
     danger = 0; return;
   }
+  if(state==='merge'){ tickMerge(dt); danger = 0; return; }
   if(state!=='play'){ danger=0; return; }
   elapsed+=gdt;
   aliveTick(gdt);
   cosmosTick(gdt);
+  if(endgamePending()) return;
+  if(state!=='play') return;
 
   if(specialization === 'fantome'){
     fantomeTimer += gdt;
@@ -220,7 +223,7 @@ function update(dt){
   else if(currentMode.useWaves) updateWaves(gdt);
 
   // Choix d'anomalie
-  if(!campaignNoAnomaly){
+  if(!campaignNoAnomaly && !sgr){
     if(currentCampaignLevel){
       if(!campaignAnomDone && !boss && currentCampaignLevel.duration >= 45 && elapsed >= currentCampaignLevel.duration*0.4){
         campaignAnomDone = true; openAnomalyScreen(); return;
@@ -240,12 +243,12 @@ function update(dt){
   }
 
   // Boss spawn for non-campaign non-wave mode
-  if(!currentCampaignLevel && !currentMode.useWaves && elapsed >= bossNextAt && !boss){
+  if(!currentCampaignLevel && !currentMode.useWaves && elapsed >= bossNextAt && !boss && !sgr){
     bossNextAt = elapsed + currentMode.bossInterval;
     spawnBoss();
   }
   // Vague infinie : un boss par minute (le 4e de la série est le Pulsar)
-  if(!currentCampaignLevel && currentMode.useWaves && waveIndex === WAVES.length-1 && !boss && waveTimer >= endlessBossAt){
+  if(!currentCampaignLevel && currentMode.useWaves && waveIndex === WAVES.length-1 && !boss && !sgr && waveTimer >= endlessBossAt){
     endlessBossAt = waveTimer + 60;
     spawnBoss();
   }
@@ -270,7 +273,7 @@ function update(dt){
   dustTimer-=gdt;
   const dustBase = currentCampaignLevel ? campaignDust : (currentWave ? currentWave.dustRate : Math.max(0.20, 0.85-elapsed*0.009));
   if(dustTimer<=0 && entities.length<ENTITY_CAP){
-    dustTimer = dustBase * (boss ? 0.6 : 1);
+    dustTimer = dustBase * (boss ? 0.6 : 1) * dustEnvK();
     spawnEntity('dust');
     if(elapsed>25 && entities.length<ENTITY_CAP && rng()<0.35) spawnEntity('dust');
   }
@@ -326,6 +329,13 @@ function update(dt){
     if(e.type==='star'){
       if(updateStar(e, gdt, d, ux, uy)){ tidalDisruption(e); entities.splice(i,1); }
       else if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260) entities.splice(i,1);
+      continue;
+    }
+    if(e.type==='rock'){
+      updateRock(e, gdt, d, ux, uy);
+      if(d < bh.r + e.r){ hitAnti(e); entities.splice(i,1); if(state!=='play') break; continue; }
+      if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260){ entities.splice(i,1); continue; }
+      if(d < nearDanger) nearDanger = d;
       continue;
     }
     if(e.kind==='comet'){
@@ -408,16 +418,17 @@ function update(dt){
           } else {
             if(isParry) doParry(e, pm, 'shock');
             else {
-              addScore(8 * multiplier * scoreK(true) * pm);
+              addScore(8 * mulK(multiplier * scoreK(true) * pm));
               burst(e.x,e.y,'#ff2d6f',16,340);
               blip(520,0.1,'square',0.09);
             }
             combo++; comboTimer=comboWindow();
             if(combo>maxCombo) maxCombo=combo;
+            if(e.kind === 'comet') runComets++;
             // Momentum Kill : antimatière détruite à plus de 800 px/s (à l'échelle de l'écran)
             if(Math.sqrt(e.vx*e.vx + e.vy*e.vy) > 800*PHYS){
               runTechniques.momentum = true;
-              if(mods.momentumEnabled) addScore(10 * multiplier);
+              if(mods.momentumEnabled) addScore(10 * mulK(multiplier));
               else if(!profile.techniques.momentum){
                 profile.techniques.momentum = true; saveP();
                 showUnlockToast('💥', 'Technique : Momentum Kill !');

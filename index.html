@@ -53,8 +53,11 @@
       <span class="hud-label">Masse</span>
       <div class="mass-track"><div class="mass-fill" id="massFill"></div></div>
       <b id="massVal">1,00</b>
+      <span class="mass-edd" id="massEdd">EDDINGTON</span>
     </div>
     <div class="tier-chip" id="tierChip"></div>
+    <div class="contract-chip" id="contractChip"></div>
+    <div class="build-bar" id="buildBar"></div>
   </div>
   <div class="hud-center">
     <div class="hud-label">Masse absorbée</div>
@@ -82,7 +85,6 @@
     <div class="best-pill"><span class="hud-label">Record</span><b id="bestHud">0</b></div>
     <div class="ghost-pace" id="ghostPace"></div>
   </div>
-  <div class="build-bar" id="buildBar"></div>
   <div class="wave-banner" id="waveBanner">
     <div class="wave-num" id="waveNum">VAGUE 1</div>
     <div class="wave-name" id="waveName">ÉVEIL</div>
@@ -163,6 +165,10 @@
       <div class="panel active" data-panel="play">
         <div class="xp-bonus hidden" id="dailyXpBonus">✦ Bonus du jour : ta première partie rapporte <b>XP ×2</b></div>
         <div class="mode-grid" id="modeGrid"></div>
+        <div class="contract-row">
+          <div class="contract-label">Contrat de la partie <span>· facultatif, récompense en éclats</span></div>
+          <div class="contract-opts" id="contractOpts"></div>
+        </div>
         <div class="howto">
           <h2>Pilotage</h2>
           <div class="row"><div class="ic">◉</div><div class="tx" id="howtoHold"><b>Maintiens</b> le clic / ESPACE : tu aspires tout.</div></div>
@@ -172,7 +178,8 @@
           <div class="row"><div class="ic">◈</div><div class="tx" id="howtoBoss">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
           <div class="row"><div class="ic">◎</div><div class="tx"><b>Arrête d'aspirer</b> près du trou : la poussière se met en <b>orbite</b>. L'anneau rapporte, te protège, et avalé d'un coup donne un bonus.</div></div>
           <div class="row"><div class="ic">★</div><div class="tx">Une <b>étoile</b> passe ? Aspire-la longtemps : la marée la <b>déchire</b> et l'éclair pulvérise l'antimatière.</div></div>
-          <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : manger te fait grossir (attraction et points), mais tu t'<b>évapores</b> si tu jeûnes, et un gros trou est plus facile à toucher.</div></div>
+          <div class="row"><div class="ic">◆</div><div class="tx">Partie infinie : à chaque <b>palier</b>, <b>encaisse</b> ta banque d'éclats ou continue (si tu meurs, tu n'en gardes que la moitié). Au palier 10, <b>Sagittarius A*</b> : survis jusqu'à la <b>fusion</b>.</div></div>
+          <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : manger te fait grossir (attraction et points), mais tu t'<b>évapores</b> si tu jeûnes, et un gros trou est plus facile à toucher. Au-delà de la limite d'<b>Eddington</b> (1,4), ta lumière repousse la matière.</div></div>
         </div>
         <button class="btn btn-primary cta-sticky" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
       </div>
@@ -272,6 +279,21 @@
   </div>
   <div class="cards" id="anomCards"></div>
   <button class="btn btn-ghost anom-reroll" id="btnReroll">↻ Relancer les cartes · <span id="rerollLeft">1</span></button>
+</div>
+
+<div id="bankScreen" class="hidden">
+  <div class="bank-panel">
+    <div class="anom-title" id="bankTitle">PALIER 2</div>
+    <div class="anom-sub" id="bankSub">PROTO-ÉTOILE</div>
+    <div class="bank-pot">Banque : <b id="bankPot">0</b> ◆ · si tu meurs, tu n'en gardes que <b id="bankHalf">0</b></div>
+    <div class="bank-event" id="bankEvent"></div>
+    <div class="bank-next" id="bankNext"></div>
+    <div class="bank-btns">
+      <button class="btn btn-ghost" id="btnCashOut" type="button">Encaisser et finir</button>
+      <button class="btn btn-primary" id="btnContinue" type="button">Continuer <span class="arrow">→</span></button>
+    </div>
+    <div class="bank-keys">ESPACE : continuer · E : encaisser</div>
+  </div>
 </div>
 
 <div id="nameModal" class="hidden">
@@ -381,6 +403,7 @@
     <div class="over-title" id="overTitle">AVALÉ</div>
     <div class="over-wave" id="overMode">CLASSIQUE</div>
     <div class="over-stage" id="overStage"></div>
+    <div class="over-extra" id="overExtra"></div>
     <div class="over-score" id="finalScore">0</div>
     <div class="near-miss" id="nearMiss"></div>
     <div class="lb-result" id="lbRank"></div>
@@ -434,6 +457,7 @@
 <script src="js/entities.js"></script>
 <script src="js/pulsar.js"></script>
 <script src="js/cosmos.js"></script>
+<script src="js/endgame.js"></script>
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/alive.js"></script>

@@ -46,7 +46,7 @@ function refreshMenuBadges(){
     else badgeStreakEl.classList.remove('active');
   }
   if(badgeShardsEl) badgeShardsEl.textContent = profile.shards;
-  if(bestHudEl) bestHudEl.textContent = profile.best;
+  if(bestHudEl) bestHudEl.textContent = fmtScore(profile.best);
   renderLevelBadge();
   if(badgeCampaignEl){
     const n = Object.keys(profile.campaign.completed||{}).length;

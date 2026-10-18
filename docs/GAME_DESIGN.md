@@ -160,3 +160,20 @@ s'ouvrait vide et bloquait le jeu (corrigé en 0.19.1). Au-delà du correctif, l
 - **Drop** : la première mesure de chaque phrase musicale (intensité ≥ 2) double les pulses ; l'anneau du kick
   devient rose.
 
+## 7. Garder l'envie à haut niveau (0.21)
+
+Partie suivante : 32,5 millions de points au palier 11, « l'envie de jouer avait disparu ». Diagnostic :
+le joueur était intouchable (zone de parry jusqu'à ×4,7 environ, onde ×3), il n'y avait plus de choix (22 mutations),
+plus de but (pas de fin), et l'écran était saturé (messages répétés, cercles géants, barre de 22 icônes).
+
+- **Défi** : 8 emplacements de mutation (oublier une mutation reconstruit les effets depuis les réglages du départ),
+  rendements décroissants (Force +40/25/15 %, Instinct +50/25 %…), plafonds de portée (parry ×2,4, onde ×2,2).
+- **But et fin** : Sagittarius A* au palier 10 (coalescence r ∝ (t_c − t)^¼, ondes gravitationnelles à deux fois
+  la fréquence orbitale). En simulation (robot immortel, 4 graines), la partie se termine par la fusion vers 13 min.
+- **Choix** : encaisser ou continuer à chaque palier (banque ⌈(n−1)/2⌉ éclats par palier, moitié en cas de mort).
+- **Score** : au-delà de ×8, le produit des multiplicateurs est compressé (×1000 → ×34). Le même robot finit vers
+  0,5 à 1 million au lieu de dizaines de millions ; affichage court (k, M). Le bonus d'anneau a été réduit.
+- **Lisibilité** : 3 messages au plus, « CHAIN ×n » mis à jour au lieu d'empilé, cercles plus discrets quand ils
+  grandissent, mutations dans la colonne de gauche, messages sous la barre de boss.
+- **Variété** : un événement cosmique par palier, un secteur tous les 2 paliers, limite d'Eddington, contrats.
+
