@@ -535,17 +535,24 @@ const inView = (page, id) => page.evaluate(id => {
   });
 
   /* ---------- 0.15 : décompte après une carte, Pulsar, plafond de score ---------- */
-  await test('Toutes les mutations au maximum : pas d\'écran vide, récompense et la partie continue', async () => {
+  await test('Mutations au maximum : fusions proposées, puis récompense au lieu d\'un écran vide', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
       for(const c of ANOMALIES) for(let k = 0; k < c.max; k++) addAnomaly(c);
+      openAnomalyScreen();
+      const cards = [...document.querySelectorAll('#anomCards .card')].map(c => c.className);
+      const fus = { state, n: cards.length, allFusion: cards.every(c => /c-fusion/.test(c)) };
+      document.querySelector('#anomCards .card').click();
+      tickResume(RESUME_DELAY + 0.01);
+      for(const f of FUSIONS) if(!activeAnomalies.find(a => a.id === f.id)) addAnomaly(f);
       lives = 1; shockCharges = 0; toasts.length = 0; const s0 = score;
       openAnomalyScreen();
-      return { state, hidden: anomalyScreen.classList.contains('hidden'), lives, charges: shockCharges, max: getMaxCharges(),
-        gained: score - s0, toast: toasts.map(t => t.text).join('|') };
+      return { fus, state, hidden: anomalyScreen.classList.contains('hidden'), lives, charges: shockCharges, max: getMaxCharges(),
+        gained: score - s0, toast: toasts.map(t => t.text).join('|'), owned: activeAnomalies.length };
     });
     await ctx.close();
+    assert(r.fus.state === 'anomaly' && r.fus.n === 3 && r.fus.allFusion, 'fusions : ' + JSON.stringify(r.fus));
     assert(r.state === 'play' && r.hidden, 'écran de mutation ouvert sans carte : ' + JSON.stringify(r));
     assert(r.lives === 2 && r.charges === r.max && r.gained > 0 && /ÉVOLUTION COMPLÈTE/.test(r.toast), 'récompense : ' + JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
@@ -1005,10 +1012,168 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.20 : cosmos ---------- */
+  const playSetup = page => page.evaluate(() => { startGame('classic', false); entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
+  const tick = (page, n, hold) => page.evaluate(({ n, hold }) => {
+    for(let i = 0; i < n; i++){ antiTimer = dustTimer = 999; hitstop = 0; attract = hold; if(state === 'play') update(1 / 60); }
+  }, { n, hold });
+
+  await test('Masse : grossit en mangeant, s\'évapore plus vite petite, rayon et attraction suivent', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      bhMass = 1; for(let k = 0; k < 20; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
+      out.fed = bhMass;
+      const loss = m => { bhMass = m; const m0 = bhMass; antiTimer = dustTimer = 999; update(1); return m0 - bhMass; };
+      out.lossBig = loss(1.6); out.lossSmall = loss(0.7);
+      bhMass = 1.6; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rBig = bh.rTarget;
+      bhMass = 0.7; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rSmall = bh.rTarget;
+      bhMass = 1.2; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 30, y:bh.y }); out.afterHit = bhMass;
+      return out;
+    });
+    await ctx.close();
+    assert(r.fed > 1.12, 'la masse ne monte pas : ' + JSON.stringify(r));
+    assert(r.lossSmall > r.lossBig * 3, 'évaporation de Hawking (∝ 1/M²) : ' + JSON.stringify(r));
+    assert(r.rBig > r.rSmall * 1.2, 'rayon : ' + JSON.stringify(r));
+    assert(r.afterHit < 1.1, 'un coup ne fait pas perdre de masse : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Orbite : relâcher près du trou met la poussière en orbite, bouclier contre l\'antimatière, avalée en aspirant', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      for(let k = 0; k < 5; k++){ const a = k / 5 * Math.PI * 2; spawnEntity('dust', bh.x + Math.cos(a) * (bh.r + 70), bh.y + Math.sin(a) * (bh.r + 70), 'gold'); }
+      for(const e of entities){ e.vx = e.vy = 0; }
+      attract = false; antiTimer = dustTimer = 999; update(1 / 60);
+      const captured = entities.filter(e => e.orbit).length;
+      const o = entities.find(e => e.orbit);
+      entities.push({ x:o.x, y:o.y, vx:0, vy:0, r:R_ANTI, type:'anti', phase:0, trail:[] });
+      const s0 = score, l0 = lives;
+      antiTimer = dustTimer = 999; update(1 / 60); antiTimer = dustTimer = 999; update(1 / 60);
+      const shield = { antis: entities.filter(e => e.type === 'anti').length, lives: lives === l0 };
+      toasts.length = 0;
+      for(let i = 0; i < 120; i++){ antiTimer = dustTimer = 999; attract = true; update(1 / 60); }
+      return { captured, shield, left: entities.filter(e => e.orbit).length, eaten: runOrbitEaten, gained: score > s0, toast: toasts.map(t => t.text).join('|') };
+    });
+    await ctx.close();
+    assert(r.captured === 5, 'capture en orbite : ' + JSON.stringify(r));
+    assert(r.shield.antis === 0 && r.shield.lives, 'bouclier : ' + JSON.stringify(r));
+    assert(r.left === 0 && r.eaten === 4 && /ANNEAU AVALÉ ×4/.test(r.toast), 'anneau avalé : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Étoile déchirée : aspirée longtemps, la marée la disloque et pulvérise l\'antimatière', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      entities.push({ x:bh.x + 200, y:bh.y, vx:0, vy:40, r:15, type:'star', tidal:0, phase:0, trail:[] });
+      for(let k = 0; k < 3; k++) entities.push({ x:bh.x - 400, y:bh.y - 200 + k * 60, vx:0, vy:0, r:R_ANTI, type:'anti', phase:0, trail:[] });
+      const s0 = score; let t = 0;
+      while(entities.some(e => e.type === 'star') && t < 4){ antiTimer = dustTimer = 999; attract = true; update(1 / 60); t += 1 / 60; }
+      return { t, star: entities.some(e => e.type === 'star'), antis: entities.filter(e => e.type === 'anti').length, tde: runTde, gained: score - s0 };
+    });
+    await ctx.close();
+    assert(!r.star && r.tde === 1 && r.t > 1, 'étoile non déchirée : ' + JSON.stringify(r));
+    assert(r.antis === 0 && r.gained >= 250, 'éclair : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Menaces : comète annoncée puis lancée, étoile à neutrons à deux ondes, fronde', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      spawnComet(); const c = entities[entities.length - 1];
+      antiTimer = dustTimer = 999; update(0.5); out.warn = { still: Math.hypot(c.vx, c.vy) === 0, warnT: c.warnT > 0 };
+      antiTimer = dustTimer = 999; update(0.7); out.launched = Math.hypot(c.vx, c.vy) > 300 * PHYS;
+      entities.length = 0;
+      entities.push({ x:bh.x + 120, y:bh.y, vx:0, vy:0, r:11, type:'anti', kind:'neutron', hp:2, phase:0, trail:[] });
+      const n = entities[0];
+      shockwaves.push({ r:130, maxR:140, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      antiTimer = dustTimer = 999; update(1 / 60);
+      out.n1 = { alive: entities.includes(n), hp: n.hp };
+      shockwaves.length = 0; n.x = bh.x + 120; n.y = bh.y; n.vx = n.vy = 0;
+      shockwaves.push({ r:130, maxR:140, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      antiTimer = dustTimer = 999; update(1 / 60);
+      out.n2 = entities.includes(n);
+      Math.random = mulberry32(5);
+      let kinds = {}; for(let k = 0; k < 400; k++){ elapsed = 60; kinds[pickAntiKind() || 'base'] = 1; }
+      out.kinds = Object.keys(kinds).sort().join(',');
+      return out;
+    });
+    await ctx.close();
+    assert(r.warn.still && r.warn.warnT && r.launched, 'comète : ' + JSON.stringify(r));
+    assert(r.n1.alive && r.n1.hp === 1 && !r.n2, 'étoile à neutrons : ' + JSON.stringify(r));
+    assert(r.kinds === 'base,comet,neutron,sling', 'variété : ' + r.kinds);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Paliers : un par minute en vague infinie, plus payant, la musique monte', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const k0 = scoreK(false);
+      applyWave(WAVES.length - 1); waveTimer = 125;
+      antiTimer = dustTimer = 999; update(1 / 60);
+      return { tier, k: scoreK(false) / k0, banner: waveNameEl.textContent, level: musicWantedLevel(), best: profile.bestTier, chip: (syncHUD(), document.getElementById('tierChip').textContent) };
+    });
+    await ctx.close();
+    assert(r.tier === 3 && r.banner === 'NAINE ROUGE' && r.best === 3, 'palier : ' + JSON.stringify(r));
+    assert(r.k > 1.35 && r.level === 3 && /PALIER 3/.test(r.chip), 'effets : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Trou Blanc : repousse la poussière, crache de l\'antimatière, l\'onde le frappe', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      spawnBossByName('whitehole'); const w = boss.parts[0];
+      spawnEntity('dust', w.x + 60, w.y, 'gold'); const d = entities[entities.length - 1]; d.vx = d.vy = 0;
+      const d0 = Math.hypot(d.x - w.x, d.y - w.y);
+      for(let i = 0; i < 150; i++){ antiTimer = dustTimer = 999; attract = false; hurtT = 1; update(1 / 60); }
+      const pushed = Math.hypot(d.x - w.x, d.y - w.y) > d0 + 20 || !entities.includes(d);
+      const antis = entities.filter(e => e.type === 'anti').length;
+      w.eyeR = 120; w.x = bh.x + 120; w.y = bh.y;
+      const hp0 = boss.hp;
+      shockwaves.push({ r:110, maxR:130, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      hitstop = 0; antiTimer = dustTimer = 999; update(1 / 60);
+      return { pushed, antis, hit: hp0 - boss.hp, name: boss.type.name };
+    });
+    await ctx.close();
+    assert(r.pushed && r.antis >= 3, 'trou blanc : ' + JSON.stringify(r));
+    assert(r.hit === 1 && r.name === 'Le Trou Blanc', 'onde : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Fusions : Quasar après 4 s d\'aspiration, Trou de ver rend une charge, drop de la musique compte double', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      addAnomaly(FUSIONS.find(f => f.id === 'quasar'));
+      entities.push({ x:bh.x, y:bh.y - 260, vx:0, vy:0, r:R_ANTI, type:'anti', phase:0, trail:[] });
+      for(let i = 0; i < 250; i++){ antiTimer = dustTimer = 999; attract = true; hurtT = 1; hitstop = 0; update(1 / 60); }
+      out.quasar = entities.filter(e => e.type === 'anti').length === 0;
+      addAnomaly(FUSIONS.find(f => f.id === 'trouver'));
+      shockCharges = 0; parryCount = 1; doParry({ x:bh.x, y:bh.y }, 1, 'shock');
+      out.charge = shockCharges;
+      pulseStreak = 0; window.musicDropActive = () => true; registerPulse();
+      out.dropStreak = pulseStreak;
+      return out;
+    });
+    await ctx.close();
+    assert(r.quasar, 'le Quasar n\'a pas tiré');
+    assert(r.charge === 1, 'Trou de ver : ' + r.charge);
+    assert(r.dropStreak === 2, 'drop : ' + r.dropStreak);
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
-    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
+    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['trou blanc', 60], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
   ];
   for(const [mode, seconds] of SIMS){
     await test('Simulation ' + seconds + ' s : ' + mode, async () => {
@@ -1018,6 +1183,7 @@ const inView = (page, id) => page.evaluate(id => {
         if(mode === 'campagne 9') startCampaignLevel(9);
         else if(mode === 'défi du jour'){ lastGameWasDaily = true; startGame('classic', true); }
         else if(mode === 'pulsar'){ startGame('classic', false); bossesKilled = 1; spawnBossByName('pulsar'); boss.hp = boss.maxHp = 40; }
+        else if(mode === 'trou blanc'){ startGame('classic', false); bossesKilled = 1; spawnBossByName('whitehole'); boss.hp = boss.maxHp = 40; }
         else if(mode.startsWith('classique')) startGame('classic', false);
         else startGame(mode, false);
         const seen = new Set();

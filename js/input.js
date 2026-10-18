@@ -242,6 +242,7 @@ function togglePause(){
     pauseAnomEl.textContent = activeAnomalies.length;
     pauseBossEl.textContent = bossesKilled;
     pauseWaveEl.textContent = currentCampaignLevel ? 'NIVEAU '+currentCampaignLevel.n : (currentMode.useWaves && WAVES[waveIndex] ? 'VAGUE '+(waveIndex+1) : currentMode.label);
+    if(tier > 0) pauseWaveEl.textContent += ' · PALIER ' + tier;
     pauseScreen.classList.remove('hidden');
     if(musicMasterGain && actx){
       musicMasterGain.gain.cancelScheduledValues(actx.currentTime);

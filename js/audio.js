@@ -93,7 +93,7 @@ function getLongNoise(){
   for(let i=0;i<size;i++) d[i]=Math.random()*2-1;
   return longNoise;
 }
-const music={playing:false,mode:'game',bpm:70,targetBpm:70,nextNote:0,step:0,bar:0,level:0,dark:false,stoppedAt:-99};
+const music={playing:false,mode:'game',bpm:70,targetBpm:70,nextNote:0,step:0,bar:0,level:0,dark:false,stoppedAt:-99,dropStart:-1,dropEnd:-1};
 const mtof = m => 440*Math.pow(2,(m-69)/12);
 /* hasard propre à la musique : ne consomme pas Math.random (parties rejouables, tests) */
 let mSeed = 0x2f6b1d;
@@ -310,17 +310,19 @@ function musicWantedLevel(){
   if(state==='menu') return 0;
   if(state==='tutorial') return 1;
   if(boss) return 3;
-  if(multiplier>=6 || resonanceT>0) return 3;
-  if(multiplier>=3 || danger>0.45 || elapsed>40) return 2;
+  if(multiplier>=6 || resonanceT>0 || tier>=3) return 3;
+  if(multiplier>=3 || danger>0.45 || elapsed>40 || tier>=1) return 2;
   return 1;
 }
+/* Drop : première mesure d'une phrase, après la montée, à partir de l'intensité 2. */
+function musicDropActive(){ return !!actx && music.playing && actx.currentTime>=music.dropStart && actx.currentTime<music.dropEnd; }
 function musicStart(mode){
   if(!actx||audioMuted) return;
   musicInit();
   const was=music.playing;
   music.mode=mode||'game';
   music.playing=true; music.nextNote=actx.currentTime+0.1; music.step=0; music.bar=0; kickTimes.length=0;
-  music.level=musicWantedLevel(); music.dark=false;
+  music.level=musicWantedLevel(); music.dark=false; music.dropStart=music.dropEnd=-1;
   if(music.mode==='menu'){ music.bpm=music.targetBpm=84; }
   const target=(profile.options.music/100)*MUSIC_GAIN;
   musicMasterGain.gain.cancelScheduledValues(actx.currentTime);
@@ -397,6 +399,7 @@ function musicPlayStep(time,s,stepDur){
   }
   const L=music.level, prog=music.dark?PROG_DARK:PROG_CALM, ch=prog[ci];
   const barDur=stepDur*16;
+  if(s===0 && ci===0 && L>=2 && music.bar>0){ music.dropStart=time; music.dropEnd=time+barDur; }
 
   /* nappe */
   if(s===0) mPad(time,ch.pad,barDur,L);

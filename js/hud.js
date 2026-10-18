@@ -62,13 +62,14 @@ function ctl(key){ const t = CONTROL_TEXT[key]; return t[dualControls() ? (touch
 function getMaxCharges(){ return BASE_MAX_CHARGES + (mods ? (mods.maxCharges - BASE_MAX_CHARGES) : 0); }
 /* Multiplicateur de score. scoreMult : règles du mode et du défi (Métronome, Fragile…).
    anomScore × fm() : mutations (Faim, Pacte Noir, Fureur, Kamikaze), plafonnées à ×4
-   hors mode Chaos, pour qu'un tirage chanceux ne fasse pas ×10 sur une partie normale. */
+   hors mode Chaos (×6 avec la fusion Singularité nue), pour qu'un tirage chanceux ne fasse
+   pas ×10 sur une partie normale. Puis palier de la partie infinie et masse du trou. */
 const ANOM_SCORE_CAP = 4;
 function scoreK(withFm){
   if(!mods) return 1;
   let a = (mods.anomScore || 1) * (withFm ? fm() : 1);
-  if(currentMode.id !== 'chaos') a = Math.min(ANOM_SCORE_CAP, a);
-  return mods.scoreMult * a;
+  if(currentMode.id !== 'chaos') a = Math.min(mods.scoreCap || ANOM_SCORE_CAP, a);
+  return mods.scoreMult * a * tierScore() * (cosmosOn() ? massScore() : 1);   // paliers et masse : hors plafond
 }
 /* Fenêtre du combo : liée à la fenêtre de chaîne (Réflexe), plus le bonus permanent Combo Long. */
 function comboWindow(){ return mods ? mods.chainWindow*1.2 + (mods.comboBonus||0) : COMBO_MAX; }
@@ -212,8 +213,28 @@ function syncHUD(){
   } else {
     blitzTimerEl.classList.remove('on','warn');
   }
+  syncCosmosHUD();
   syncTouchControls();
   updateGhostPace();
+}
+/* Masse du trou noir (évaporation de Hawking) et palier de la partie infinie */
+let lastMassTxt = '', lastTierTxt = '';
+function syncCosmosHUD(){
+  const on = cosmosOn() && state !== 'tutorial';
+  const mm = $('massMeter'); if(!mm) return;
+  mm.classList.toggle('on', on);
+  if(on){
+    const txt = bhMass.toFixed(2).replace('.', ',');
+    if(txt !== lastMassTxt){
+      lastMassTxt = txt;
+      $('massVal').textContent = txt;
+      $('massFill').style.transform = 'scaleX(' + ((bhMass - MASS_MIN) / (MASS_MAX - MASS_MIN)).toFixed(3) + ')';
+      mm.classList.toggle('low', bhMass < 0.75);
+      mm.classList.toggle('high', bhMass > 1.45);
+    }
+  }
+  const tt = tier > 0 ? 'PALIER ' + tier + ' · ' + tierName(tier) : '';
+  if(tt !== lastTierTxt){ lastTierTxt = tt; const c = $('tierChip'); c.textContent = tt; c.classList.toggle('on', !!tt); }
 }
 /* Boutons tactiles : aspiration en cours, charges restantes sur le bouton ONDE */
 let lastTcKey = '';
@@ -251,7 +272,7 @@ function getBestGhostPace(){
 function renderBuildBar(){
   buildBarEl.innerHTML='';
   for(const a of activeAnomalies){
-    const data = ANOMALIES.find(x=>x.id===a.id);
+    const data = anomDef(a.id);
     if(!data) continue;
     const el=document.createElement('div');
     el.className='build-slot';
