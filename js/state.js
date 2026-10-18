@@ -35,7 +35,7 @@ let runHasPerfect=false;
 let runBossesKilled=0;
 let lastGameWasDaily=false;
 
-let endlessBurstAt=18;
+let endlessBurstAt=18, endlessBossAt=30, pulsarDailyDone=false, resumeT=0;
 let waveIndex=0, waveTimer=0, waveBannerTimer=0;
 let elemChain = { type:null, count:0, timer:0 };
 let elemTypesCollected = new Set();

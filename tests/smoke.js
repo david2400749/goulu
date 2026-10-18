@@ -496,7 +496,7 @@ const inView = (page, id) => page.evaluate(id => {
     await page.evaluate(() => rerollAnomalies());
     const again = await page.evaluate(() => rerollsLeft);
     await page.click('#anomCards .card');
-    const st = await page.evaluate(() => ({ state, n: activeAnomalies.length }));
+    const st = await page.evaluate(() => { const s0 = state; tickResume(RESUME_DELAY + 0.01); return { state: s0 === 'resume' ? state : 'pas de décompte', n: activeAnomalies.length }; });
     await page.evaluate(() => { startGame('classic', false); });
     const reset = await page.evaluate(() => rerollsLeft);
     await ctx.close();
@@ -534,10 +534,120 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.15 : décompte après une carte, Pulsar, plafond de score ---------- */
+  await test('Carte choisie : décompte de 1,5 s avant la reprise', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.evaluate(() => openAnomalyScreen());
+    await page.click('#anomCards .card');
+    const r = await page.evaluate(() => {
+      const a = { state, shown: !document.getElementById('resumeScreen').classList.contains('hidden'), count: document.getElementById('resumeCount').textContent };
+      const e0 = elapsed;
+      attract = true;                                     // maintenir pendant le décompte est permis
+      for(let i = 0; i < 60; i++) loop(performance.now() + i * 16);   // ~1 s : toujours gelé
+      const b = { state, frozen: elapsed === e0, attract };
+      tickResume(0.6);
+      return { a, b, after: state, hidden: document.getElementById('resumeScreen').classList.contains('hidden') };
+    });
+    await ctx.close();
+    assert(r.a.state === 'resume' && r.a.shown && r.a.count === '3', 'pas de décompte : ' + JSON.stringify(r.a));
+    assert(r.b.state === 'resume' && r.b.frozen && r.b.attract, 'le jeu a repris trop tôt : ' + JSON.stringify(r.b));
+    assert(r.after === 'play' && r.hidden, 'pas de reprise : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  const pulsarSetup = page => page.evaluate(() => {
+    startGame('classic', false); entities.length = 0; bossesKilled = 1; lives = 3; maxLivesRun = 3;
+    spawnBossByName('pulsar'); window.__p = boss.parts[0];
+    antiTimer = dustTimer = 999; hitstop = 0;
+  });
+  const step = page => page.evaluate(() => { antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60); });
+
+  await test('Pulsar : ONDE pendant le passage du faisceau = renvoi (sans charge)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await pulsarSetup(page);
+    const r = await page.evaluate(() => {
+      shockCharges = 0; __p.beamPhase = 0;               // le faisceau est sur le trou noir
+      const hp0 = boss.hp; fireWave();
+      return { lost: hp0 - boss.hp, waves: shockwaves.length, charges: shockCharges, lives, parry: parryCount };
+    });
+    await ctx.close();
+    assert(r.lost === 1 && r.waves === 0 && r.charges === 0 && r.lives === 3 && r.parry === 1, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Pulsar : faisceau non renvoyé = une vie perdue, cause « Aveuglé »', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await pulsarSetup(page);
+    await page.evaluate(() => { __p.beamPhase = 0; });
+    await step(page);                                     // le passage commence
+    await page.evaluate(() => { __p.beamPhase = 0.3; });
+    await step(page);                                     // le passage est fini, rien n'a été fait
+    const r = await page.evaluate(() => ({ lives, cause: lastDeathContext && lastDeathContext.pulsar, title: analyzeDeath(lastDeathContext).title }));
+    await ctx.close();
+    assert(r.lives === 2 && r.cause && r.title === 'AVEUGLÉ', JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Pulsar : insensible aux ondes, renvoi ×2 quand il est aspiré près', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await pulsarSetup(page);
+    const r = await page.evaluate(() => {
+      const hp0 = boss.hp;
+      __p.beamPhase = 0.5;                               // faisceau loin : une onde normale part
+      shockCharges = 1; fireWave();
+      shockwaves[0].r = 999;                              // l'onde couvre tout l'écran
+      antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60);
+      const afterShock = boss.hp;
+      __p.orbitR = pulsarMinR(); __p.beamPhase = 0; fireWave();
+      return { hp0, afterShock, afterClose: boss.hp, close: pulsarIsClose(__p) };
+    });
+    await ctx.close();
+    assert(r.afterShock === r.hp0, 'une onde ordinaire a blessé le Pulsar : ' + JSON.stringify(r));
+    assert(r.close && r.hp0 - r.afterClose === 2, 'renvoi rapproché : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Pulsar enragé : deux faisceaux, vaincu → skin Pulsar', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await pulsarSetup(page);
+    const r = await page.evaluate(() => {
+      damageBoss(3, 0, 0);                                // 5 → 2 PV : enragé
+      const beams = pulsarOffsets().length;
+      __p.beamPhase = 0.5;                                // le 2e faisceau (décalé d'un demi-tour) passe
+      fireWave();
+      const hpAfterSecondBeam = boss.hp;
+      __p.beamPhase = 0; __p.beams[0].reflected = false; fireWave();
+      lives = 0; checkAchievements(runSummaryObj());
+      return { beams, hpAfterSecondBeam, dead: boss === null, killed: profile.pulsarsKilled, skin: profile.skinsUnlocked.includes('pulsar') };
+    });
+    await ctx.close();
+    assert(r.beams === 2 && r.hpAfterSecondBeam === 1, 'enrage : ' + JSON.stringify(r));
+    assert(r.dead && r.killed === 1 && r.skin, 'mort / skin : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Plafond ×4 des mutations de score, sauf en mode Chaos', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, unlockedModes: ['classic', 'chaos'] } });
+    const r = await page.evaluate(() => {
+      const k = mode => { startGame(mode, false); mods.anomScore = 2.5 * 1.8; mods.fureur = true; timeSinceRelease = 9; return +scoreK(true).toFixed(3); };
+      const out = { classic: k('classic'), chaos: k('chaos') };
+      startGame('classic', false); out.plain = scoreK(true);
+      return out;
+    });
+    await ctx.close();
+    assert(r.classic === 4 && r.chaos === 9 && r.plain === 1, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
-    ['classic', 150], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
+    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
   ];
   for(const [mode, seconds] of SIMS){
     await test('Simulation ' + seconds + ' s : ' + mode, async () => {
@@ -546,12 +656,15 @@ const inView = (page, id) => page.evaluate(id => {
         Math.random = mulberry32(hashSeed('smoke-' + mode));   // hasard fixé (seul le calage rythmique dépend de l'horloge)
         if(mode === 'campagne 9') startCampaignLevel(9);
         else if(mode === 'défi du jour'){ lastGameWasDaily = true; startGame('classic', true); }
+        else if(mode === 'pulsar'){ startGame('classic', false); bossesKilled = 1; spawnBossByName('pulsar'); boss.hp = boss.maxHp = 40; }
+        else if(mode.startsWith('classique')) startGame('classic', false);
         else startGame(mode, false);
         const seen = new Set();
         /* le temps de jeu ralentit pendant les parry / gels : on simule jusqu'au temps visé */
         const maxSteps = Math.round(seconds * 60 * 4);
         for(let i = 0; i < maxSteps && elapsed < seconds; i++){
           if(state === 'anomaly'){ const c = document.querySelector('#anomCards .card'); if(c) c.click(); }
+          if(state === 'resume') tickResume(RESUME_DELAY + 0.01);
           if(state !== 'play') break;
           const holding = (i % 80) < 50;
           if(holding && !attract) attract = true;
@@ -569,6 +682,7 @@ const inView = (page, id) => page.evaluate(id => {
       assert(!errors.length, errors.join('\n'));
       if(mode === 'campagne 9') assert(r.state === 'campdone', 'niveau 9 non terminé : ' + JSON.stringify(r));
       if(mode === 'blitz') assert(r.state === 'over', 'le chrono Blitz ne termine pas la partie : ' + r.state);
+      if(mode.startsWith('classique')) assert(r.bosses.includes('pulsar'), 'pas de Pulsar en vague infinie : ' + JSON.stringify(r));
       return r.state + ', ' + r.elapsed + ' s, score ' + r.score + ', vague ' + r.wave + ', boss ' + r.bosses + ', anomalies ' + r.anomalies;
     });
   }
