@@ -19,7 +19,7 @@ Deux commandes séparées :
 - L'ancien mode à un seul bouton (relâcher = onde) reste disponible dans les options.
 
 Au programme : une campagne narrative en 10 chapitres, un défi du jour identique pour tous avec son classement mondial,
-5 modes de jeu, 5 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme, et le Trou Blanc), des mutations à chaque vague (avec une relance par partie),
+5 modes de jeu, 6 boss qui s'enragent à mi-vie (dont le Pulsar, dont on renvoie le faisceau en rythme, et le Trou Blanc), des mutations à chaque vague (avec une relance par partie),
 des skins et un arbre d'évolution permanent. Chaque partie rapporte de l'XP : le trou noir monte de niveau
 et gagne des shards, la première partie du jour compte double, et une *seconde chance* (1 shard) peut sauver une belle partie.
 Partage ton score : le lien envoyé met tes amis au défi de le battre.
@@ -37,6 +37,14 @@ l'anneau en orbite le fait tourner plus vite, la chute radiale et le disque à c
 stable la plus proche se rapproche (le disque du shader suit), l'**efficacité** du disque monte (points ×1 → ×1,6), les ondes
 s'élargissent. Chaque onde est un **jet de Blandford-Znajek** qui puise dans l'énergie de rotation (masse irréductible conservée).
 La **fronde** qui traverse l'ergosphère repart plus vite et te vole de la rotation (**processus de Penrose**).
+
+**Absorptions et fusions (0.24)** : une **étoile à neutrons** spirale vers le trou en émettant des ondes gravitationnelles ;
+selon ta masse et ton spin (critère de Foucart et al. 2018), elle est déchirée avant l'orbite stable la plus proche (**kilonova** :
+éclair, débris d'or à avaler) ou avalée d'un coup, sans lumière. Nouveau boss, **le Compagnon** : un autre trou noir ; aspirer
+le rapproche, tes ondes resserrent son orbite, et la **fusion** suit les ajustements de relativité numérique (masse finale
+inférieure à la somme, énergie partie en ondes, spin final, recul, aire de l'horizon en hausse). L'**entropie** (∝ aire de
+l'horizon, elle ne baisse jamais) devient un record ; la pause et la fin de partie font le bilan de ce qui a été absorbé.
+Au palier 10, la **spirale extrême** vers Sagittarius A\* se termine par ta chute en lui.
 
 Le trou noir a une **masse** : tout ce qu'il avale le fait grossir (attraction et points en hausse), antimatière comprise,
 mais un gros trou est plus facile à toucher. Il ne maigrit jamais (l'évaporation de Hawking d'un trou stellaire prendrait
@@ -67,7 +75,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.23.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.24.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -107,6 +115,7 @@ js/
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
   endgame.js       fin de partie : compression du score, Sagittarius A*, encaisser ou continuer, événements
                    cosmiques, secteurs et astéroïdes, contrats
+  merger.js        étoile à neutrons (kilonova ou avalée entière), le Compagnon (fusion de trous noirs), entropie, bilan
   cosmos.js        masse et disque d'accrétion (Eddington), spin de Kerr, jets, Penrose, phases de vie, orbites, étoile déchirée,
                    comète / étoile à neutrons / fronde, paliers, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil

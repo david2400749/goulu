@@ -686,6 +686,6 @@ body.touch .birth-cap{bottom:calc(150px + env(safe-area-inset-bottom))}
 .phys-panel .pp-head{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ice);margin-bottom:4px}
 .phys-panel .pp-row{display:flex;justify-content:space-between;gap:12px;color:var(--ink-3)}
 .phys-panel .pp-row b{font-weight:500;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
-.over-phys{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;color:var(--ice);opacity:.85;text-align:center;line-height:1.5}
+.over-phys{white-space:pre-line;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;color:var(--ice);opacity:.85;text-align:center;line-height:1.5}
 .over-phys:empty{display:none}
 @media (max-width:480px){.mass-track{width:34px}}

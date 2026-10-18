@@ -35,6 +35,7 @@ function cosmosReset(){
   ringEatN = 0; ringEatT = 0; discWarned = false; dropShown = 0; dropOn = false;
   runTde = 0; runOrbitEaten = 0; accRate = 0; xrbT = 0; xrbA = 0; mqT = 0; bbhT = 0;
   bhSpin = 0; discJ = 0; spinWarned = 0; runJetE = 0; runPenrose = 0;
+  mergerReset();
 }
 function cosmosOn(){ return !currentCampaignLevel; }
 function seenOnce(key){
@@ -122,6 +123,7 @@ function massGain(dustType, e){
   const g = { gold:0.0035, blue:0.006, red:0.0045, white:0.0045 }[dustType] || 0.0035;
   /* la masse gagnée est l'énergie qui reste (1 − η) : un trou qui tourne vite rayonne plus et grossit moins */
   const dm = g / Math.max(1, eddRatio()) * (1 - etaNow()) / (1 - ETA0);
+  absorbed.gas += dm / bhMass * realMass();
   spinAccrete(dm / bhMass, e);                       // le spin suit la matière, même au plafond de masse (licence de jeu)
   bhMass = Math.min(MASS_MAX, bhMass + dm);
 }
@@ -129,7 +131,7 @@ function massGain(dustType, e){
    Ce qui tombe dans le trou, lui, a une masse positive (ALPHA-g, CERN, 2023) : la masse monte un peu. */
 function massHit(){
   if(!cosmosOn()) return;
-  accRate = 0;
+  accRate = 0; absorbed.anti++;
   bhMass = Math.min(MASS_MAX, bhMass + 0.003);
   if(seenOnce('annihil')) addToast('ANNIHILATION · ton disque est soufflé (ta masse, elle, monte)', '#ff8aa0', H/2 + 70);
 }
@@ -180,7 +182,7 @@ function phaseEnter(n){
   if(p === 'xrb'){ xrbA = rng() * Math.PI * 2; xrbT = 1.5; }
   else if(p === 'tde') starTimer = Math.min(starTimer, 3);
   else if(p === 'microquasar') mqT = 0;
-  else if(p === 'bbh') bbhT = 1;
+  else if(p === 'bbh'){ bbhT = 1; if(!boss && !sgr) spawnBossByName('companion'); }   // un autre trou noir : le Compagnon
 }
 /* Point d'où la compagne de la binaire X déverse sa matière (bord de l'écran). */
 function xrbPoint(){
@@ -199,7 +201,7 @@ function phaseTick(gdt){
   } else if(p === 'microquasar'){   // état dur (jets) 6 s, état mou 6 s
     mqT += gdt;
     if(mqT % 12 < 6) aliveJet(0.45);
-  } else if(p === 'bbh'){   // le compagnon invisible émet des ondes gravitationnelles
+  } else if(p === 'bbh' && !(boss && boss.type.id === 'companion')){   // compagnon lointain : seulement ses ondes
     bbhT -= gdt;
     if(bbhT <= 0){
       bbhT = 4.5;
@@ -221,7 +223,7 @@ function pickAntiKind(){
 }
 const KIND_INTRO = {
   comet:   ['☄ COMÈTE · une ligne l\'annonce', '#9fe8ff'],
-  neutron: ['◉ ÉTOILE À NEUTRONS · deux ondes', '#cfe3ff'],
+  neutron: ['◉ ANTI-ÉTOILE À NEUTRONS · deux ondes', '#cfe3ff'],
   sling:   ['↺ FRONDE · elle se sert de ta gravité', '#c99cff']
 };
 function spawnAnti(){
@@ -303,7 +305,7 @@ function updateStar(e, gdt, d, ux, uy){
   return e.tidal >= 1 || d < bh.r + e.r;
 }
 function tidalDisruption(e){
-  e.dead = true; runTde++;
+  e.dead = true; runTde++; absorbed.stars++;
   profile.tde = (profile.tde || 0) + 1; saveP();
   let n = 0;
   for(const o of entities){
@@ -491,5 +493,6 @@ function cosmosTick(gdt){
   const d = dropActive();
   if(d && !dropOn && dropShown < 2){ dropShown++; addToast('♪ DROP · pulses ×2', '#ff9cf0', H/2 + 40); }
   dropOn = d;
+  mergerTick(gdt);
   endgameTick(gdt);
 }

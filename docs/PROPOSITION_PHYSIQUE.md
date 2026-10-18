@@ -182,7 +182,7 @@ L'écran se termine sur cette question ouverte. Ce n'est pas un échec du jeu : 
 |---|---|---|
 | **0.22 · Naissance** (faite) | `js/physics.js` (fonctions pures en unités réelles : Rs, T_H, L_Edd, η(a*), r_ISCO(a*), r_t, durée de vie) ; cinématique de naissance (complète + courte) et ses 3 branches de base ; nouvelles phases (`TIER_NAMES`) et stades ; jeûne = le disque s'éteint, plus d'évaporation ; vies = disque ; panneau Instruments | `physics.js`, nouveau `birth.js`, `data.js`, `cosmos.js`, `alive.js`, `hud.js`, `index.html` |
 | **0.23 · Kerr** (faite) | spin a*, efficacité radiative, accrétion rétrograde, onde = jet Blandford-Znajek, ergosphère pour la fronde, branchement de `uSpin` sur l'ISCO du shader | `cosmos.js`, `update.js`, `space.js`, `render.js` |
-| **0.24 · Absorption et fusion** | matrice d'absorption (section 5), étoile à neutrons conditionnelle, boss Compagnon (fusion, recul, théorème des aires), entropie, EMRI Sgr A* renommée | `cosmos.js`, `endgame.js`, nouveau boss dans `data.js` |
+| **0.24 · Absorption et fusion** (faite) | matrice d'absorption (section 5), étoile à neutrons conditionnelle, boss Compagnon (fusion, recul, théorème des aires), entropie, EMRI Sgr A* renommée | `cosmos.js`, `endgame.js`, nouveau boss dans `data.js` |
 | **0.25 · Archives et fin** | onglet Archives, épilogue « Le long sommeil », naissances à débloquer, mode Simulation | `ui.js`, `endgame.js`, `data.js` |
 
 Tests : `tests/smoke.js` vérifie les constantes de `physics.js` contre les valeurs de référence

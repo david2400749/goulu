@@ -171,6 +171,7 @@ function drawEntity(e, t, cb){
   if(s !== 1){ sctx.save(); sctx.translate(e.x, e.y); sctx.scale(s, s); sctx.translate(-e.x, -e.y); }
   if(e.type === 'dust') drawDust(e, t);
   else if(e.type === 'star') drawStar(e, t);
+  else if(e.type === 'nstar') drawNStar(e, t);
   else if(e.type === 'rock') drawRock(e);
   else if(e.bossPart) drawBossPart(e, t);
   else if(e.isProjectile) drawBolt(e, t);
@@ -346,6 +347,7 @@ function drawBolt(e, t){
 function drawBossPart(e, t){
   if(e.pulsar){ drawPulsar(e, t); return; }
   if(e.whitehole){ drawWhiteHole(e, t); return; }
+  if(e.companion){ drawCompanion(e, t); return; }
   const color = boss ? boss.type.color : '#ff2d6f';
   const bid = boss ? boss.type.id : 'consumer';
   const flashAmt = boss && boss.hitFlash > 0 ? boss.hitFlash / 0.18 : 0;

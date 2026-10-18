@@ -276,6 +276,8 @@ function renderStats(){
   if(statsAvgEl) statsAvgEl.textContent = avg;
   if(statsWaveEl) statsWaveEl.textContent = profile.bestWave || 0;
   if(statsElemEl) statsElemEl.textContent = profile.elemChains || 0;
+  if($('statsEntropy')) $('statsEntropy').textContent = profile.bestEntropy ? PHY.sci(profile.bestEntropy) : '—';
+  if($('statsMergers')) $('statsMergers').textContent = (profile.kilonovas || 0) + ' / ' + (profile.bbhMergers || 0);
   renderTechniques();
   try{ drawSpark(); }catch(e){}
 }

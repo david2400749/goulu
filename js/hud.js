@@ -225,7 +225,7 @@ function syncCosmosHUD(){
   mm.classList.toggle('on', on);
   if(on){
     const lam = eddRatio();
-    const txt = PHY.num(realMass(), 1) + ' M☉|' + Math.round(Math.min(lam, 1.5) * 20);
+    const txt = PHY.msun(realMass()) + '|' + Math.round(Math.min(lam, 1.5) * 20);
     if(txt !== lastMassTxt){
       lastMassTxt = txt;
       $('massVal').textContent = txt.split('|')[0];

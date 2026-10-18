@@ -1169,6 +1169,89 @@ const inView = (page, id) => page.evaluate(id => {
     return r.gl ? 'WebGL' : 'repli 2D';
   });
 
+  await test('Fusions et kilonovas : GW150914 retrouvé, critère de Foucart, aire de l\'horizon toujours en hausse', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      const g = PHY.merger(36, 29, 0), areas = [];
+      for(const q of [1, 0.7, 0.4, 0.2]) areas.push(PHY.merger(10, 10 * q, 0.5).areaGain);
+      return { g, eq: PHY.merger(10, 10, 0), areas, slow: PHY.nsRemnant(8, 0.5), fast: PHY.nsRemnant(8, 0.85), heavy: PHY.nsRemnant(40, 0.9),
+        kerrS: PHY.entropyKerr(10, 0.998) / PHY.entropyKB(10) };
+    });
+    await ctx.close();
+    assert(Math.abs(r.g.mf - 62) < 1 && Math.abs(r.g.eradMsun - 3) < 0.3 && Math.abs(r.g.af - 0.67) < 0.03, 'GW150914 : ' + JSON.stringify(r.g));
+    assert(Math.abs(r.eq.af - 0.687) < 0.01 && r.eq.kick === 0 && Math.abs(r.eq.erad - 0.048) < 0.002, 'masses égales : ' + JSON.stringify(r.eq));
+    assert(r.areas.every(x => x > 0), 'théorème des aires : ' + r.areas);
+    assert(r.slow === 0 && r.fast > 0.05 && r.heavy === 0, 'étoile à neutrons : ' + [r.slow, r.fast, r.heavy]);
+    assert(r.kerrS > 0.5 && r.kerrS < 0.6, 'entropie de Kerr / Schwarzschild : ' + r.kerrS);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Étoile à neutrons : déchirée (kilonova) avec du spin, avalée sans lumière sans spin', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const run = spin => {
+        entities.length = 0; bhMass = 0.8; massK = 1; bhSpin = spin; discJ = 1; const m0 = realMass();
+        spawnNS(); const ns = entities.find(e => e.type === 'nstar'), R0 = ns.R;
+        let t = 0; while(entities.some(e => e.type === 'nstar') && t < 15){ antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60); t += 1 / 60; }
+        return { t, dm: realMass() - m0, dust: entities.filter(e => e.type === 'dust').length, chirp: R0 };
+      };
+      const fast = run(0.9), slow = run(0);
+      return { fast, slow, kn: absorbed.kilonova, whole: absorbed.nsWhole, prof: profile.kilonovas };
+    });
+    await ctx.close();
+    assert(r.kn === 1 && r.fast.dust >= 4 && r.fast.dm > 1 && r.fast.dm < 1.4, 'kilonova : ' + JSON.stringify(r));
+    assert(r.whole === 1 && Math.abs(r.slow.dm - 1.4) < 0.01 && r.slow.dust === 0 && r.slow.t > 10, 'avalée entière : ' + JSON.stringify(r));
+    assert(r.prof === 1, 'compte : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Le Compagnon : les ondes resserrent l\'orbite, la fusion suit la relativité numérique', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      tier = 6; phaseEnter(6);
+      const out = { spawned: boss && boss.type.id === 'companion' };
+      const e = boss.parts[0]; e.q = 0.5;
+      entities.push({ x:e.x + 10, y:e.y, vx:0, vy:0, r:7, type:'dust', dustType:'gold', phase:0, trail:[] });
+      antiTimer = dustTimer = 999; update(1 / 60); out.stole = (e.ate || 0) === 1;
+      out.far = companionHit(e) === false;                // trop loin : l'onde ne fait rien
+      e.R = 150 * PHYS; compPlace(e); const R0 = e.R;
+      const de = Math.hypot(e.x - bh.x, e.y - bh.y); shockwaves.push({ r:de, maxR:de + 2, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      const hp0 = boss.hp; hitstop = 0; antiTimer = dustTimer = 999; update(1 / 60);
+      out.hit = { hp: boss.hp === hp0 - 1, shrink: e.R < R0 * 0.95 };
+      bhSpin = 0.2; const m1 = realMass(), s0 = entropyNow();
+      while(boss){ companionHit(e); damageBoss(1, e.x, e.y); }
+      const f = lastMerger;
+      out.merge = { m1, m2: f.m2, mf: realMass(), sum: m1 + f.m2, spin: bhSpin, af: f.af, area: f.areaGain, kick: f.kick, S: entropyNow() > s0, n: absorbed.bh, prof: profile.bbhMergers };
+      return out;
+    });
+    await ctx.close();
+    assert(r.spawned && r.stole && r.far, 'phase binaire de trous noirs : ' + JSON.stringify(r));
+    assert(r.hit.hp && r.hit.shrink, 'onde sur le Compagnon : ' + JSON.stringify(r.hit));
+    const m = r.merge;
+    assert(Math.abs(m.m2 - m.m1 * 0.5) < 1e-6 && m.mf < m.sum && m.mf > m.sum * 0.95, 'masse finale : ' + JSON.stringify(m));
+    assert(m.spin === m.af && m.af > 0.5 && m.area > 0 && m.kick > 100 && m.S && m.n === 1 && m.prof === 1, 'fusion : ' + JSON.stringify(m));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Entropie : record en fin de partie et au profil ; bilan de ce qui a été absorbé', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      for(let k = 0; k < 5; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
+      togglePause(); const panel = document.getElementById('pausePhys').textContent; togglePause();
+      lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 5, y:bh.y });
+      const over = document.getElementById('overPhys').textContent;
+      renderStats();
+      return { panel, over, best: profile.bestEntropy, cell: document.getElementById('statsEntropy').textContent };
+    });
+    await ctx.close();
+    assert(/Absorbé · Gaz et poussière/.test(r.panel) && /Entropie/.test(r.panel), 'instruments : ' + r.panel);
+    assert(/Entropie .*10.* k_B · ★ record/.test(r.over) && r.best > 1e78 && /10/.test(r.cell), 'record : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   await test('Naissances : la même pour tous au défi du jour, effets de départ, légende et instruments', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');

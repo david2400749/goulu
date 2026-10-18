@@ -26,7 +26,7 @@ let birth = null, pendingBirth = null, fallbackAcc = 0;
 
 /* ---------- grandeurs réelles de la partie ---------- */
 function birthStart(){ return birth ? birth.start : 1; }
-function realMass(){ return birth ? birth.msun * bhMass / birth.start : 10 * bhMass; }
+function realMass(){ return (birth ? birth.msun * bhMass / birth.start : 10 * bhMass) * (typeof massK === 'number' ? massK : 1); }
 function realSpin(){ return Math.abs(bhSpin); }
 /* Âge réel du trou noir, en années : la phase en cours (une par minute) est parcourue en échelle logarithmique. */
 function realAge(){
@@ -45,7 +45,7 @@ function physPanelHTML(){
   const sense = Math.abs(discJ) < 0.25 ? 'désordonné (accrétion chaotique)' : ar >= 0 ? 'prograde' : 'rétrograde';
   const rows = [
     ['Naissance', birth ? birth.name.toLowerCase() : '—'],
-    ['Masse', PHY.num(m, 1) + ' M☉'],
+    ['Masse', PHY.msun(m)],
     ['Spin a* (Kerr)', PHY.num(a, 3)],
     ['Sens du disque', sense],
     ['Horizon r₊', PHY.num(PHY.horizonRg(a) * rs / 2, 0) + ' km (Rs = ' + PHY.num(rs, 0) + ' km)'],
@@ -60,17 +60,20 @@ function physPanelHTML(){
     ['Température de Hawking', PHY.sci(th) + ' K'],
     ['Évaporation', th < 2.725 ? 'non : plus froid que le fond cosmologique (2,7 K)' : 'oui'],
     ['Durée de vie (Hawking)', PHY.sci(PHY.lifeYears(m)) + ' ans'],
-    ['Entropie (∝ aire)', PHY.sci(PHY.entropyKB(m) * PHY.irrK(a) * PHY.irrK(a)) + ' k_B'],
+    ['Entropie (∝ aire, ne baisse jamais)', PHY.sci(PHY.entropyKerr(m, a)) + ' k_B'],
     ['Âge', PHY.age(realAge())]
-  ];
+  ].concat(absorbedRows().map(r => ['Absorbé · ' + r[0], r[1]]));
   return '<div class="pp-head">Instruments · lois réelles, temps compressé</div>' +
     rows.map(r => '<div class="pp-row"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('');
 }
+/* Fin de partie : origine, état final et entropie atteinte (record de compte : elle ne peut que croître). */
 function showPhysOver(){
   const el = $('overPhys'); if(!el) return;
-  el.textContent = cosmosOn() && birth
-    ? 'Né d\'une ' + birth.name.toLowerCase() + ' · ' + PHY.num(realMass(), 1) + ' M☉ · a* ' + PHY.num(realSpin(), 2) + ' · âge ' + PHY.age(realAge())
-    : '';
+  if(!(cosmosOn() && birth)){ el.textContent = ''; return; }
+  const S = Math.max(runEntropy, entropyNow()), rec = S > (profile.bestEntropy || 0);
+  if(rec){ profile.bestEntropy = S; saveP(); }
+  el.textContent = 'Né d\'une ' + birth.name.toLowerCase() + ' · ' + PHY.msun(realMass()) + ' · a* ' + PHY.num(realSpin(), 2) + ' · âge ' + PHY.age(realAge())
+    + '\nEntropie ' + PHY.sci(S) + ' k_B' + (rec ? ' · ★ record' : '');
 }
 
 /* ---------- naissance d'une partie ---------- */

@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.23.0-dev';
+const GAME_VERSION = '0.24.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -307,4 +307,6 @@ const BOSS_TYPES = [
   /* 0.20 : un trou blanc, l'inverse du joueur : il repousse la poussière, crache de
      l'antimatière et fuit dès qu'on cesse de l'aspirer (js/cosmos.js) */
   { id:'whitehole', name:'Le Trou Blanc', icon:'⚪', hp:6, color:'#eaf6ff', pts:1400 },
+  /* 0.24 : un autre trou noir ; les ondes resserrent l'orbite jusqu'à la fusion (js/merger.js) */
+  { id:'companion', name:'Le Compagnon', icon:'⚫', hp:7, color:'#ffb56e', pts:1600 },
 ];

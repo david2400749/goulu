@@ -326,6 +326,10 @@ function update(dt){
       }
     }
 
+    if(e.type==='nstar'){
+      if(updateNS(e, gdt)){ nsPlunge(e); entities.splice(i,1); if(state!=='play') break; }
+      continue;
+    }
     if(e.type==='star'){
       if(updateStar(e, gdt, d, ux, uy)){ tidalDisruption(e); entities.splice(i,1); }
       else if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260) entities.splice(i,1);
@@ -347,6 +351,9 @@ function update(dt){
       if(state!=='play') break;
     } else if(e.whitehole){
       if(boss) updateWhiteHole(e, gdt);
+    } else if(e.companion){
+      if(boss) updateCompanion(e, gdt);
+      if(!boss) continue;
     } else if(e.bossPart && boss && boss.type.id==='eye'){
       e.eyeAngle += gdt*0.35;
       if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45*PHYS);
@@ -407,6 +414,7 @@ function update(dt){
           if(sw.pulse && !sw.counted){ sw.counted = true; registerPulse(); }
           const isParry = !sw.weak && d < parryR();
           if(e.bossPart){
+            if(e.companion && !companionHit(e)) continue;   // trop loin : l'onde ne resserre pas l'orbite
             damageBoss(1, e.x, e.y);
             if(boss && boss.type.id === 'consumer'){ e.vx = -ux*420*PHYS; e.vy = -uy*420*PHYS; }
             if(boss && boss.type.id === 'whitehole') e.eyeR = Math.min(e.eyeR0, e.eyeR + 70*PHYS);

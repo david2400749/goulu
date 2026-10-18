@@ -78,7 +78,7 @@ function openBank(n){
   $('bankPot').textContent = runBank;
   $('bankHalf').textContent = Math.floor(runBank / 2);
   $('bankEvent').textContent = cosmicEvent ? '⚠ ' + cosmicEvent.name + ' : ' + cosmicEvent.desc : '';
-  $('bankNext').textContent = n + 1 >= SGR_TIER ? 'Au palier 10 : Sagittarius A*. Survis jusqu\'à la fusion.' : 'Prochain palier : antimatière plus rapide, points ×' + (1 + 0.1 * n).toFixed(1).replace('.', ',');
+  $('bankNext').textContent = n + 1 >= SGR_TIER ? 'Au palier 10 : la spirale vers Sagittarius A*. Survis jusqu\'à ta chute.' : 'Prochain palier : antimatière plus rapide, points ×' + (1 + 0.1 * n).toFixed(1).replace('.', ',');
   $('bankScreen').classList.remove('hidden');
   if(actx && !audioMuted) [523.25, 659.25, 783.99].forEach((f, i) => blip(f, 0.25, 'triangle', 0.09, undefined, i * 0.06));
 }
@@ -101,9 +101,9 @@ function startSgr(){
   sgrPlace();
   waveNumEl.textContent = 'PALIER ' + SGR_TIER;
   waveNameEl.textContent = 'SAGITTARIUS A*';
-  if(waveLoreEl) waveLoreEl.textContent = 'Un trou noir supermassif. Survis ' + SGR_DUR + ' s jusqu\'à la fusion.';
+  if(waveLoreEl) waveLoreEl.textContent = 'Spirale extrême (EMRI) : 4,3 millions de masses solaires contre ' + PHY.msun(realMass()) + '.\nSurvis ' + SGR_DUR + ' s jusqu\'à ta chute en lui.';
   waveBannerEl.classList.add('on'); waveBannerTimer = 4.5;
-  bossNameEl.textContent = 'SAGITTARIUS A* · fusion dans ' + SGR_DUR + ' s';
+  bossNameEl.textContent = 'SAGITTARIUS A* · chute dans ' + SGR_DUR + ' s';
   bossFillEl.style.transform = 'scaleX(1)';
   bossBarEl.classList.add('on');
   if(bossHintEl){ bossHintEl.textContent = 'Survis : il attire tout, même ta poussière'; bossHintEl.classList.remove('hidden'); }
@@ -123,7 +123,7 @@ function updateSgr(gdt){
   sgr.a += om * gdt;
   sgrPlace();
   const left = Math.max(0, SGR_DUR - sgr.t);
-  const txt = 'SAGITTARIUS A* · fusion dans ' + Math.ceil(left) + ' s';
+  const txt = 'SAGITTARIUS A* · chute dans ' + Math.ceil(left) + ' s';
   if(bossNameEl.textContent !== txt) bossNameEl.textContent = txt;
   bossFillEl.style.transform = 'scaleX(' + (left / SGR_DUR).toFixed(3) + ')';
   /* sa gravité tire tout vers lui ; ce qui franchit son horizon disparaît */
@@ -143,6 +143,7 @@ function updateSgr(gdt){
 }
 function mergeSgr(){
   runWon = true; sgr = null;
+  if(cosmosOn()){ addRealMass(4.3e6); absorbed.bh++; }   // tu fais désormais partie de Sgr A*
   const pts = Math.round(25000 + 5000 * lives);
   addScore(pts);
   profile.sgrWins = (profile.sgrWins || 0) + 1; saveP();
@@ -150,7 +151,7 @@ function mergeSgr(){
   bossBarEl.classList.remove('on'); if(bossHintEl) bossHintEl.classList.add('hidden');
   burst(bh.x, bh.y, '#ffffff', 120, 1100); burst(bh.x, bh.y, '#c9a6ff', 90, 900);
   parryFlash = 1.2; shake = 40; aliveJet(1); vibrate([80, 40, 120, 40, 160]);
-  addToast('✦ FUSION · +' + fmtScore(pts), '#ffffff', H/2 - 120);
+  addToast('✦ ABSORBÉ PAR SAGITTARIUS A* · +' + fmtScore(pts), '#ffffff', H/2 - 120);
   thought('Nous ne sommes plus qu\'un.');
   if(actx && !audioMuted){ blip(60, 0.9, 'sine', 0.25, 1600); blip(120, 1.4, 'triangle', 0.14, 2400, 0.2); }
   state = 'merge'; mergeT = 0;
@@ -255,7 +256,7 @@ function endgameTick(gdt){
 
 /* ---------- écran de fin ---------- */
 function endgameOver(){
-  if(runWon) return { title:'FUSION', causeTitle:'SAGITTARIUS A*', cause:'Tu as fusionné avec un trou noir supermassif. Les ondes gravitationnelles de ta victoire traversent l\'univers.' };
+  if(runWon) return { title:'FUSION', causeTitle:'SAGITTARIUS A*', cause:'Spirale extrême : tu es tombé dans un trou noir de 4,3 millions de masses solaires. Tu fais désormais partie de lui. Le futur observatoire spatial LISA entendrait ce signal.' };
   if(runCashed) return { title:'ENCAISSÉ', causeTitle:'SAGESSE', cause:'Tu t\'es arrêté au palier <b>' + tier + '</b> avec toute ta banque.' };
   return null;
 }

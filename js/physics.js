@@ -43,6 +43,30 @@ const PHY = (() => {
   function spinAfter(mIrr, m){ const q = Math.min(1, mIrr / m), k = 2 * q * q - 1; return Math.sqrt(Math.max(0, 1 - k * k)); }
   /* Part de la masse extractible sous forme d'énergie de rotation : 29,3 % au plus (a* = 1). */
   function rotFrac(a){ return 1 - irrK(a); }
+  /* Entropie de Bekenstein-Hawking d'un trou de Kerr : ∝ aire = 8π M² (1 + √(1 − a*²)) ∝ masse irréductible². */
+  function entropyKerr(m, a){ const k = irrK(a); return entropyKB(m) * k * k; }
+  /* Étoile à neutrons qui tombe dans un trou noir : masse restée hors du trou (fraction de l'étoile),
+     ajustement de Foucart, Hinderer & Nissanke (2018). > 0 : elle est déchirée avant l'ISCO (disque,
+     éjecta, kilonova possible) ; 0 : avalée d'un coup, sans lumière (comme GW200105 et GW200115).
+     a : spin aligné avec l'orbite de l'étoile (négatif : à contre-sens) ; C = GM/(Rc²) ≈ 0,17. */
+  function nsRemnant(mBh, a, mNs, C){
+    mNs = mNs || 1.4; C = C || 0.17;
+    const q = mBh / mNs, nu = q / ((1 + q) * (1 + q));
+    const x = 0.406 * (1 - 2 * C) / Math.cbrt(nu) - 0.139 * iscoRg(a) * C / nu + 0.255;
+    return x > 0 ? Math.pow(x, 1.761) : 0;
+  }
+  /* Fusion de deux trous noirs (ajustements de relativité numérique, trous sans rotation propre) :
+     énergie rayonnée en ondes gravitationnelles (Barausse et al. 2012), spin final (Rezzolla et al. 2008),
+     vitesse de recul (González et al. 2007). Le spin du plus gros s'ajoute, pondéré par (m₁/M)² (approximation). */
+  function merger(m1, m2, a1){
+    const M = m1 + m2, nu = m1 * m2 / (M * M);
+    const erad = 0.0559745 * nu + 0.580951 * nu * nu - 0.960673 * nu * nu * nu + 3.35241 * nu * nu * nu * nu;
+    const af = Math.min(0.998, 2 * Math.sqrt(3) * nu - 3.871 * nu * nu + 4.028 * nu * nu * nu + Math.abs(a1 || 0) * Math.pow(Math.max(m1, m2) / M, 2) * 0.3);
+    const kick = 1.2e4 * nu * nu * Math.sqrt(Math.max(0, 1 - 4 * nu)) * (1 - 0.93 * nu);
+    const mf = M * (1 - erad);
+    const area = (mm, aa) => mm * mm * (1 + Math.sqrt(1 - Math.min(1, aa * aa)));   // ∝ aire de l'horizon
+    return { mf, af, erad, kick, eradMsun:M * erad, areaGain:area(mf, af) / (area(m1, a1 || 0) + area(m2, 0)) - 1 };
+  }
   /* Température de Hawking T = ħc³ / (8πGMk_B) : 6,2×10⁻⁸ K pour une masse solaire. */
   function hawkingK(m){ return hbar * c * c * c / (8 * Math.PI * G * m * MSUN * kB); }
   /* Durée de vie par évaporation (photons seuls) : t = 5120π G²M³ / (ħc⁴), en années. */
@@ -70,6 +94,8 @@ const PHY = (() => {
     const ms = mant.toFixed(d === undefined ? 1 : d).replace('.', ',');
     return (ms === '1,0' || ms === '1' ? '' : ms + '×') + '10' + String(e).split('').map(ch => SUP[ch]).join('');
   }
+  /* Masse en masses solaires : « 15,3 M☉ », « 4,3×10⁶ M☉ » pour un trou supermassif. */
+  function msun(m){ return (m < 1e5 ? num(m, 1) : sci(m, 1)) + ' M☉'; }
   /* Âge lisible : « 0,25 s », « 3 h », « 12 jours », « 4 ans », « 3,2 millions d'années ». */
   function age(yr){
     const s = yr * YEAR;
@@ -83,5 +109,5 @@ const PHY = (() => {
     return num(yr / 1e9, 1) + ' milliards d\'années';
   }
 
-  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, iscoL, iscoE, spinRate, horizonRg, irrK, spinAfter, rotFrac, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, age };
+  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, iscoL, iscoE, spinRate, horizonRg, irrK, spinAfter, rotFrac, entropyKerr, nsRemnant, merger, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, msun, age };
 })();

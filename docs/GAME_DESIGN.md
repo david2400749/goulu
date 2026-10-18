@@ -213,3 +213,23 @@ Première étape de `docs/PROPOSITION_PHYSIQUE.md`. Principe : les lois sont vra
 - **Ergosphère** dessinée en pointillés dès a\* ≥ 0,3 ; la fronde qui la traverse repart ×1,4 (processus de Penrose).
 - **Rendu** : l'ISCO du shader (uniform uRin) suit le spin, de 4,5 Rs (rétrograde) à 1,15 Rs ; l'entraînement du référentiel
   est proportionnel à a\*. Les rayons lumineux restent ceux de Schwarzschild (licence de jeu).
+
+## 10. Absorptions et fusions (0.24)
+
+- **Étoile à neutrons** (matière, à ne pas confondre avec l'ennemi, renommé « anti-étoile à neutrons ») : toutes les
+  85 à 110 s, elle spirale en 13 s (r ∝ (t_c − t)^¼, ondes gravitationnelles au double de la fréquence orbitale). À la chute,
+  l'ajustement de Foucart, Hinderer & Nissanke (2018) donne la masse restée dehors : > 1 % → **kilonova** (éclair qui
+  pulvérise l'antimatière proche, 4 à 14 débris d'or, la masse avalée est 1,4 M☉ moins les éjecta) ; sinon avalée entière
+  (+1,4 M☉, pas de lumière, comme GW200105). L'annonce dit le spin qu'il faudrait : le spin de la 0.23 devient un objectif.
+  En simulation, la masse grimpe vite (26 M☉ à 4 min) : au-delà d'environ 20 M☉, plus de kilonova possible, comme en vrai.
+- **Le Compagnon** (6e boss, et la phase « binaire de trous noirs » le fait venir) : orbite képlérienne qui rétrécit par
+  ondes gravitationnelles (dR/dt ∝ −1/R³), plus vite quand on aspire ; il vole la poussière proche et dévie l'antimatière.
+  Une onde ne resserre l'orbite (−10 %, un PV) que s'il est à moins de 190 px : il faut d'abord l'attirer. 7 PV.
+  Premier réglage (5 PV, sans portée) : battu en 11 s ; réglage retenu : environ 20 s, 1 à 2 coups reçus au robot.
+- **Fusion** : énergie rayonnée (Barausse et al. 2012), spin final (Rezzolla et al. 2008, plus une part du spin initial,
+  approximation), recul (González et al. 2007). Vérifié sur GW150914 : 36 + 29 → 61,9 M☉, 3,07 M☉ en ondes, a* = 0,68.
+  L'aire de l'horizon augmente toujours (théorème de Hawking, confirmé par GW250114).
+- **Masse réelle** : au-delà du plafond de jeu (zone de collision), le surplus est compté à part (massK) ; la chute dans
+  Sagittarius A\* ajoute 4,3 millions de M☉.
+- **Entropie** S ∝ aire ∝ masse irréductible² : record de partie (fin de partie) et de compte (profil), avec le nombre de
+  kilonovas et de fusions. Bilan de ce qui a été absorbé dans les instruments.

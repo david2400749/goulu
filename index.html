@@ -180,7 +180,8 @@
           <div class="row"><div class="ic">◈</div><div class="tx" id="howtoBoss">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
           <div class="row"><div class="ic">◎</div><div class="tx"><b>Arrête d'aspirer</b> près du trou : la poussière se met en <b>orbite</b>. L'anneau rapporte, te protège, et avalé d'un coup donne un bonus.</div></div>
           <div class="row"><div class="ic">★</div><div class="tx">Une <b>étoile</b> passe ? Aspire-la longtemps : la marée la <b>déchire</b> et l'éclair pulvérise l'antimatière.</div></div>
-          <div class="row"><div class="ic">◆</div><div class="tx">Partie infinie : à chaque <b>palier</b>, <b>encaisse</b> ta banque d'éclats ou continue (si tu meurs, tu n'en gardes que la moitié). Au palier 10, <b>Sagittarius A*</b> : survis jusqu'à la <b>fusion</b>.</div></div>
+          <div class="row"><div class="ic">◆</div><div class="tx">Partie infinie : à chaque <b>palier</b>, <b>encaisse</b> ta banque d'éclats ou continue (si tu meurs, tu n'en gardes que la moitié). Au palier 10, la <b>spirale extrême</b> vers <b>Sagittarius A*</b> : survis jusqu'à ta chute en lui.</div></div>
+          <div class="row"><div class="ic">◉</div><div class="tx">Une <b>étoile à neutrons</b> spirale vers toi : avec assez de spin elle est déchirée (<b>kilonova</b>, débris d'or à avaler), sinon tu l'avales d'un coup, sans lumière. Le <b>Compagnon</b> est un autre trou noir : tes ondes resserrent son orbite jusqu'à la <b>fusion</b>.</div></div>
           <div class="row"><div class="ic">⚖</div><div class="tx"><b>Masse</b> : tout ce que tu avales te fait grossir (attraction et points), mais un gros trou est plus facile à toucher. Un trou noir ne maigrit jamais : si tu jeûnes, c'est ton <b>disque</b> qui s'éteint et rapporte moins. Avale trop vite et tu dépasses la limite d'<b>Eddington</b> : ta lumière souffle la matière.</div></div>
           <div class="row"><div class="ic">↻</div><div class="tx"><b>Spin</b> : la matière qui tourne dans ton sens (l'anneau en orbite) te fait tourner plus vite ; celle qui tombe droit ou à contre-sens te freine. Plus de spin : disque plus efficace (points) et ondes plus larges. Chaque onde est un <b>jet</b> qui consomme un peu de ta rotation.</div></div>
           <div class="row"><div class="ic">✦</div><div class="tx"><b>Vraie physique</b> : ta naissance, tes phases de vie et les grandeurs affichées suivent les lois réelles, seul le temps est accéléré. <button class="link-btn" id="btnBirth" type="button">Revoir la naissance →</button></div></div>
@@ -218,6 +219,8 @@
           <div class="stats-row" style="grid-template-columns:repeat(2,1fr)">
             <div class="stat-cell green"><div class="v" id="statsWave">0</div><div class="l">Vague max</div></div>
             <div class="stat-cell pink"><div class="v" id="statsElem">0</div><div class="l">Chaînes élém.</div></div>
+            <div class="stat-cell cyan"><div class="v" id="statsEntropy">0</div><div class="l">Entropie max (k_B)</div></div>
+            <div class="stat-cell gold"><div class="v" id="statsMergers">0 / 0</div><div class="l">Kilonovas / fusions</div></div>
           </div>
         </div>
         <div class="stats-block">
@@ -475,6 +478,7 @@
 <script src="js/pulsar.js"></script>
 <script src="js/cosmos.js"></script>
 <script src="js/endgame.js"></script>
+<script src="js/merger.js"></script>
 <script src="js/progression.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/alive.js"></script>
