@@ -47,6 +47,7 @@ function refreshMenuBadges(){
   }
   if(badgeShardsEl) badgeShardsEl.textContent = profile.shards;
   if(bestHudEl) bestHudEl.textContent = profile.best;
+  renderLevelBadge();
   if(badgeCampaignEl){
     const n = Object.keys(profile.campaign.completed||{}).length;
     const b = badgeCampaignEl.querySelector('b');
@@ -503,6 +504,9 @@ $('btnQuit').addEventListener('click', ()=>{
   }
 });
 $('btnSkipTut').addEventListener('click', e=>{ e.stopPropagation(); if(tutorialActive) endTutorial(); });
+$('btnRevive').addEventListener('click', e=>{ e.stopPropagation(); acceptRevive(); });
+$('btnReviveNo').addEventListener('click', e=>{ e.stopPropagation(); declineRevive(); });
+$('btnReroll').addEventListener('click', e=>{ e.stopPropagation(); rerollAnomalies(); });
 if($('btnVictoryMenu')) $('btnVictoryMenu').addEventListener('click', ()=>{ backToMenu(); });
 
 function updateStreakOnPlay(){
@@ -512,6 +516,11 @@ function updateStreakOnPlay(){
   else profile.streak.current=1;
   profile.streak.lastDate=today;
   if(profile.streak.current>profile.streak.best) profile.streak.best=profile.streak.current;
+  const sr = streakReward(profile.streak.current);
+  if(sr > 0){
+    profile.shards += sr;
+    setTimeout(()=>showUnlockToast('🔥', 'Série de ' + profile.streak.current + ' jours · +' + sr + ' shard' + (sr > 1 ? 's' : '')), 600);
+  }
   saveP();
   refreshMenuBadges();
 }

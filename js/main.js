@@ -35,8 +35,9 @@ function loop(now){
   if(dt > 0.05) dt = 0.05;
   updateCamera(dt);
   perfSample(dt);
-  if(state === 'anomaly' || state === 'paused'){
+  if(state === 'anomaly' || state === 'paused' || state === 'revive'){
     /* jeu gelé : le décor continue de vivre */
+    if(state === 'revive') tickRevive(dt);
   } else if(state === 'tutorial'){
     updateTutorial(dt);
     syncTouchControls();

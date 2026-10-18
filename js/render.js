@@ -218,6 +218,10 @@ function drawBossPart(e, t){
     sctx.globalCompositeOperation = 'lighter';
     sctx.lineWidth = 2; sctx.strokeStyle = color;
     sctx.beginPath(); sctx.arc(0, 0, rr, 0, Math.PI * 2); sctx.stroke();
+    if(boss && boss.enraged){
+      sctx.lineWidth = 3; sctx.strokeStyle = 'rgba(255,60,60,' + (0.45 + 0.4 * Math.sin(t * 12)).toFixed(2) + ')';
+      sctx.beginPath(); sctx.arc(0, 0, rr * (1.22 + 0.06 * Math.sin(t * 12)), 0, Math.PI * 2); sctx.stroke();
+    }
     if(flashAmt > 0){ sctx.fillStyle = 'rgba(255,255,255,' + (flashAmt * 0.8).toFixed(2) + ')'; sctx.beginPath(); sctx.arc(0, 0, rr, 0, Math.PI * 2); sctx.fill(); }
     sctx.restore();
     sctx.globalCompositeOperation = 'source-over';
@@ -226,7 +230,7 @@ function drawBossPart(e, t){
     sctx.globalCompositeOperation = 'lighter';
     sctx.drawImage(glowSprite('shard' + color, [[0, color], [0.4, 'rgba(160,110,255,.35)'], [1, 'rgba(0,0,0,0)']], R3), e.x - R3, e.y - R3, R3 * 2, R3 * 2);
     sctx.globalCompositeOperation = 'source-over';
-    sctx.save(); sctx.translate(e.x, e.y); sctx.rotate(t * 2 + e.phase);
+    sctx.save(); sctx.translate(e.x, e.y); sctx.rotate(t * (boss && boss.enraged ? 5 : 2) + e.phase);
     diamondPath(sctx, 0, 0, e.r * 1.5);
     const gs = sctx.createLinearGradient(-e.r, -e.r, e.r, e.r);
     gs.addColorStop(0, '#d9c4ff'); gs.addColorStop(0.5, color); gs.addColorStop(1, '#2a0f60');

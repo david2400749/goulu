@@ -49,6 +49,8 @@ function startGame(modeId, isDaily){
   campaignNoAnomaly = !!(currentCampaignLevel && (currentCampaignLevel.constraint === 'noAnomaly' || currentCampaignLevel.constraint === 'reducedStats'));
   campaignReducedStats = !!(currentCampaignLevel && currentCampaignLevel.constraint === 'reducedStats');
   runTechniques = { dashparry: false, echochain: false, momentum: false };
+  reviveUsed = false; runRevives = 0; rerollsLeft = RUN_REROLLS; lastXp = null;
+  $('reviveScreen').classList.add('hidden');
   parryTimes = [];
   if(clipBlobUrl){ try{ URL.revokeObjectURL(clipBlobUrl); }catch(e){} clipBlobUrl = null; clipBlob = null; }
   if(btnDownloadClip) btnDownloadClip.style.display = 'none';
@@ -236,6 +238,7 @@ function gameOver(){
   ghostLineEl.classList.remove('on');
   bossBarEl.classList.remove('on');
   overEl.classList.remove('hidden');
+  showXpResult(lastXp); showNextGoal();
   deathSound();
   refreshMenuBadges();
   checkModeUnlocks();

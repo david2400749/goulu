@@ -96,6 +96,17 @@ function damageBoss(amount, x, y){
   vibrate(35);
   if(actx && !audioMuted) blip(220, 0.14, 'sawtooth', 0.15, 60);
   if(boss.hp <= 0) killBoss();
+  else if(!boss.enraged && boss.hp <= boss.maxHp / 2) enrageBoss();
+}
+/* Deuxième phase à mi-vie : le boss accélère et frappe plus fort, le combat change de rythme. */
+function enrageBoss(){
+  boss.enraged = true;
+  addToast('⚠ ' + boss.type.name.toUpperCase() + ' ENRAGÉ', '#ff5c5c', H/2 - 150);
+  shake = Math.max(shake, 26); flash = Math.max(flash, reduceFx() ? 0.2 : 0.5);
+  for(const p of boss.parts) burst(p.x, p.y, '#ff3b3b', 24, 520);
+  if(actx && !audioMuted){ blip(90, 0.7, 'sawtooth', 0.16, 45); blip(140, 0.5, 'square', 0.08, 70, 0.1); }
+  vibrate([60, 30, 60]);
+  thoughtOnce('enrage', 'Il a peur. Moi aussi.');
 }
 function killBoss(){
   if(!boss) return;

@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.13.0-dev';
+const GAME_VERSION = '0.14.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -69,7 +69,7 @@ const UPGRADES = [
   { id:'app1', branch:'appetit', name:'Appétit I',    icon:'💰', desc:'+5% pts dust',       cost:3,  apply:(m)=>{ m.dustValue *= 1.05; } },
   { id:'app2', branch:'appetit', name:'Appétit II',   icon:'💰', desc:'+10% pts dust',      cost:6,  apply:(m)=>{ m.dustValue *= 1.10; } },
   { id:'app3', branch:'appetit', name:'Appétit III',  icon:'💰', desc:'+15% pts dust',      cost:9,  apply:(m)=>{ m.dustValue *= 1.15; } },
-  { id:'app4', branch:'appetit', name:'Combo Long',   icon:'🔥', desc:'+0.6s fenêtre combo', cost:5,  apply:(m)=>{ m.comboMax += 0.6; } },
+  { id:'app4', branch:'appetit', name:'Combo Long',   icon:'🔥', desc:'+0.6s fenêtre combo', cost:5,  apply:(m)=>{ m.comboBonus += 0.6; } },
   // DÉFENSE
   { id:'def1', branch:'defense', name:'Robustesse I', icon:'🛡️', desc:'+1 vie max',         cost:6,  apply:(m)=>{ m.bonusLives += 1; } },
   { id:'def2', branch:'defense', name:'Robustesse II',icon:'🛡️', desc:'+2 vies max',        cost:12, apply:(m)=>{ m.bonusLives += 2; } },

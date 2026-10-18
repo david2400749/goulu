@@ -55,6 +55,10 @@ function migrate(p){
   p.resonances = p.resonances || 0;
   p.elemChains = p.elemChains || 0;
   p.bestWave = p.bestWave || 0;
+  /* 0.14 : niveau du trou noir */
+  p.level = Math.max(1, p.level || 1);
+  p.xp = p.xp || 0;
+  p.xpBonusDate = p.xpBonusDate || '';
   p.specUnlocked = p.specUnlocked || {};
   p.tutorialDone = p.tutorialDone || false;
   p.bossTutorialDone = p.bossTutorialDone || false;
