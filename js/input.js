@@ -1,12 +1,13 @@
 /* GOULU — entrées clavier / souris / tactile, pause
    ---------------------------------------------------------
    2 commandes séparées (par défaut) :
-     ASPIRER  maintenir : ESPACE / clic gauche / doigt posé n'importe où
-     ONDE     appui     : F / Entrée / clic droit / bouton ONDE à l'écran
+     ASPIRER  maintenir : ESPACE / flèche ← / clic gauche / doigt posé n'importe où
+     ONDE     appui     : F / flèche → / Entrée / clic droit / bouton ONDE à l'écran
+   Les flèches suivent la souris : ← comme le clic gauche, → comme le clic droit.
    Mode « 1 seul bouton » (option) : relâcher l'aspiration déclenche l'onde. */
-const HOLD_KEYS = ['Space', 'ArrowUp'];
-const WAVE_KEYS = ['KeyF', 'KeyJ', 'Enter'];
-const isHoldKey = c => HOLD_KEYS.includes(c) || (!dualControls() && c === 'Enter');
+const HOLD_KEYS = ['Space', 'ArrowLeft'];
+const WAVE_KEYS = ['KeyF', 'KeyJ', 'Enter', 'ArrowRight'];
+const isHoldKey = c => HOLD_KEYS.includes(c) || (!dualControls() && (c === 'Enter' || c === 'ArrowRight'));
 const isWaveKey = c => dualControls() && WAVE_KEYS.includes(c);
 const inGame = () => state === 'play' || state === 'tutorial' || state === 'resume';
 
@@ -111,6 +112,7 @@ function pressWaveBtn(){
 
 /* ---------- souris ---------- */
 window.addEventListener('mousedown', e => {
+  if(state === 'menu') initAudio();   // le premier geste au menu débloque l'audio : la musique du menu démarre
   if(state === 'menu' && e.button === 0 && menuTapTarget(e.target)) menuTap(e.clientX, e.clientY);
   const onWaveBtn = e.target && e.target.closest && e.target.closest('#btnWave');
   if(e.button === 2 || onWaveBtn){
@@ -140,6 +142,7 @@ function dropTouches(e){
   for(const id of Array.from(holdTouches)) if(!live.has(id)) holdTouches.delete(id);
 }
 window.addEventListener('touchstart', e => {
+  if(state === 'menu') initAudio();
   if(state === 'menu' && e.touches && e.touches[0] && menuTapTarget(e.target)) menuTap(e.touches[0].clientX, e.touches[0].clientY);
   enableTouchUI();
   if(!dualControls() || !inGame()){ onDown(e); return; }
@@ -206,8 +209,11 @@ window.addEventListener('keydown',e=>{
       if(inGame() && ae.closest && ae.closest('#hud')){ ae.blur(); fromHudButton = true; }
       else return;
     }
+    if(state==='menu'){
+      if(e.code==='Space' || e.code==='Enter'){ e.preventDefault(); if(!e.repeat) $('btnPlay').click(); }
+      return;   // flèches au menu : défilement normal de la page
+    }
     e.preventDefault();
-    if(state==='menu'){ if(!e.repeat && (e.code==='Space' || e.code==='Enter')) $('btnPlay').click(); return; }
     if(e.repeat) return;
     if(isWaveKey(e.code)){
       if(inGame()){ initAudio(); fireWave(); }

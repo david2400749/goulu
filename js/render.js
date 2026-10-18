@@ -44,6 +44,81 @@ function glowSprite(key, stops, radius){
 }
 function diamondPath(c, x, y, r){ c.beginPath(); c.moveTo(x, y-r); c.lineTo(x+r, y); c.lineTo(x, y+r); c.lineTo(x-r, y); c.closePath(); }
 
+/* ---------- MATIÈRE QUI TOMBE ----------
+   Grains de gaz et de poussière interstellaires qui spiralent vers le trou, sur la
+   couche scène (donc vus à travers la lentille). Rayons en unités de Rs :
+   - rotation képlérienne Ω ∝ r^-3/2 : lents au loin, tourbillon rapide près du trou ;
+   - chute vers le centre, bien plus rapide quand on aspire ;
+   - vue de loin, la chute ralentit en (1 - Rs/r) : près de l'horizon le grain semble
+     se figer, rougit (redshift gravitationnel g = √(1 - Rs/r)) et s'éteint en g⁴ —
+     rien n'est jamais vu franchir l'horizon ;
+   - échauffement T ∝ r^-3/4 et traînée étirée (spaghettification). */
+const INFALL = [];
+const BB_STEPS = 48, BB_T0 = 900, BB_T1 = 16000;
+const BB_RGB = [];
+(function(){
+  for(let i = 0; i < BB_STEPS; i++){
+    const t = (BB_T0 + (BB_T1 - BB_T0) * i / (BB_STEPS - 1)) / 100;
+    const r = t <= 66 ? 1 : clamp(1.292936186 * Math.pow(t - 60, -0.1332047592), 0, 1);
+    const g = t <= 66 ? clamp(0.3900815788 * Math.log(t) - 0.6318414438, 0, 1) : clamp(1.129890861 * Math.pow(t - 60, -0.0755148492), 0, 1);
+    const b = t >= 66 ? 1 : (t <= 19 ? 0 : clamp(0.5432067891 * Math.log(t - 10) - 1.19625408914, 0, 1));
+    BB_RGB.push('rgb(' + Math.round(r * 255) + ',' + Math.round(g * 255) + ',' + Math.round(b * 255) + ')');
+  }
+})();
+function bbColor(T){ return BB_RGB[Math.round(clamp((T - BB_T0) / (BB_T1 - BB_T0), 0, 1) * (BB_STEPS - 1))]; }
+function infallCount(){ return reduceFx() ? 45 : (IS_TOUCH ? 80 : 130); }
+function infallRs(){ return Math.max(2, bh.r * cam.zoom / 2.598); }
+function spawnInfall(m, edge){
+  const rMax = Math.hypot(W, H) * 0.55 / infallRs();
+  m.r = edge ? rMax * (0.85 + 0.15 * Math.random()) : 3 + Math.random() * Math.max(1, rMax - 3);
+  m.a = Math.random() * Math.PI * 2;
+  m.age = edge ? 0 : 2;
+  m.hot = Math.random() < 0.2;
+  m.w = 0.6 + Math.random() * 0.9;
+  m.vr = 0; m.om = 0;
+}
+function updateInfall(dt, pull){
+  const want = infallCount();
+  while(INFALL.length < want){ const m = {}; spawnInfall(m, false); INFALL.push(m); }
+  if(INFALL.length > want) INFALL.length = want;
+  for(let i = 0; i < INFALL.length; i++){
+    const m = INFALL[i];
+    const r = m.r;
+    m.om = 30 * Math.pow(r, -1.5);
+    m.vr = (1.6 + 26 * pull) * Math.pow(r, -0.5) * (1 - 1 / r);
+    m.a -= m.om * dt;
+    m.r = Math.max(1.0005, r - m.vr * dt);
+    m.age += dt;
+    if(m.r < 1.12) spawnInfall(m, true);
+  }
+}
+function drawInfall(pull){
+  const Rs = infallRs(), cx = bh.x, cy = bh.y;
+  sctx.globalCompositeOperation = 'lighter';
+  sctx.lineCap = 'round';
+  for(let i = 0; i < INFALL.length; i++){
+    const m = INFALL[i], r = m.r;
+    const ca = Math.cos(m.a), sa = Math.sin(m.a);
+    const x = cx + ca * r * Rs, y = cy + sa * r * Rs;
+    if(x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+    const g = Math.sqrt(1 - 1 / r);                              // redshift gravitationnel
+    const T = (m.hot ? 7000 : 3600) * Math.pow(8 / Math.max(r, 1.5), 0.75) * g;
+    const fadeIn = Math.min(1, m.age / 1.5);
+    const a = fadeIn * g * g * g * g * Math.min(1, (m.hot ? 0.5 : 0.24) * (0.4 + 8 / r)) * (0.7 + 0.6 * pull);
+    if(a < 0.01) continue;
+    /* vitesse apparente (px/s) : chute + rotation ; la traînée s'étire avec la marée (∝ 1/r²) */
+    const vx = (-m.vr * ca + m.om * r * sa) * Rs, vy = (-m.vr * sa - m.om * r * ca) * Rs;
+    const sp = Math.hypot(vx, vy) + 1e-6;
+    const k = Math.min(0.05 + 1.6 / (r * r), 30 / sp);   // traînée plafonnée à 30 px
+    sctx.globalAlpha = a;
+    sctx.strokeStyle = bbColor(T);
+    sctx.lineWidth = m.w * (m.hot ? 1.5 : 1.1);
+    sctx.beginPath(); sctx.moveTo(x - vx * k, y - vy * k); sctx.lineTo(x, y); sctx.stroke();
+  }
+  sctx.globalAlpha = 1;
+  sctx.globalCompositeOperation = 'source-over';
+}
+
 /* ---------- COUCHE SCÈNE ---------- */
 function drawSceneLayer(t){
   const s = sceneScale;
@@ -53,6 +128,7 @@ function drawSceneLayer(t){
   sctx.clearRect(0, 0, W, H);
   sctx.save();
   sctx.translate(cam.dx, cam.dy);
+  drawInfall(VIS.attract);
   if(state === 'menu'){ sctx.restore(); return; }
   drawJets(t);
   const cb = profile.options.colorblind;
@@ -107,7 +183,8 @@ function drawDust(e, t){
   const ang = Math.atan2(dy, dx);
   const near = clamp(1 - (dist - bh.r) / 300, 0, 1);
   const stretch = 1 + near * near * 3.2;
-  const flick = 0.8 + 0.2 * Math.sin(t * 9 + e.phase * 3);
+  const gz = 1 - Math.min(0.95, bh.r / 2.598 / Math.max(dist, 1));   // g² = 1 - Rs/r : rougit et s'éteint à l'horizon
+  const flick = (0.8 + 0.2 * Math.sin(t * 9 + e.phase * 3)) * (0.35 + 0.65 * gz * gz);
   const R3 = e.r * 3.6;
   sctx.save();
   sctx.translate(e.x, e.y); sctx.rotate(ang);
@@ -474,6 +551,7 @@ function renderFrame(dt){
   const bi = (state === 'play' && music.playing) ? beatInfo() : null;
   const kick = bi ? Math.max(0, 1 - bi.phase * 4) : 0;
   VIS.hurt += ((hurtT > 0 ? 1 : 0) - VIS.hurt) * (1 - Math.exp(-dt * 8));
+  updateInfall(dt * (playing && timeScale < 1 ? Math.max(0.3, timeScale) : 1), Math.min(1, VIS.attract + ALIVE.menuPull * 0.6));
   VIS.danger += (danger - VIS.danger) * (1 - Math.exp(-dt * 10));
 
   let shk = { x: 0, y: 0 };
@@ -513,7 +591,12 @@ function renderFrame(dt){
     glow, temp: sk.temp * (1 + 0.16 * VIS.attract) * AV.temp, beam: 2.35,
     hue, sat: sk.sat,
     lens: 20 * (1 + 0.55 * VIS.attract) * AV.lens, sceneLens: 1.15 * (1 + 0.4 * VIS.attract),
-    sceneOn: state !== 'menu', sceneCanvas, sceneGain: 1.18,
+    sceneOn: true, sceneCanvas, sceneGain: 1.18,
+    inflow: (state === 'menu' ? 0.45 : 0.35) + 0.9 * VIS.attract + ALIVE.menuPull * 0.5,
+    twist: 0.22 + 0.75 * VIS.attract + ALIVE.menuPull * 0.4,
+    hot: (0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(t * 0.37)), 4)) * (reduceFx() ? 0.5 : 1),
+    pull: reduceFx() ? VIS.attract * 0.3 : VIS.attract,
+    holeU: (bh.x + cam.dx) / W, holeV: 1 - (bh.y + cam.dy) / H,
     starGain: 1.0, quality: 1, tint: VTINT, ripples,
     bloomThr: 1.0, bloom: 0.8, exposure: 1.15, vignette: 0.5, grain: 0.028,
     aberr: 0.0012 + Math.min(1, shake / 32) * 0.004 + parryFlash * 0.004 + flash * 0.006 + dilate * 0.003,

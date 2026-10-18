@@ -10,7 +10,7 @@ Deux commandes séparées :
 
 | | **ASPIRER** (maintenir) | **ONDE** (appuyer) |
 |---|---|---|
-| Ordinateur | ESPACE ou clic gauche | F, Entrée ou clic droit |
+| Ordinateur | ESPACE, flèche ← ou clic gauche | F, flèche →, Entrée ou clic droit |
 | Téléphone | doigt posé n'importe où (repère en bas à gauche) | bouton ONDE en bas à droite |
 
 - **Aspire** la poussière d'étoiles : elle recharge tes ondes.
@@ -35,7 +35,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.18.1-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.19.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -69,7 +69,7 @@ js/
   core.js          canvases, caméra (menu → partie), redimensionnement, résolution adaptative
   space.js         moteur WebGL2 (voir ci-dessous)
   render.js        couche scène (entités), overlay (repères), paramètres envoyés au GPU, repli 2D
-  hud.js audio.js  HUD, audio synthétisé (SFX, musique, grondement gravitationnel)
+  hud.js audio.js  HUD, audio synthétisé (SFX, musique générative adaptative, grondement gravitationnel)
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil
   leaderboard.js   classement mondial du défi du jour (Supabase, actif seulement sur github.io ou avec ?lb)
@@ -93,7 +93,12 @@ Trois couches : `#gl` (WebGL2) → `#c` (overlay 2D, non déformé) + une couche
   `u'' + u = 3/2 u²` dans son plan orbital. Ombre de rayon critique `3√3/2 Rs`, anneau de photons,
   disque d'accrétion mince traversé jusqu'à 3 fois (arche au-dessus et sous l'ombre), effet Doppler
   relativiste + redshift gravitationnel, couleur corps noir. Loin du trou : déflexion analytique `2/b + 2,945/b² + 5,33/b³`.
-- **Ciel** : nébuleuse + Voie lactée cuites en texture, étoiles procédurales (4 couches), le tout
+- **Zone de plongée** sous l'ISCO (3 Rs) : le gaz quitte le disque et tombe en spirale vers l'horizon,
+  de plus en plus rougi et éteint. **Point chaud** en orbite képlérienne près de l'ISCO (sursauts façon Sgr A*).
+- **Entraînement du référentiel** (Lense-Thirring) : le ciel lentillé est tordu autour du trou (∝ 1/b²), davantage quand on aspire.
+- **Accrétion de Bondi** : gaz interstellaire qui spirale vers le trou, chauffé (T ∝ r^-3/4) puis rougi
+  par le redshift gravitationnel g = √(1 − Rs/r) (intensité ∝ g⁴). Couronne X diffuse autour de la région interne.
+- **Ciel** : nébuleuse + Voie lactée + galaxies lointaines cuites en texture, étoiles procédurales (4 couches), le tout
   rendu une fois à la résolution de l'écran puis rafraîchi à ~7 Hz (scintillement).
 - **Post** : bloom 2 niveaux, aberration chromatique, tone mapping ACES, vignette, grain.
 - **Qualité adaptative** : la résolution GL suit le temps GPU mesuré (`EXT_disjoint_timer_query`).
@@ -105,6 +110,16 @@ Le rayon de l'ombre = `bh.r` (rayon de jeu) : ce que tu vois est ce qui te touch
 - Maintenir (aspirer) : l'espace-temps se courbe plus (lentille ×1,55), le disque chauffe et tourne plus vite.
 - Onde de choc : ondulation réfractive réelle du ciel, plus anneau de repère.
 - Parry / ralenti : désaturation et teinte froide (dilatation du temps).
-- Poussières : étirées vers le trou (spaghettification) et chauffées en approchant.
+- Poussières : étirées vers le trou (spaghettification) et chauffées en approchant ; elles rougissent et pâlissent près de l'horizon.
+- Matière qui tombe (`render.js`, couche lentillée) : grains en rotation képlérienne (Ω ∝ r^-3/2), chute bien plus rapide quand on
+  aspire, puis gel apparent à l'horizon (vitesse ∝ 1 − Rs/r, redshift, extinction) : vu de loin, rien ne franchit jamais l'horizon.
+- Aspirer : flou radial vers le trou (la lumière semble tirée vers lui) et torsion du ciel.
 - Kick de la musique : le disque pulse.
+
+## Musique
+
+Générative et synthétisée en direct (`audio.js`), synthwave spatiale en la mineur, calée sur le tempo du jeu
+(le kick reste le battement du *pulse*). Nappe d'accords désaccordée, basse, arpège en écho ping-pong, mélodie,
+batterie, cloches cristallines, grande réverbération, sidechain sur le kick. L'arrangement suit la partie :
+menu (calme, sans batterie) → début de partie → multiplicateur ×3 / danger → boss ou ×6 (grille plus sombre au boss).
 - Skins : température et teinte du disque (`SKIN_GFX` dans `render.js`).

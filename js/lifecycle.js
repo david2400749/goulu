@@ -120,7 +120,8 @@ function startGame(modeId, isDaily){
   hintEl.classList.add('on');
   setTimeout(()=>hintEl.classList.remove('on'), 4500);
   if(actx){
-    if(!(currentCampaignLevel && currentCampaignLevel.n === 4)) musicStart();
+    if(currentCampaignLevel && currentCampaignLevel.n === 4) musicStop();   // niveau SILENCE : la nappe du menu se tait aussi
+    else musicStart('game');
     musicSetBpm(80);
   }
   spawnTutorialRing();
