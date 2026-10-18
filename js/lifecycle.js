@@ -183,6 +183,7 @@ function gameOver(){
     }
   }
   if(lastGameWasDaily && score > profile.daily.score) profile.daily.score = score;
+  if(lastGameWasDaily) afterDailyRun(score); else if($('lbRank')) $('lbRank').textContent = '';
 
   profile.history.push({ score, mode:currentMode.id, ts:Date.now(), parry:parryCount, time:run.time });
   if(profile.history.length > 60) profile.history = profile.history.slice(-60);
@@ -271,4 +272,5 @@ function backToMenu(){
   renderModeGrid(); renderQuests(); renderStats();
   renderCampaign(); renderJournal(); renderEvolution();
   renderGreeting(); maybeAskName();
+  if(document.querySelector('.mtab.active[data-tab="daily"]')) renderDailyBoard();
 }

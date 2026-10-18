@@ -283,7 +283,7 @@ document.querySelectorAll('.mtab').forEach(btn=>{
     document.querySelectorAll('.mtab').forEach(b=>b.classList.toggle('active', b===btn));
     document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.dataset.panel===tab));
     try{
-      if(tab==='daily') refreshDaily();
+      if(tab==='daily'){ refreshDaily(); renderDailyBoard(); }
       if(tab==='ach') renderAch();
       if(tab==='skins') renderSkins();
       if(tab==='quests') renderQuests();

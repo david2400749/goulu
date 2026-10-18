@@ -750,6 +750,67 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.17 : classement mondial du défi du jour (réseau intercepté, jamais la vraie base) ---------- */
+  const LB_PLAYER = { tutorialDone: true, bhName: 'Nox', namePromptSeen: true };
+  const dieDaily = page => page.evaluate(() => {
+    lastGameWasDaily = true; startGame('classic', true); score = 1500;
+    lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x: bh.x + 5, y: bh.y });
+  });
+
+  await test('Classement : inactif hors du site publié (aucun appel réseau)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: LB_PLAYER });
+    let calls = 0;
+    await page.route('**/*supabase.co/**', r => { calls++; r.abort(); });
+    await page.click('.mtab[data-tab="daily"]');
+    await dieDaily(page);
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => ({ board: document.getElementById('dailyBoard').classList.contains('hidden'), rank: document.getElementById('lbRank').textContent }));
+    await ctx.close();
+    assert(calls === 0 && r.board && r.rank === '', JSON.stringify({ calls, r }));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Classement : envoi après un défi, rang affiché, noms affichés comme texte', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl&lb', { profile: LB_PLAYER });
+    const seen = [];
+    await page.route('**/rest/v1/rpc/**', async route => {
+      const req = route.request(), fn = req.url().split('/').pop();
+      seen.push({ fn, body: JSON.parse(req.postData() || '{}'), headers: req.headers() });
+      const json = fn === 'submit_daily_score' ? [{ rank: 3, total: 12 }]
+        : [{ rank: 1, name: 'Abysse', score: 9000, total: 12 }, { rank: 2, name: '<img src=x onerror=alert(1)>', score: 4000, total: 12 }, { rank: 3, name: 'Nox', score: 1500, total: 12 }];
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+    });
+    await dieDaily(page);
+    await page.waitForFunction(() => /sur/.test(document.getElementById('lbRank').textContent));
+    const rank = await page.evaluate(() => document.getElementById('lbRank').textContent);
+    await page.evaluate(() => backToMenu());
+    await page.click('.mtab[data-tab="daily"]');
+    await page.waitForFunction(() => document.querySelectorAll('#dailyBoardList .lb-row').length === 3);
+    const board = await page.evaluate(() => ({ imgs: document.querySelectorAll('#dailyBoardList img').length,
+      names: [...document.querySelectorAll('#dailyBoardList .lb-name')].map(n => n.textContent),
+      me: document.querySelectorAll('#dailyBoardList .lb-row.me').length, foot: document.getElementById('dailyBoardFoot').textContent,
+      day: todayStr(), pid: profile.playerId }));
+    await ctx.close();
+    const sub = seen.find(s => s.fn === 'submit_daily_score');
+    assert(rank.includes('3e sur 12'), 'écran de fin : ' + rank);
+    assert(sub && sub.body.p_score === 1500 && sub.body.p_name === 'Nox' && sub.body.p_day === board.day && sub.body.p_player === board.pid, 'envoi : ' + JSON.stringify(sub && sub.body));
+    assert(/^sb_publishable_/.test(sub.headers.apikey) && !sub.headers.authorization, 'en-têtes : clé publique dans apikey seulement');
+    assert(board.imgs === 0 && board.names[1].startsWith('<img') && board.me === 1 && board.foot.includes('3e sur 12'), 'classement : ' + JSON.stringify(board));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Classement : hors ligne, la partie continue sans erreur', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl&lb', { profile: LB_PLAYER });
+    await page.route('**/rest/v1/rpc/**', r => r.fulfill({ status: 503, body: 'indisponible' }));
+    await dieDaily(page);
+    await page.waitForFunction(() => /indisponible/.test(document.getElementById('lbRank').textContent));
+    const r = await page.evaluate(() => ({ state, daily: profile.daily.score }));
+    await ctx.close();
+    assert(r.state === 'over' && r.daily === 1500, JSON.stringify(r));
+    const real = errors.filter(e => !/supabase\.co|503/.test(e));   // la réponse 503 simulée n'est pas une erreur du jeu
+    assert(!real.length, real.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [

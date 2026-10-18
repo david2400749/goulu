@@ -105,7 +105,7 @@ achats intégrés Google Play / App Store si le jeu est empaqueté avec Capacito
 | Priorité | Lot | Pourquoi |
 |---|---|---|
 | 1 | **Mesures** (début / fin de partie, cause de mort, niveau, seconde chance acceptée ou non, rétention J1 / J7) | Sans chiffres, impossible de savoir ce qui retient vraiment. Plausible, Umami ou PostHog suffisent. |
-| 2 | **Classement mondial du défi du jour** (Supabase ou Firebase) | Le défi identique pour tous est déjà prêt ; il lui manque le classement pour devenir un rendez-vous quotidien. |
+| 2 | ~~**Classement mondial du défi du jour**~~ : **fait en 0.17** (Supabase, `supabase/daily_leaderboard.sql`) | Le défi identique pour tous est déjà prêt ; il lui manque le classement pour devenir un rendez-vous quotidien. |
 | 3 | **Pub récompensée** pour la seconde chance et le double XP | Premier revenu, sans gêner personne. |
 | 4 | ~~**Nouveau boss**~~ : **fait en 0.15**, le Pulsar (faisceau à renvoyer avec l'onde, sur le battement). Reste : nouvelles anomalies synergiques | La variété des parties est ce qui use le plus vite un roguelite. |
 | 5 | **Pack Fondateur + boutique de skins** | Revenu principal, 100 % cosmétique. |
