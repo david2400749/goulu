@@ -184,6 +184,7 @@ const inView = (page, id) => page.evaluate(id => {
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
       entities.length = 0; score = 0; scoreFrac = 0; elemChain = { type: null, count: 0, timer: 0 };
+      birth = null; bhMass = 1; bhSpin = 0; discJ = 0;   // sans naissance : masse et spin neutres
       for(let i = 0; i < 3; i++) collectDust({ dustType: 'gold', x: bh.x, y: bh.y });
       syncHUD();
       return { score, hud: scoreHudEl.textContent };
@@ -700,9 +701,10 @@ const inView = (page, id) => page.evaluate(id => {
   await test('Plafond ×4 des mutations de score, sauf en mode Chaos', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, unlockedModes: ['classic', 'chaos'] } });
     const r = await page.evaluate(() => {
-      const k = mode => { startGame(mode, false); mods.anomScore = 2.5 * 1.8; mods.fureur = true; timeSinceRelease = 9; return +scoreK(true).toFixed(3); };
+      const neutral = () => { birth = null; bhMass = 1; bhSpin = 0; };   // masse et spin de naissance neutres
+      const k = mode => { startGame(mode, false); neutral(); mods.anomScore = 2.5 * 1.8; mods.fureur = true; timeSinceRelease = 9; return +scoreK(true).toFixed(3); };
       const out = { classic: k('classic'), chaos: k('chaos') };
-      startGame('classic', false); out.plain = scoreK(true);
+      startGame('classic', false); neutral(); out.plain = scoreK(true);
       return out;
     });
     await ctx.close();
@@ -1057,7 +1059,7 @@ const inView = (page, id) => page.evaluate(id => {
 
   /* ---------- 0.20 : cosmos ---------- */
   /* sans naissance : pas de débris de retombée ni de masse de départ différente */
-  const playSetup = page => page.evaluate(() => { startGame('classic', false); birth = null; bhMass = 1; entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
+  const playSetup = page => page.evaluate(() => { startGame('classic', false); birth = null; bhMass = 1; bhSpin = 0; discJ = 0; entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
   const tick = (page, n, hold) => page.evaluate(({ n, hold }) => {
     for(let i = 0; i < n; i++){ antiTimer = dustTimer = 999; hitstop = 0; attract = hold; if(state === 'play') update(1 / 60); }
   }, { n, hold });
@@ -1106,6 +1108,67 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  await test('Kerr : spin de Bardeen (×2,2 en masse pour a* = 0,998), masse irréductible, énergie de rotation', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      let a = 0, lnM = 0; while(a < 0.998 && lnM < 3){ a = Math.min(0.998, a + PHY.spinRate(a, 1) * 5e-4); lnM += 5e-4; }
+      const mi = PHY.irrK(0.9);
+      return { up: Math.exp(lnM), l0: PHY.iscoL(0), e0: PHY.iscoE(0), r1: PHY.spinRate(1, 1), radial: PHY.spinRate(0.5, 0), retro: PHY.spinRate(0.5, -1),
+        rot: PHY.rotFrac(1), keep: PHY.spinAfter(mi, 1), after: PHY.spinAfter(mi, 0.99), hz: PHY.horizonRg(1) };
+    });
+    await ctx.close();
+    const near = (v, want, tol) => Math.abs(v / want - 1) < tol;
+    assert(r.up > 2.1 && r.up < 2.45, 'montée en spin : masse ×' + r.up);
+    assert(near(r.l0, 2 * Math.sqrt(3), 1e-6) && near(r.e0, Math.sqrt(8 / 9), 1e-6) && Math.abs(r.r1) < 1e-9, 'ISCO : ' + JSON.stringify(r));
+    assert(near(r.radial, -1, 1e-9) && r.retro < -4, 'accrétion sans rotation / rétrograde : ' + JSON.stringify(r));
+    assert(near(r.rot, 0.2929, 0.001) && near(r.keep, 0.9, 1e-6) && r.after < 0.9 && near(r.hz, 1, 1e-9), 'rotation extractible : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Spin en partie : l\'anneau le fait monter, la chute radiale et le contre-sens le freinent, l\'onde-jet le consomme', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      const eat = (n, mk) => { for(let k = 0; k < n; k++){ accRate = 0; collectDust(mk()); } };
+      bhSpin = 0.3; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:0, vy:-50, orbit:true }));
+      out.ring = bhSpin; out.sense = discJ;
+      bhSpin = 0.6; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:-50, vy:0 }));
+      out.radial = bhSpin;
+      bhSpin = 0.6; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:0, vy:50 }));
+      out.retro = bhSpin; out.retroK = etaK();
+      bhSpin = 0.9; discJ = 0.8; bhMass = 1.2; out.highK = etaK(); out.zeroK = (bhSpin = 0, etaK());
+      bhSpin = 0.9; const mIrr = bhMass * PHY.irrK(0.9), m0 = bhMass, r0 = jetK();
+      shockCharges = 3; fireWave();
+      out.jet = { spin: bhSpin, dm: m0 - bhMass, irr: Math.abs(bhMass * PHY.irrK(bhSpin) - mIrr), k: r0, k0: (bhSpin = 0, jetK()) };
+      bhSpin = 0.9; const sl = { x:bh.x + ergoR() + 5, y:bh.y, vx:0, vy:-100, r:13, type:'anti', kind:'sling', phase:0, trail:[] };
+      penroseCheck(sl, Math.hypot(sl.x - bh.x, sl.y - bh.y)); out.penrose = { boosted: sl.vy < -130, spin: bhSpin, n: runPenrose };
+      return out;
+    });
+    await ctx.close();
+    assert(r.ring > 0.45 && r.sense > 0.9, 'l\'anneau en orbite fait tourner le trou : ' + JSON.stringify(r));
+    assert(r.radial < 0.6 && r.retro < r.radial && r.retroK <= 1, 'chute radiale / rétrograde : ' + JSON.stringify(r));
+    assert(r.highK >= 1.2 && r.zeroK === 1, 'efficacité : ' + JSON.stringify(r));
+    assert(r.jet.spin < 0.9 && r.jet.dm > 0 && r.jet.irr < 1e-9 && r.jet.k > 1.1 && r.jet.k0 < 1, 'jet : ' + JSON.stringify(r.jet));
+    assert(r.penrose.boosted && r.penrose.spin < 0.9 && r.penrose.n === 1, 'Penrose : ' + JSON.stringify(r.penrose));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Rendu WebGL avec un spin extrême (ISCO, ergosphère, entraînement du référentiel)', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const rins = [];
+      for(const a of [0.998, -0.9, 0]){ bhSpin = a; discJ = 1; for(let k = 0; k < 40; k++) renderFrame(1 / 20); rins.push(VIS.rin); }
+      return { rins, gl: useGL };
+    });
+    await page.waitForTimeout(200);
+    await ctx.close();
+    assert(r.rins[0] < 1.3 && r.rins[1] > 4 && Math.abs(r.rins[2] - 3) < 0.05, 'ISCO du shader (Rs) : ' + r.rins.map(x => x.toFixed(2)).join(' / '));
+    assert(!errors.length, errors.join('\n'));
+    return r.gl ? 'WebGL' : 'repli 2D';
+  });
+
   await test('Naissances : la même pour tous au défi du jour, effets de départ, légende et instruments', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');
@@ -1132,7 +1195,7 @@ const inView = (page, id) => page.evaluate(id => {
     assert(r.dailySame && r.kinds === 3, 'tirage : ' + JSON.stringify(r));
     assert(Math.abs(r.direct.m - 15) < 0.01 && r.direct.calm && /SUPERNOVA RATÉE/.test(r.direct.cap) && /Rs = 44 km/.test(r.direct.cap), 'supernova ratée : ' + JSON.stringify(r.direct));
     assert(r.collapsar && r.fallbackDust >= 4 && r.ring, 'collapsar / retombée : ' + JSON.stringify(r));
-    assert(/Rs 24 km · a\* 0,50/.test(r.chip) && /8,0 M☉/.test(r.mass), 'HUD : ' + r.chip + ' · ' + r.mass);
+    assert(/Rs 24 km · a\* 0,50 · η 8,2 %/.test(r.chip) && /8,0 M☉/.test(r.mass), 'HUD : ' + r.chip + ' · ' + r.mass);
     assert(/Température de Hawking/.test(r.panel) && /plus froid que le fond cosmologique/.test(r.panel), 'instruments : ' + r.panel);
     assert(!errors.length, errors.join('\n'));
   });

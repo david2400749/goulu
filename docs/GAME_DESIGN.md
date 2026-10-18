@@ -196,3 +196,20 @@ Première étape de `docs/PROPOSITION_PHYSIQUE.md`. Principe : les lois sont vra
   de croissance. L'antimatière ajoute de la masse et souffle le disque. Stades réels : Nouveau-né → Microquasar.
 - **Instruments** : Rs, ombre, ISCO, η, λ, température du disque et de Hawking, durée de vie, entropie, âge (pause) ;
   ligne Rs · a* · âge dans le HUD ; masse en M☉. Tests : constantes vérifiées contre les valeurs de référence.
+
+## 9. Trou noir de Kerr (0.23)
+
+- **Spin a\*** signé (sens des orbites), hérité de la naissance. Chaque poussière avalée change a\* selon Bardeen :
+  d(a\*)/d(ln M) = ℓ/E − 2a\*, avec ℓ et E pris sur l'ISCO et pondérés par la **cohérence du disque** (moyenne du moment
+  cinétique de la matière qui arrive) : l'anneau en orbite (cohérence 1) fait monter le spin, la chute radiale (0) le fait
+  baisser (accrétion chaotique), le contre-sens encore plus. Limite de Thorne 0,998. Vérifié : depuis a\* = 0, il faut
+  multiplier la masse par 2,2 pour atteindre 0,998.
+- **Efficacité** η(a\*) de 5,7 % à 32 % : points ×1 → ×1,6 (licence de jeu, ×5,6 en vrai), un peu moins en rétrograde ;
+  la masse gagnée est (1 − η) de la matière avalée.
+- **Charges et jets** : les charges restent (lecture : le flux magnétique apporté par la matière). Chaque onde est un jet de
+  Blandford-Znajek : portée ×0,92 → ×1,22 selon a\*², et elle extrait de l'énergie de rotation à masse irréductible
+  constante (M et a\* baissent). Simulation au robot sur 4 min : le spin se stabilise vers 0,4 à 0,5 entre accrétion et jets ;
+  un premier réglage (8 fois plus coûteux) vidait le spin en 2 min.
+- **Ergosphère** dessinée en pointillés dès a\* ≥ 0,3 ; la fronde qui la traverse repart ×1,4 (processus de Penrose).
+- **Rendu** : l'ISCO du shader (uniform uRin) suit le spin, de 4,5 Rs (rétrograde) à 1,15 Rs ; l'entraînement du référentiel
+  est proportionnel à a\*. Les rayons lumineux restent ceux de Schwarzschild (licence de jeu).

@@ -27,7 +27,7 @@ let birth = null, pendingBirth = null, fallbackAcc = 0;
 /* ---------- grandeurs réelles de la partie ---------- */
 function birthStart(){ return birth ? birth.start : 1; }
 function realMass(){ return birth ? birth.msun * bhMass / birth.start : 10 * bhMass; }
-function realSpin(){ return birth ? birth.a : 0; }
+function realSpin(){ return Math.abs(bhSpin); }
 /* Âge réel du trou noir, en années : la phase en cours (une par minute) est parcourue en échelle logarithmique. */
 function realAge(){
   const tc = tierClock(), clk = tc >= 0 ? tc : elapsed;
@@ -37,25 +37,30 @@ function realAge(){
 }
 function physLine(){
   const m = realMass();
-  return 'Rs ' + PHY.num(PHY.rsKm(m), 0) + ' km · a* ' + PHY.num(realSpin(), 2) + ' · ' + PHY.age(realAge());
+  return 'Rs ' + PHY.num(PHY.rsKm(m), 0) + ' km · a* ' + PHY.num(realSpin(), 2) + (spinRel() < -0.05 ? ' rétro' : '') + ' · η ' + PHY.num(etaNow() * 100, 1) + ' % · ' + PHY.age(realAge());
 }
 /* Panneau « Instruments » (pause) : uniquement des nombres calculés, aucun texte saisi. */
 function physPanelHTML(){
-  const m = realMass(), a = realSpin(), rs = PHY.rsKm(m), lam = eddRatio(), th = PHY.hawkingK(m);
+  const m = realMass(), a = realSpin(), ar = spinRel(), rs = PHY.rsKm(m), lam = eddRatio(), th = PHY.hawkingK(m);
+  const sense = Math.abs(discJ) < 0.25 ? 'désordonné (accrétion chaotique)' : ar >= 0 ? 'prograde' : 'rétrograde';
   const rows = [
     ['Naissance', birth ? birth.name.toLowerCase() : '—'],
     ['Masse', PHY.num(m, 1) + ' M☉'],
-    ['Spin a*', PHY.num(a, 2)],
-    ['Horizon Rs = 2GM/c²', PHY.num(rs, 0) + ' km'],
-    ['Ombre (3√3/2 Rs)', PHY.num(PHY.shadowKm(m), 0) + ' km'],
-    ['Dernière orbite stable', PHY.num(PHY.iscoRg(a) * rs / 2, 0) + ' km'],
-    ['Efficacité du disque η', PHY.num(PHY.eta(a) * 100, 1) + ' %'],
+    ['Spin a* (Kerr)', PHY.num(a, 3)],
+    ['Sens du disque', sense],
+    ['Horizon r₊', PHY.num(PHY.horizonRg(a) * rs / 2, 0) + ' km (Rs = ' + PHY.num(rs, 0) + ' km)'],
+    ['Ombre (≈ 3√3/2 Rs)', PHY.num(PHY.shadowKm(m), 0) + ' km'],
+    ['Dernière orbite stable', PHY.num(PHY.iscoRg(ar) * rs / 2, 0) + ' km'],
+    ['Efficacité du disque η', PHY.num(PHY.eta(ar) * 100, 1) + ' %'],
+    ['Masse irréductible', PHY.num(m * PHY.irrK(a), 2) + ' M☉'],
+    ['Énergie de rotation', PHY.num(PHY.rotFrac(a) * 100, 1) + ' % de la masse'],
+    ['Puissance des jets (∝ a*²)', PHY.num(a * a * 100, 0) + ' % du maximum'],
     ['Accrétion', PHY.num(lam, 2) + ' × Eddington'],
     ['Bord interne du disque', '≈ ' + PHY.sci(PHY.discK(m, Math.max(lam, 0.01))) + ' K'],
     ['Température de Hawking', PHY.sci(th) + ' K'],
     ['Évaporation', th < 2.725 ? 'non : plus froid que le fond cosmologique (2,7 K)' : 'oui'],
     ['Durée de vie (Hawking)', PHY.sci(PHY.lifeYears(m)) + ' ans'],
-    ['Entropie', PHY.sci(PHY.entropyKB(m)) + ' k_B'],
+    ['Entropie (∝ aire)', PHY.sci(PHY.entropyKB(m) * PHY.irrK(a) * PHY.irrK(a)) + ' k_B'],
     ['Âge', PHY.age(realAge())]
   ];
   return '<div class="pp-head">Instruments · lois réelles, temps compressé</div>' +
@@ -78,6 +83,7 @@ function birthSetup(isDaily){
   birth = (!isDaily && pendingBirth) ? pendingBirth : BIRTHS[Math.floor(r * BIRTHS.length)];
   pendingBirth = null;
   bhMass = birth.start;
+  bhSpin = birth.a; discJ = 0.6;                                    // le disque hérité de l'étoile tourne avec elle
   if(birth.id === 'direct') antiTimer += 2.5;                       // l'étoile s'est éteinte sans bruit : départ calme
   else if(birth.id === 'collapsar'){ shockCharges = getMaxCharges(); aliveJet(1); }
   /* implosion : la matière tombe vers le centre, une bouffée d'ondes gravitationnelles */

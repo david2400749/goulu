@@ -18,7 +18,7 @@ function collectDust(e){
     }
   }
   aliveEat(e.dustType);
-  massGain(e.dustType);
+  massGain(e.dustType, e);
   if(e.orbit) orbitEaten();
   if(e.dustType === 'blue'){ slowmoT = 1.0; timeScale = 0.4; flash = Math.max(flash, 0.25); }
   else if(e.dustType === 'red'){
@@ -69,7 +69,7 @@ function hitAnti(e){
 function spawnShockwave(isEcho, pulse){
   const weak = !!(currentMode.beatOnly && !pulse && !isEcho);
   const nova = !!(isEcho && mods.supernova);
-  const maxR = SHOCK_MAX_R * Math.min(SHOCK_CAP, mods.shockRadiusMult * (pulse ? 1.2 : 1) * (nova ? 1.6 : 1)) * (currentMode.noShock ? 0.5 : 1) * (weak ? 0.45 : 1) * shockEnvK();
+  const maxR = SHOCK_MAX_R * Math.min(SHOCK_CAP, mods.shockRadiusMult * (pulse ? 1.2 : 1) * (nova ? 1.6 : 1)) * (currentMode.noShock ? 0.5 : 1) * (weak ? 0.45 : 1) * shockEnvK() * jetK();
   shockwaves.push({
     r:bh.r, maxR,
     life:SHOCK_LIFE, maxLife:SHOCK_LIFE,
@@ -355,7 +355,7 @@ function update(dt){
     } else if(!e.bossPart || (boss && boss.type.id !== 'swarm')){
       let effectiveAttract = ATTRACT_F*PHYS*PHYS*mods.attractMult*massPull();   // a = F/d : F ∝ PHYS² quand d ∝ PHYS
       if(specialization === 'devoreur' && e.type === 'anti') effectiveAttract *= 0.6;
-      if(e.kind === 'sling') effectiveAttract *= 1.9;          // fronde : ta gravité l'accélère
+      if(e.kind === 'sling'){ effectiveAttract *= 1.9; penroseCheck(e, d); }   // fronde : ta gravité l'accélère, l'ergosphère aussi
       else if(e.kind === 'neutron') effectiveAttract *= 0.5;   // étoile à neutrons : très dense, lourde
       const hostileE = (e.type==='anti' || e.bossPart);
       if(e.type==='dust' && boss && boss.type.id==='whitehole') whiteHolePush(e, gdt);

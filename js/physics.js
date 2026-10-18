@@ -25,6 +25,24 @@ const PHY = (() => {
   /* Efficacité radiative de l'accrétion : η = 1 − E_ISCO, E_ISCO = √(1 − 2/(3 r_ISCO)).
      5,7 % sans rotation, 32 % à la limite de Thorne (a* = 0,998), 42 % pour a* = 1. */
   function eta(a){ return 1 - Math.sqrt(1 - 2 / (3 * iscoRg(a))); }
+  /* Moment cinétique et énergie spécifiques sur l'ISCO (en GM/c et en c²), a* signé comme pour iscoRg. */
+  function iscoL(a){ const r = iscoRg(a), sr = Math.sqrt(r); return 2 * (3 * sr - 2 * a) / (Math.sqrt(3) * sr); }
+  function iscoE(a){ return Math.sqrt(1 - 2 / (3 * iscoRg(a))); }
+  /* Évolution du spin par accrétion (Bardeen 1970) : d(a*) / d(ln M) = ℓ/E − 2a*.
+     c ∈ [−1, 1] : cohérence du disque (1 : tout tourne dans le sens du spin, −1 : à contre-sens,
+     0 : matière qui tombe sans tourner, ℓ = 0, E = 1 : le spin baisse, comme en accrétion chaotique). */
+  function spinRate(a, c){
+    const s = c >= 0 ? 1 : -1, ar = a * s;
+    return s * Math.abs(c) * iscoL(ar) / (Math.abs(c) * iscoE(ar) + (1 - Math.abs(c))) - 2 * a;
+  }
+  /* Horizon r₊ = 1 + √(1 − a*²) en GM/c². L'ergosphère (à l'équateur) s'étend jusqu'à 2 GM/c² = Rs. */
+  function horizonRg(a){ return 1 + Math.sqrt(1 - Math.min(1, a * a)); }
+  /* Masse irréductible (Christodoulou 1970) : ce qu'aucun processus ne peut extraire. */
+  function irrK(a){ return Math.sqrt((1 + Math.sqrt(1 - Math.min(1, a * a))) / 2); }
+  /* Spin restant quand la masse passe à M en gardant la masse irréductible (énergie de rotation extraite). */
+  function spinAfter(mIrr, m){ const q = Math.min(1, mIrr / m), k = 2 * q * q - 1; return Math.sqrt(Math.max(0, 1 - k * k)); }
+  /* Part de la masse extractible sous forme d'énergie de rotation : 29,3 % au plus (a* = 1). */
+  function rotFrac(a){ return 1 - irrK(a); }
   /* Température de Hawking T = ħc³ / (8πGMk_B) : 6,2×10⁻⁸ K pour une masse solaire. */
   function hawkingK(m){ return hbar * c * c * c / (8 * Math.PI * G * m * MSUN * kB); }
   /* Durée de vie par évaporation (photons seuls) : t = 5120π G²M³ / (ħc⁴), en années. */
@@ -65,5 +83,5 @@ const PHY = (() => {
     return num(yr / 1e9, 1) + ' milliards d\'années';
   }
 
-  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, age };
+  return { G, c, hbar, kB, MSUN, YEAR, rsKm, shadowKm, iscoRg, iscoL, iscoE, spinRate, horizonRg, irrK, spinAfter, rotFrac, eta, hawkingK, lifeYears, eddW, entropyKB, tidalKm, salpeterYears, discK, num, sci, age };
 })();

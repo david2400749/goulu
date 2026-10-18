@@ -32,6 +32,12 @@ Les paliers sont les **phases de la vie** d'un trou noir stellaire (retombée, v
 binaire de trous noirs, migration, noyau galactique, sphère d'influence, spirale extrême vers Sagittarius A\*), avec l'âge réel.
 Le HUD affiche Rs en km, le spin et l'âge ; la pause montre les **instruments** (ISCO, efficacité, température de Hawking, entropie…).
 
+**Trou noir de Kerr (0.23)** : le trou a un **spin** a\*. La matière avalée lui apporte son moment cinétique (loi de Bardeen) :
+l'anneau en orbite le fait tourner plus vite, la chute radiale et le disque à contre-sens le freinent. Plus de spin : l'orbite
+stable la plus proche se rapproche (le disque du shader suit), l'**efficacité** du disque monte (points ×1 → ×1,6), les ondes
+s'élargissent. Chaque onde est un **jet de Blandford-Znajek** qui puise dans l'énergie de rotation (masse irréductible conservée).
+La **fronde** qui traverse l'ergosphère repart plus vite et te vole de la rotation (**processus de Penrose**).
+
 Le trou noir a une **masse** : tout ce qu'il avale le fait grossir (attraction et points en hausse), antimatière comprise,
 mais un gros trou est plus facile à toucher. Il ne maigrit jamais (l'évaporation de Hawking d'un trou stellaire prendrait
 ~10⁷⁰ ans) : s'il jeûne, c'est son **disque d'accrétion** qui s'éteint. Une antimatière qui touche souffle le disque.
@@ -61,7 +67,7 @@ Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'é
 
 ## Développement
 
-**Version actuelle : 0.22.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.23.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.
@@ -90,7 +96,8 @@ css/style.css      interface « instruments de bord »
 js/
   util.js          dates, PRNG, graine
   data.js          campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins, phases de vie
-  physics.js       physique en unités réelles : Rs, ombre, ISCO de Kerr, efficacité, Hawking, Eddington, entropie, affichage
+  physics.js       physique en unités réelles : Rs, ombre, ISCO de Kerr, efficacité, spin (Bardeen), masse irréductible,
+                   Hawking, Eddington, entropie, affichage
   profile.js       profil et sauvegarde locale (localStorage)
   state.js dom.js  constantes, état de partie, références DOM
   core.js          canvases, caméra (menu → partie), redimensionnement, résolution adaptative
@@ -100,7 +107,7 @@ js/
   pulsar.js        le Pulsar : boss de rythme (faisceau calé sur le battement, renvoi par l'onde)
   endgame.js       fin de partie : compression du score, Sagittarius A*, encaisser ou continuer, événements
                    cosmiques, secteurs et astéroïdes, contrats
-  cosmos.js        masse et disque d'accrétion (Eddington), phases de vie, orbites, étoile déchirée,
+  cosmos.js        masse et disque d'accrétion (Eddington), spin de Kerr, jets, Penrose, phases de vie, orbites, étoile déchirée,
                    comète / étoile à neutrons / fronde, paliers, effets des fusions, Trou Blanc, drop de la musique
   alive.js         trou noir vivant : humeurs, regard, jets, stades, voix, nom, accueil
   birth.js         naissance : 3 branches réelles, version courte en partie, cinématique complète, grandeurs réelles

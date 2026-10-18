@@ -5,6 +5,10 @@
      antimatière comprise ; un trou noir stellaire ne maigrit jamais (son
      évaporation de Hawking prendrait ~10⁷⁰ ans). Jeûner éteint le disque.
      Limite d'Eddington sur le débit d'accrétion, pas sur la masse.
+   • Spin de Kerr (0.23) : l'accrétion fait tourner le trou (Bardeen), dans le sens
+     du disque ; l'efficacité η(a*) fixe les points ; l'onde est un jet de
+     Blandford-Znajek qui puise dans l'énergie de rotation ; la fronde qui
+     traverse l'ergosphère vole de l'énergie (processus de Penrose).
    • Orbites : relâcher près du trou met la poussière en orbite ; l'anneau rapporte
      en continu, protège (une antimatière qui le touche est annihilée) et, avalé
      d'un coup, donne un gros bonus.
@@ -24,11 +28,13 @@ const TIDAL_TIME = 2.2;
 let bhMass = 1, tier = 0, starTimer = STAR_FIRST, quasarHold = 0, orbiters = [];
 let ringEatN = 0, ringEatT = 0, discWarned = false, dropShown = 0, dropOn = false;
 let runTde = 0, runOrbitEaten = 0, accRate = 0, xrbT = 0, xrbA = 0, mqT = 0, bbhT = 0;
+let bhSpin = 0, discJ = 0, spinWarned = 0, runJetE = 0, runPenrose = 0;
 
 function cosmosReset(){
   bhMass = 1; tier = 0; starTimer = STAR_FIRST; endgameReset(); quasarHold = 0; orbiters = [];
   ringEatN = 0; ringEatT = 0; discWarned = false; dropShown = 0; dropOn = false;
   runTde = 0; runOrbitEaten = 0; accRate = 0; xrbT = 0; xrbA = 0; mqT = 0; bbhT = 0;
+  bhSpin = 0; discJ = 0; spinWarned = 0; runJetE = 0; runPenrose = 0;
 }
 function cosmosOn(){ return !currentCampaignLevel; }
 function seenOnce(key){
@@ -52,13 +58,72 @@ function eddK(){ return clamp(eddRatio() - 1, 0, 1); }
    Un disque éteint ne rapporte pas de bonus. Par paliers de 0,1 (lisible, stable). */
 function cosmosScore(){
   const l = Math.round(Math.min(eddRatio(), 1) * 10) / 10, m = Math.round(bhMass / birthStart() * 10) / 10;
-  return (1 + 0.2 * Math.max(0, l - 0.5)) * (1 + 0.15 * (m - 1));
+  return (1 + 0.2 * Math.max(0, l - 0.5)) * (1 + 0.15 * (m - 1)) * etaK();
 }
-function massGain(dustType){
+/* ---------- spin de Kerr ---------- */
+/* bhSpin : a* signé, + dans le sens des orbites (antihoraire à l'écran). discJ ∈ [−1, 1] : moment
+   cinétique moyen de la matière qui arrive (cohérence et sens du disque). */
+const SPIN_MAX = 0.998;                     // limite de Thorne : le disque capture des photons qui freinent le trou
+const ETA0 = 0.0572, ETA_MAX = 0.321;       // η(0) et η(0,998)
+function discSense(){ return discJ >= 0 ? 1 : -1; }
+function spinRel(){ return bhSpin * discSense(); }        // > 0 : disque prograde, < 0 : rétrograde
+function etaNow(){ return PHY.eta(spinRel()); }
+/* Points ∝ efficacité radiative : ×1 sans rotation, ×1,6 à la limite de Thorne (licence de jeu : ×5,6 en vrai),
+   un peu moins en rétrograde. Par paliers de 0,05. */
+function etaK(){ return Math.round(Math.max(0.9, 1 + 0.6 * (etaNow() - ETA0) / (ETA_MAX - ETA0)) * 20) / 20; }
+/* Puissance des jets de Blandford-Znajek ∝ a*² : portée de l'onde ×0,92 → ×1,22 (le disque lance aussi des vents). */
+function jetK(){ return cosmosOn() ? 0.92 + 0.3 * bhSpin * bhSpin : 1; }
+/* Sens de la matière avalée : + si elle tourne dans le sens des orbites (l'anneau en orbite : 1). */
+function infallJ(e){
+  if(!e) return 0;
+  if(e.orbit) return 1;
+  const dx = e.x - bh.x, dy = e.y - bh.y, n = Math.hypot(dx, dy) * Math.hypot(e.vx || 0, e.vy || 0);
+  return n > 1e-6 ? clamp(-(dx * (e.vy || 0) - dy * (e.vx || 0)) / n, -1, 1) : 0;
+}
+/* La matière qui tombe apporte son moment cinétique (Bardeen) : dln M → da*. */
+function spinAccrete(dlnM, e){
+  discJ += (infallJ(e) - discJ) * 0.12;
+  const a = clamp(bhSpin + PHY.spinRate(bhSpin, discJ) * dlnM, -SPIN_MAX, SPIN_MAX);
+  if(spinWarned < 1 && spinRel() < -0.2 && Math.abs(discJ) > 0.3){ spinWarned = 1; addToast('DISQUE RÉTROGRADE · il tourne à contre-sens, ton spin ralentit', '#c99cff', H/2 + 70); }
+  if(Math.abs(a) >= 0.9 && Math.abs(bhSpin) < 0.9 && spinWarned < 2){ spinWarned = 2; addToast('SPIN 0,9 · efficacité ' + PHY.num(PHY.eta(0.9) * 100, 0) + ' % · jets puissants', '#9fd4ff', H/2 + 70); thoughtOnce('spin', 'Je tourne si vite que l\'espace tourne avec moi.'); }
+  bhSpin = a;
+}
+/* Extraction d'énergie de rotation (jet, Penrose) : la masse irréductible ne bouge pas, M et a* baissent. */
+function extractRot(frac){
+  const a = Math.abs(bhSpin); if(a < 0.02) return 0;
+  const mIrr = bhMass * PHY.irrK(a), m = Math.max(mIrr, bhMass * (1 - frac));
+  const a2 = PHY.spinAfter(mIrr, m), dm = bhMass - m;
+  bhMass = m; bhSpin = Math.sign(bhSpin) * a2;
+  return dm;
+}
+/* Une onde = un jet : énergie ∝ a*² (≈ 1,6 % de l'énergie de rotation par onde, a* baisse d'environ 0,8 %). */
+function jetFired(){
+  if(!cosmosOn()) return;
+  const a2 = bhSpin * bhSpin;
+  runJetE += extractRot(0.002 * a2);
+  if(a2 > 0.3) aliveJet(0.5 * a2);
+  if(a2 > 0.25 && seenOnce('jetbz')) addToast('JET · ton onde puise dans ta rotation (Blandford-Znajek)', '#9fd4ff', H/2 + 70);
+}
+/* Ergosphère : entre l'horizon (r₊) et 2 GM/c² à l'équateur. Ici l'horizon est bh.r. */
+function ergoR(){ return bh.r * 2 / PHY.horizonRg(Math.abs(bhSpin)); }
+/* Processus de Penrose : la fronde qui frôle l'ergosphère repart plus vite, le trou perd de la rotation. */
+function penroseCheck(e, d){
+  if(e.kind !== 'sling' || e.penrose || !cosmosOn() || Math.abs(bhSpin) < 0.3) return;
+  if(d - e.r > ergoR() || d < bh.r + e.r * 0.5) return;
+  e.penrose = true; runPenrose++;
+  e.vx *= 1.4; e.vy *= 1.4;
+  extractRot(0.004);
+  burst(e.x, e.y, '#c99cff', 12, 300);
+  if(seenOnce('penrose')) addToast('PROCESSUS DE PENROSE · la fronde vole ton énergie de rotation', '#c99cff', H/2 + 110);
+}
+function massGain(dustType, e){
   if(!cosmosOn()) return;
   accRate += 1 / ACC_TAU;
   const g = { gold:0.0035, blue:0.006, red:0.0045, white:0.0045 }[dustType] || 0.0035;
-  bhMass = Math.min(MASS_MAX, bhMass + g / Math.max(1, eddRatio()));   // au-delà d'Eddington, les vents emportent l'essentiel
+  /* la masse gagnée est l'énergie qui reste (1 − η) : un trou qui tourne vite rayonne plus et grossit moins */
+  const dm = g / Math.max(1, eddRatio()) * (1 - etaNow()) / (1 - ETA0);
+  spinAccrete(dm / bhMass, e);                       // le spin suit la matière, même au plafond de masse (licence de jeu)
+  bhMass = Math.min(MASS_MAX, bhMass + dm);
 }
 /* L'antimatière s'annihile avec la matière du disque : l'éclair gamma le souffle (vie perdue).
    Ce qui tombe dans le trou, lui, a une masse positive (ALPHA-g, CERN, 2023) : la masse monte un peu. */

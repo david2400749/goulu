@@ -22,7 +22,7 @@ const SKIN_GFX = {
   pulsar:   { temp:14000,hue:0,     sat:0.90, glow:1.15, flicker:true }
 };
 
-const VIS = { attract:0, spin:0, glow:1, fade:0, tilt:1.29, hurt:0, danger:0, ripple:[] };
+const VIS = { attract:0, spin:0, glow:1, fade:0, tilt:1.29, hurt:0, danger:0, ripple:[], rin:3 };
 const SK_NEUTRAL = '#dce4ff';
 const WAVE_TINTS = [[.9,1,1.3],[1.3,.8,1],[1,.9,1.4],[1.4,.8,.8],[.8,1.1,1.4],[1.3,1,.8],[1.4,.8,1],[.8,1.3,1],[1.5,.8,.8],[1.2,1.2,1.2]];
 const VTINT = [1, 1, 1];
@@ -471,6 +471,16 @@ function drawCosmosMarks(t){
       ctx.strokeStyle = 'rgba(255,233,163,.9)'; ctx.lineWidth = 2.4; ctx.stroke();
     }
   }
+  /* ergosphère (spin ≥ 0,3) : ellipse pointillée qui tourne avec le trou, aplatie aux pôles */
+  const sa = Math.abs(bhSpin);
+  if(cosmosOn() && sa >= 0.3 && !reduceFx()){
+    const er = ergoR();
+    ctx.save();
+    ctx.setLineDash([3, 6]); ctx.lineDashOffset = t * 40 * (bhSpin < 0 ? 1 : -1);
+    ctx.strokeStyle = 'rgba(201,156,255,' + (0.12 + 0.25 * (sa - 0.3)).toFixed(3) + ')'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(bh.x, bh.y, er, bh.r + (er - bh.r) * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   /* poussière en orbite : un fin anneau doré */
   if(orbiters.length){
     let rr = 0; for(const o of orbiters) rr += o.orbitR; rr /= orbiters.length;
@@ -728,6 +738,10 @@ function renderFrame(dt){
   const hue = sk.hue === -1 ? (t * 0.45) % 6.2832 : sk.hue;
   const dilate = playing ? clamp((1 - timeScale) / 0.75, 0, 1) : 0;
   const radius = Math.max(1e-3, bh.r * cam.zoom * holeK());   // naissance : l'horizon apparaît et « sonne »
+  /* ISCO de Kerr (en Rs) : le bord interne du disque se rapproche quand le spin prograde augmente */
+  const aRel = state === 'birth' ? (CINE.b ? CINE.b.a : 0) : (state !== 'menu' && cosmosOn() ? spinRel() : 0);
+  VIS.rin += (clamp(PHY.iscoRg(aRel) / 2, 1.15, 4.5) - VIS.rin) * Math.min(1, dt * 3);
+  const drag = state !== 'menu' && state !== 'birth' && cosmosOn() ? (0.6 + 0.7 * Math.abs(bhSpin)) * (bhSpin < 0 ? -1 : 1) : 1;   // Lense-Thirring ∝ a*
   const tint = WAVE_TINTS[waveIndex % WAVE_TINTS.length];
   const wantTint = (state === 'play' && sector) ? sector.tint : ((state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1]);
   for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] * AV.tint[i] - VTINT[i]) * Math.min(1, dt * 4);
@@ -758,7 +772,7 @@ function renderFrame(dt){
     lens: 20 * (1 + 0.55 * VIS.attract) * AV.lens, sceneLens: 1.15 * (1 + 0.4 * VIS.attract),
     sceneOn: true, sceneCanvas, sceneGain: 1.18,
     inflow: (state === 'menu' ? 0.45 : 0.35) + 0.9 * VIS.attract + ALIVE.menuPull * 0.5,
-    twist: 0.22 + 0.75 * VIS.attract + ALIVE.menuPull * 0.4,
+    twist: (0.22 + 0.75 * VIS.attract + ALIVE.menuPull * 0.4) * drag, rin: VIS.rin,
     hot: (0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(t * 0.37)), 4)) * (reduceFx() ? 0.5 : 1),
     pull: reduceFx() ? VIS.attract * 0.3 : VIS.attract,
     holeU: (bh.x + cam.dx) / W, holeV: 1 - (bh.y + cam.dy) / H,

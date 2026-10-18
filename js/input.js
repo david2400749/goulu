@@ -85,6 +85,7 @@ function fireWave(){
     shockCharges--;
     const pu = isOnBeat();
     spawnShockwave(false, pu);
+    jetFired();                                       // l'onde est un jet : elle coûte de la rotation
     if(resonanceT > 0) pendingEchoes.push({time:0.35});
     if(!pu && currentMode.beatOnly) addToast('HORS TEMPO', '#9aa0c8');
   } else {
