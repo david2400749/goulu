@@ -656,3 +656,62 @@ body.touch .bank-keys{display:none}
 .card-swap{margin-top:8px;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#d9b8ff}
 .card.c-forget .card-rarity{color:#ff8aa0}
 .card.c-back{opacity:.75}
+
+/* =========================================================
+   Vraie physique (0.22) : naissance, grandeurs réelles
+   ========================================================= */
+.wave-lore{white-space:pre-line}
+.phys-chip{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.1em;color:var(--ice);opacity:0;transition:opacity .3s;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.phys-chip.on{opacity:.75}
+.birth-cap{position:fixed;left:50%;bottom:92px;transform:translate(-50%,8px);width:min(420px,calc(100vw - 32px));text-align:center;pointer-events:none;opacity:0;transition:opacity .7s,transform .7s;z-index:3}
+.birth-cap.on{opacity:1;transform:translate(-50%,0)}
+.birth-cap .bc-k{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.3em;color:var(--hot)}
+.birth-cap .bc-v{font-family:var(--f-mono);font-size:12px;color:#fff;margin-top:6px;font-variant-numeric:tabular-nums}
+.birth-cap .bc-l{font-size:12px;font-style:italic;font-weight:300;color:var(--ink-2);margin-top:6px;line-height:1.5}
+.birth-cap .bc-t{font-family:var(--f-mono);font-size:9px;letter-spacing:.16em;color:var(--ice);opacity:.8;margin-top:6px;text-transform:uppercase}
+body.touch .birth-cap{bottom:calc(150px + env(safe-area-inset-bottom))}
+#birthScreen{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;justify-content:space-between;padding:max(16px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));pointer-events:none;background:radial-gradient(ellipse at 50% 120%,rgba(2,3,8,.75),rgba(2,3,8,0) 60%)}
+#birthScreen.hidden{display:none}
+.bs-top{display:flex;justify-content:space-between;align-items:center;pointer-events:auto}
+.bs-step{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.3em;color:var(--ink-3)}
+.bs-skip{min-height:40px;padding:8px 16px;font-size:12px}
+.bs-box{margin-top:auto;width:min(560px,100%);align-self:center;text-align:center}
+.bs-title{font-size:clamp(18px,4.4vw,28px);font-weight:200;letter-spacing:.32em;color:#fff;text-shadow:0 0 26px rgba(255,170,90,.45)}
+.bs-text{font-size:clamp(12.5px,3.4vw,14.5px);font-weight:300;color:var(--ink);line-height:1.6;margin-top:10px;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.bs-tag{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ice);margin-top:10px;opacity:.85}
+.bs-clock{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;color:var(--gold);text-align:center;margin-top:14px;font-variant-numeric:tabular-nums}
+.link-btn{background:none;border:0;padding:0;font:inherit;color:var(--hot);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.phys-panel{width:100%;display:flex;flex-direction:column;gap:3px;font-family:var(--f-mono);font-size:10.5px;max-height:34vh;overflow:auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0}
+.phys-panel:empty{display:none}
+.phys-panel .pp-head{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ice);margin-bottom:4px}
+.phys-panel .pp-row{display:flex;justify-content:space-between;gap:12px;color:var(--ink-3)}
+.phys-panel .pp-row b{font-weight:500;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.over-phys{white-space:pre-line;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;color:var(--ice);opacity:.85;text-align:center;line-height:1.5}
+.over-phys:empty{display:none}
+@media (max-width:480px){.mass-track{width:34px}}
+#hud.sim .hearts,#hud.sim .hud-left>.hud-label:first-child{display:none}
+/* Archives (0.25) */
+.arc-intro{font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:12px}
+.arc-births{margin-bottom:10px}
+.arc-pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.arc-pick .mbadge{cursor:pointer}
+.arc-pick .mbadge.on{border-color:var(--hot);color:var(--hot)}
+.arc-pick .mbadge.locked{opacity:.55;cursor:default}
+.arc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.arc-actions .btn{flex:1 1 200px}
+.arc-actions .btn:disabled{opacity:.5;cursor:default}
+.arc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.arc-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.arc-card.locked{opacity:.55}
+.arc-card h3{font-size:14px;font-weight:500;color:#fff}
+.arc-card p{font-size:12px;line-height:1.55;color:var(--ink-2)}
+.arc-card .arc-obs{color:var(--ice)}
+.arc-card .arc-game{color:var(--ink-3);font-style:italic}
+.arc-card .arc-hint{color:var(--ink-3)}
+.arc-tag{align-self:flex-start;font-family:var(--f-mono);font-size:9px;font-weight:500;letter-spacing:.16em;padding:2px 6px;border-radius:2px;border:1px solid currentColor}
+.arc-tag.t-obs{color:var(--green)}
+.arc-tag.t-theo{color:var(--ice)}
+.arc-tag.t-hyp{color:var(--gold)}
+.arc-tag.t-open{color:#c99cff}
+#btnEpilogue{margin-top:8px;width:100%}
+#btnEpilogue.hidden{display:none}

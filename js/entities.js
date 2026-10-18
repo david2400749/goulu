@@ -56,6 +56,9 @@ function spawnBossByName(bossId){
       const e={ x:bh.x+Math.cos(a)*R, y:bh.y+Math.sin(a)*R, vx:0, vy:0, r:12, type:'boss', bossPart:true, phase:rng()*Math.PI*2, swarmAngle:a, swarmR:R, swarmR0:R, isMain:false, trail:[] };
       entities.push(e); boss.parts.push(e);
     }
+  } else if(type.id==='companion'){
+    const e = spawnCompanion();
+    entities.push(e); boss.parts.push(e);
   } else if(type.id==='whitehole'){
     const e = spawnWhiteHole();
     entities.push(e); boss.parts.push(e);
@@ -71,7 +74,7 @@ function spawnBossByName(bossId){
   bossNameEl.textContent = type.name + ' · ' + bossHp + ' / ' + bossHp;
   bossFillEl.style.transform = 'scaleX(1)';
   bossBarEl.classList.add('on');
-  if(bossHintEl){ bossHintEl.textContent = ctl(type.id === 'pulsar' ? 'pulsarHint' : 'bossHint'); bossHintEl.classList.remove('hidden'); }
+  if(bossHintEl){ bossHintEl.textContent = type.id === 'companion' ? COMPANION_HINT : ctl(type.id === 'pulsar' ? 'pulsarHint' : 'bossHint'); bossHintEl.classList.remove('hidden'); }
   if(actx && !audioMuted){ blip(120,0.6,'sawtooth',0.15,60); blip(180,0.5,'triangle',0.1); }
   vibrate([50,30,50]);
   shake = Math.max(shake, 28);
@@ -120,6 +123,8 @@ function enrageBoss(){
 function killBoss(){
   if(!boss) return;
   bossesKilled++; runBossesKilled++;
+  const merged = boss.type.id === 'companion';
+  if(merged) companionMerge(boss.parts[0]);
   profile.bossesKilled = (profile.bossesKilled||0) + 1;
   if(boss.type.id === 'pulsar') profile.pulsarsKilled = (profile.pulsarsKilled||0) + 1;
   for(const en of entities) if(en.bossPart) en.dead = true;
@@ -128,12 +133,12 @@ function killBoss(){
   shockCharges = getMaxCharges();
   if(currentCampaignLevel) heal(1);
   const card = pickFreeCard();   // carte offerte : jamais une qui demanderait un 9e emplacement
-  if(card && !campaignNoAnomaly) addAnomaly(card);
+  if(card && !campaignNoAnomaly && !currentMode.simulation) addAnomaly(card);
   burst(W/2, H/2, '#ffffff', 80, 800);
   burst(W/2, H/2, boss.type.color, 60, 650);
   flash = 1.2; shake = 34;
   vibrate([60,40,80]);
-  addToast('💀 ' + boss.type.name + ' VAINCU +'+bonus, '#ffdd44', H/2-120);
+  addToast((merged ? '⚫ ' + boss.type.name + ' AVALÉ +' : '💀 ' + boss.type.name + ' VAINCU +') + bonus, '#ffdd44', H/2-120);
   thoughtOnce('bossdead', 'Plus rien. Encore faim.');
   if(actx && !audioMuted){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.3,'sine',0.14),i*90)); }
   boss = null;
@@ -249,7 +254,7 @@ function thoughtHit(){
   else thought(pick(persona().hit));
 }
 const BOSS_THOUGHTS = { consumer:'Il mange comme moi. Je n\'aime pas ça.', swarm:'Tant de petites faims.', eye:'L\'Œil me regarde. Il ne cligne pas.', pulsar:'Il tourne. Il bat. Comme moi.',
-  whitehole:'Mon contraire. Il rend tout ce que je prends.' };
+  whitehole:'Mon contraire. Il rend tout ce que je prends.', companion:'Un autre comme moi. Nous tournerons jusqu\'à n\'être qu\'un.' };
 function a11y(el){
   el.tabIndex = 0; el.setAttribute('role','button');
   el.addEventListener('keydown', ev=>{ if(ev.code==='Space'||ev.code==='Enter'){ ev.preventDefault(); ev.stopPropagation(); el.click(); } });

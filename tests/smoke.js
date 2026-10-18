@@ -40,6 +40,8 @@ async function open(url, { viewport = { width: 1366, height: 768 }, profile, tou
   page.on('pageerror', e => errors.push('exception : ' + e.message));
   page.on('console', m => { if(m.type() === 'error' && !external(m.text()) && !external((m.location() || {}).url || '')) errors.push('console : ' + m.text()); });
   page.on('response', r => { if(r.status() >= 400 && !external(r.url())) errors.push('HTTP ' + r.status() + ' ' + r.url()); });
+  /* la cinématique de naissance complète n'est jouée qu'une fois : les profils de test l'ont déjà vue */
+  if(profile && !profile.seen) profile = Object.assign({ seen: { birthFull: true } }, profile);
   if(profile) await page.addInitScript(p => localStorage.setItem('goulu_profile_v10', p), JSON.stringify(profile));
   await page.goto(base + url);
   await page.waitForFunction(() => typeof state !== 'undefined' && typeof profile !== 'undefined');
@@ -123,16 +125,57 @@ const inView = (page, id) => page.evaluate(id => {
     });
   }
 
-  await test('Premier lancement : tutoriel puis partie', async () => {
+  await test('Premier lancement : naissance, tutoriel puis partie (avec cette naissance)', async () => {
     const { page, ctx, errors } = await open('index.html?nogl');
     await page.click('#btnPlay');
-    const s1 = await page.evaluate(() => state);
+    const s0 = await page.evaluate(() => ({ state, branch: CINE.b && CINE.b.id, screen: !document.getElementById('birthScreen').classList.contains('hidden') }));
+    await page.waitForTimeout(600);
+    await page.click('#btnSkipBirth');
+    const s1 = await page.evaluate(() => ({ state, seen: profile.seen.birthFull }));
     await page.click('#btnSkipTut');
     await page.waitForTimeout(700);
-    const s2 = await page.evaluate(() => ({ state, done: profile.tutorialDone }));
+    const s2 = await page.evaluate(() => ({ state, done: profile.tutorialDone, birth: birth && birth.id }));
     await ctx.close();
-    assert(s1 === 'tutorial', 'attendu tutorial, obtenu ' + s1);
-    assert(s2.state === 'play' && s2.done, JSON.stringify(s2));
+    assert(s0.state === 'birth' && s0.screen && s0.branch, 'naissance : ' + JSON.stringify(s0));
+    assert(s1.state === 'tutorial' && s1.seen, 'attendu tutorial, obtenu ' + JSON.stringify(s1));
+    assert(s2.state === 'play' && s2.done && s2.birth === s0.branch, JSON.stringify({ s0, s2 }));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissance complète : 8 étapes dans l\'ordre, l\'horizon n\'apparaît qu\'à la fin (rendu WebGL)', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: { tutorialDone: true, seen: {} } });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { titles: [], holes: [], discs: [] };
+      for(let k = 0; k < 40 * 30 && state === 'birth'; k++){
+        birthCinemaTick(1 / 30);
+        const tt = document.getElementById('bsTitle').textContent;
+        if(tt && out.titles[out.titles.length - 1] !== tt){ out.titles.push(tt); out.holes.push(holeK()); out.discs.push(discGlowK()); }
+        if(k % 15 === 0) renderFrame(1 / 30);
+      }
+      out.state = state; out.birth = birth && birth.id; out.seen = profile.seen.birthFull;
+      return out;
+    });
+    await page.waitForTimeout(300);
+    await ctx.close();
+    assert(r.titles.length === 8 && r.titles[0] === 'UNE ÉTOILE MASSIVE' && r.titles[6] === 'L\'HORIZON', 'étapes : ' + r.titles.join(' / '));
+    assert(r.holes.slice(0, 6).every(h => h < 0.01) && r.discs.slice(0, 7).every(d => d === 0), 'horizon trop tôt : ' + JSON.stringify(r));
+    assert(r.state === 'play' && r.birth && r.seen, 'après la naissance : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+    return r.birth;
+  });
+
+  await test('Naissance revue depuis le menu ; Échap la passe et ramène au menu', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnBirth');
+    await page.waitForTimeout(400);
+    const s1 = await page.evaluate(() => state);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+    const s2 = await page.evaluate(() => ({ state, menu: !document.getElementById('menu').classList.contains('hidden'), hidden: document.getElementById('birthScreen').classList.contains('hidden') }));
+    await ctx.close();
+    assert(s1 === 'birth', 'état : ' + s1);
+    assert(s2.state === 'menu' && s2.menu && s2.hidden, JSON.stringify(s2));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -141,6 +184,7 @@ const inView = (page, id) => page.evaluate(id => {
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
       entities.length = 0; score = 0; scoreFrac = 0; elemChain = { type: null, count: 0, timer: 0 };
+      birth = null; bhMass = 1; bhSpin = 0; discJ = 0;   // sans naissance : masse et spin neutres
       for(let i = 0; i < 3; i++) collectDust({ dustType: 'gold', x: bh.x, y: bh.y });
       syncHUD();
       return { score, hud: scoreHudEl.textContent };
@@ -657,9 +701,10 @@ const inView = (page, id) => page.evaluate(id => {
   await test('Plafond ×4 des mutations de score, sauf en mode Chaos', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, unlockedModes: ['classic', 'chaos'] } });
     const r = await page.evaluate(() => {
-      const k = mode => { startGame(mode, false); mods.anomScore = 2.5 * 1.8; mods.fureur = true; timeSinceRelease = 9; return +scoreK(true).toFixed(3); };
+      const neutral = () => { birth = null; bhMass = 1; bhSpin = 0; };   // masse et spin de naissance neutres
+      const k = mode => { startGame(mode, false); neutral(); mods.anomScore = 2.5 * 1.8; mods.fureur = true; timeSinceRelease = 9; return +scoreK(true).toFixed(3); };
       const out = { classic: k('classic'), chaos: k('chaos') };
-      startGame('classic', false); out.plain = scoreK(true);
+      startGame('classic', false); neutral(); out.plain = scoreK(true);
       return out;
     });
     await ctx.close();
@@ -675,7 +720,7 @@ const inView = (page, id) => page.evaluate(id => {
       entities.length = 0; elemChain = { type: null, count: 0, timer: 0 };
       for(let i = 0; i < 10; i++){ collectDust({ dustType: 'gold', x: bh.x, y: bh.y }); }
       const fed = { sated: aliveMood().sated, glow: aliveVisual(1).glow };
-      ALIVE.satiety = 0; elapsed = 30; ALIVE.lastEat = 15;
+      ALIVE.satiety = 0; ALIVE.jet = 0; elapsed = 30; ALIVE.lastEat = 15;   // jets éteints (naissance collapsar)
       const starved = { hungry: aliveMood().hungry, glow: aliveVisual(1).glow, spin: aliveVisual(1).spin };
       return { fed, starved };
     });
@@ -685,7 +730,7 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
-  await test('Stades : Graine → Quasar selon la masse, affiché en fin de partie', async () => {
+  await test('Stades : Nouveau-né → Microquasar selon la masse, affiché en fin de partie', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');
     const r = await page.evaluate(() => {
@@ -697,7 +742,7 @@ const inView = (page, id) => page.evaluate(id => {
     });
     await ctx.close();
     assert(r.s1 === 1 && r.s3 === 3 && r.jet > 0.5 && r.sameR, JSON.stringify(r));
-    assert(/QUASAR/.test(r.over), 'écran de fin : ' + r.over);
+    assert(/MICROQUASAR/.test(r.over), 'écran de fin : ' + r.over);
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1013,30 +1058,313 @@ const inView = (page, id) => page.evaluate(id => {
   });
 
   /* ---------- 0.20 : cosmos ---------- */
-  const playSetup = page => page.evaluate(() => { startGame('classic', false); entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
+  /* sans naissance : pas de débris de retombée ni de masse de départ différente */
+  const playSetup = page => page.evaluate(() => { startGame('classic', false); birth = null; bhMass = 1; bhSpin = 0; discJ = 0; entities.length = 0; antiTimer = dustTimer = 999; hitstop = 0; });
   const tick = (page, n, hold) => page.evaluate(({ n, hold }) => {
     for(let i = 0; i < n; i++){ antiTimer = dustTimer = 999; hitstop = 0; attract = hold; if(state === 'play') update(1 / 60); }
   }, { n, hold });
 
-  await test('Masse : grossit en mangeant, s\'évapore plus vite petite, rayon et attraction suivent', async () => {
+  await test('Masse : ne fait que grossir (pas d\'évaporation au jeûne), le disque s\'éteint, un coup souffle le disque', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay'); await playSetup(page);
     const r = await page.evaluate(() => {
       const out = {};
-      bhMass = 1; for(let k = 0; k < 20; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
-      out.fed = bhMass;
-      const loss = m => { bhMass = m; const m0 = bhMass; antiTimer = dustTimer = 999; update(1); return m0 - bhMass; };
-      out.lossBig = loss(1.6); out.lossSmall = loss(0.7);
+      bhMass = 1; accRate = 0; for(let k = 0; k < 20; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
+      out.fed = bhMass; out.lamFed = eddRatio(); out.kFed = cosmosScore();
+      const m0 = bhMass; for(let i = 0; i < 600; i++){ antiTimer = dustTimer = 999; update(1 / 60); }
+      out.fasted = bhMass; out.massKept = bhMass >= m0; out.lamFast = eddRatio(); out.kFast = cosmosScore();
       bhMass = 1.6; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rBig = bh.rTarget;
       bhMass = 0.7; for(let i = 0; i < 60; i++){ antiTimer = dustTimer = 999; update(1 / 60); } out.rSmall = bh.rTarget;
-      bhMass = 1.2; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 30, y:bh.y }); out.afterHit = bhMass;
+      bhMass = 1.2; accRate = 3; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 30, y:bh.y }); out.afterHit = bhMass; out.lamHit = eddRatio();
       return out;
     });
     await ctx.close();
-    assert(r.fed > 1.12, 'la masse ne monte pas : ' + JSON.stringify(r));
-    assert(r.lossSmall > r.lossBig * 3, 'évaporation de Hawking (∝ 1/M²) : ' + JSON.stringify(r));
+    assert(r.fed > 1.05, 'la masse ne monte pas : ' + JSON.stringify(r));
+    assert(r.massKept, 'un trou noir stellaire ne maigrit pas en jeûnant : ' + JSON.stringify(r));
+    assert(r.lamFed > 0.8 && r.lamFast < 0.1 && r.kFed > r.kFast * 1.05, 'disque : ' + JSON.stringify(r));
     assert(r.rBig > r.rSmall * 1.2, 'rayon : ' + JSON.stringify(r));
-    assert(r.afterHit < 1.1, 'un coup ne fait pas perdre de masse : ' + JSON.stringify(r));
+    assert(r.afterHit > 1.2 && r.lamHit === 0, 'antimatière : la masse monte, le disque est soufflé : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Physique réelle : Rs, Hawking, Eddington, ISCO et efficacité de Kerr, entropie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => ({
+      rs: PHY.rsKm(1), th: PHY.hawkingK(1), life: PHY.lifeYears(1), edd: PHY.eddW(1), s: PHY.entropyKB(1),
+      i0: PHY.iscoRg(0), i1: PHY.iscoRg(1), im: PHY.iscoRg(-1), e0: PHY.eta(0), e998: PHY.eta(0.998), e1: PHY.eta(1),
+      shadow: PHY.shadowKm(1) / PHY.rsKm(1), sal: PHY.salpeterYears(0.1), sci: PHY.sci(2.1e67), age: PHY.age(3.2e6)
+    }));
+    await ctx.close();
+    const near = (v, want, tol) => Math.abs(v / want - 1) < tol;
+    assert(near(r.rs, 2.953, 0.005), 'Rs(1 M☉) = ' + r.rs + ' km');
+    assert(near(r.th, 6.17e-8, 0.01), 'T_H(1 M☉) = ' + r.th);
+    assert(near(r.life, 2.1e67, 0.03), 'durée de vie = ' + r.life);
+    assert(near(r.edd, 1.26e31, 0.01), 'L_Edd = ' + r.edd);
+    assert(near(r.s, 1.05e77, 0.02), 'entropie = ' + r.s);
+    assert(near(r.i0, 6, 1e-9) && near(r.i1, 1, 1e-6) && near(r.im, 9, 1e-9), 'ISCO : ' + [r.i0, r.i1, r.im]);
+    assert(near(r.e0, 0.0572, 0.01) && near(r.e998, 0.32, 0.02) && near(r.e1, 0.4226, 0.01), 'η : ' + [r.e0, r.e998, r.e1]);
+    assert(near(r.shadow, 2.598, 0.001) && near(r.sal, 5e7, 0.1), 'ombre / Salpeter : ' + [r.shadow, r.sal]);
+    assert(r.sci === '2,1×10⁶⁷' && r.age === '3,2 millions d\'années', 'affichage : ' + r.sci + ' · ' + r.age);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Kerr : spin de Bardeen (×2,2 en masse pour a* = 0,998), masse irréductible, énergie de rotation', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      let a = 0, lnM = 0; while(a < 0.998 && lnM < 3){ a = Math.min(0.998, a + PHY.spinRate(a, 1) * 5e-4); lnM += 5e-4; }
+      const mi = PHY.irrK(0.9);
+      return { up: Math.exp(lnM), l0: PHY.iscoL(0), e0: PHY.iscoE(0), r1: PHY.spinRate(1, 1), radial: PHY.spinRate(0.5, 0), retro: PHY.spinRate(0.5, -1),
+        rot: PHY.rotFrac(1), keep: PHY.spinAfter(mi, 1), after: PHY.spinAfter(mi, 0.99), hz: PHY.horizonRg(1) };
+    });
+    await ctx.close();
+    const near = (v, want, tol) => Math.abs(v / want - 1) < tol;
+    assert(r.up > 2.1 && r.up < 2.45, 'montée en spin : masse ×' + r.up);
+    assert(near(r.l0, 2 * Math.sqrt(3), 1e-6) && near(r.e0, Math.sqrt(8 / 9), 1e-6) && Math.abs(r.r1) < 1e-9, 'ISCO : ' + JSON.stringify(r));
+    assert(near(r.radial, -1, 1e-9) && r.retro < -4, 'accrétion sans rotation / rétrograde : ' + JSON.stringify(r));
+    assert(near(r.rot, 0.2929, 0.001) && near(r.keep, 0.9, 1e-6) && r.after < 0.9 && near(r.hz, 1, 1e-9), 'rotation extractible : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Spin en partie : l\'anneau le fait monter, la chute radiale et le contre-sens le freinent, l\'onde-jet le consomme', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const out = {};
+      const eat = (n, mk) => { for(let k = 0; k < n; k++){ accRate = 0; collectDust(mk()); } };
+      bhSpin = 0.3; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:0, vy:-50, orbit:true }));
+      out.ring = bhSpin; out.sense = discJ;
+      bhSpin = 0.6; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:-50, vy:0 }));
+      out.radial = bhSpin;
+      bhSpin = 0.6; discJ = 0; eat(40, () => ({ dustType:'gold', x:bh.x + 40, y:bh.y, vx:0, vy:50 }));
+      out.retro = bhSpin; out.retroK = etaK();
+      bhSpin = 0.9; discJ = 0.8; bhMass = 1.2; out.highK = etaK(); out.zeroK = (bhSpin = 0, etaK());
+      bhSpin = 0.9; const mIrr = bhMass * PHY.irrK(0.9), m0 = bhMass, r0 = jetK();
+      shockCharges = 3; fireWave();
+      out.jet = { spin: bhSpin, dm: m0 - bhMass, irr: Math.abs(bhMass * PHY.irrK(bhSpin) - mIrr), k: r0, k0: (bhSpin = 0, jetK()) };
+      bhSpin = 0.9; const sl = { x:bh.x + ergoR() + 5, y:bh.y, vx:0, vy:-100, r:13, type:'anti', kind:'sling', phase:0, trail:[] };
+      penroseCheck(sl, Math.hypot(sl.x - bh.x, sl.y - bh.y)); out.penrose = { boosted: sl.vy < -130, spin: bhSpin, n: runPenrose };
+      return out;
+    });
+    await ctx.close();
+    assert(r.ring > 0.45 && r.sense > 0.9, 'l\'anneau en orbite fait tourner le trou : ' + JSON.stringify(r));
+    assert(r.radial < 0.6 && r.retro < r.radial && r.retroK <= 1, 'chute radiale / rétrograde : ' + JSON.stringify(r));
+    assert(r.highK >= 1.2 && r.zeroK === 1, 'efficacité : ' + JSON.stringify(r));
+    assert(r.jet.spin < 0.9 && r.jet.dm > 0 && r.jet.irr < 1e-9 && r.jet.k > 1.1 && r.jet.k0 < 1, 'jet : ' + JSON.stringify(r.jet));
+    assert(r.penrose.boosted && r.penrose.spin < 0.9 && r.penrose.n === 1, 'Penrose : ' + JSON.stringify(r.penrose));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Rendu WebGL avec un spin extrême (ISCO, ergosphère, entraînement du référentiel)', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const rins = [];
+      for(const a of [0.998, -0.9, 0]){ bhSpin = a; discJ = 1; for(let k = 0; k < 40; k++) renderFrame(1 / 20); rins.push(VIS.rin); }
+      return { rins, gl: useGL };
+    });
+    await page.waitForTimeout(200);
+    await ctx.close();
+    assert(r.rins[0] < 1.3 && r.rins[1] > 4 && Math.abs(r.rins[2] - 3) < 0.05, 'ISCO du shader (Rs) : ' + r.rins.map(x => x.toFixed(2)).join(' / '));
+    assert(!errors.length, errors.join('\n'));
+    return r.gl ? 'WebGL' : 'repli 2D';
+  });
+
+  await test('Fusions et kilonovas : GW150914 retrouvé, critère de Foucart, aire de l\'horizon toujours en hausse', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      const g = PHY.merger(36, 29, 0), areas = [];
+      for(const q of [1, 0.7, 0.4, 0.2]) areas.push(PHY.merger(10, 10 * q, 0.5).areaGain);
+      return { g, eq: PHY.merger(10, 10, 0), areas, slow: PHY.nsRemnant(8, 0.5), fast: PHY.nsRemnant(8, 0.85), heavy: PHY.nsRemnant(40, 0.9),
+        kerrS: PHY.entropyKerr(10, 0.998) / PHY.entropyKB(10) };
+    });
+    await ctx.close();
+    assert(Math.abs(r.g.mf - 62) < 1 && Math.abs(r.g.eradMsun - 3) < 0.3 && Math.abs(r.g.af - 0.67) < 0.03, 'GW150914 : ' + JSON.stringify(r.g));
+    assert(Math.abs(r.eq.af - 0.687) < 0.01 && r.eq.kick === 0 && Math.abs(r.eq.erad - 0.048) < 0.002, 'masses égales : ' + JSON.stringify(r.eq));
+    assert(r.areas.every(x => x > 0), 'théorème des aires : ' + r.areas);
+    assert(r.slow === 0 && r.fast > 0.05 && r.heavy === 0, 'étoile à neutrons : ' + [r.slow, r.fast, r.heavy]);
+    assert(r.kerrS > 0.5 && r.kerrS < 0.6, 'entropie de Kerr / Schwarzschild : ' + r.kerrS);
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Étoile à neutrons : déchirée (kilonova) avec du spin, avalée sans lumière sans spin', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      const run = spin => {
+        entities.length = 0; bhMass = 0.8; massK = 1; bhSpin = spin; discJ = 1; const m0 = realMass();
+        spawnNS(); const ns = entities.find(e => e.type === 'nstar'), R0 = ns.R;
+        let t = 0; while(entities.some(e => e.type === 'nstar') && t < 15){ antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60); t += 1 / 60; }
+        return { t, dm: realMass() - m0, dust: entities.filter(e => e.type === 'dust').length, chirp: R0 };
+      };
+      const fast = run(0.9), slow = run(0);
+      return { fast, slow, kn: absorbed.kilonova, whole: absorbed.nsWhole, prof: profile.kilonovas };
+    });
+    await ctx.close();
+    assert(r.kn === 1 && r.fast.dust >= 4 && r.fast.dm > 1 && r.fast.dm < 1.4, 'kilonova : ' + JSON.stringify(r));
+    assert(r.whole === 1 && Math.abs(r.slow.dm - 1.4) < 0.01 && r.slow.dust === 0 && r.slow.t > 10, 'avalée entière : ' + JSON.stringify(r));
+    assert(r.prof === 1, 'compte : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Le Compagnon : les ondes resserrent l\'orbite, la fusion suit la relativité numérique', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      tier = 6; phaseEnter(6);
+      const out = { spawned: boss && boss.type.id === 'companion' };
+      const e = boss.parts[0]; e.q = 0.5;
+      entities.push({ x:e.x + 10, y:e.y, vx:0, vy:0, r:7, type:'dust', dustType:'gold', phase:0, trail:[] });
+      antiTimer = dustTimer = 999; update(1 / 60); out.stole = (e.ate || 0) === 1;
+      out.far = companionHit(e) === false;                // trop loin : l'onde ne fait rien
+      e.R = 150 * PHYS; compPlace(e); const R0 = e.R;
+      const de = Math.hypot(e.x - bh.x, e.y - bh.y); shockwaves.push({ r:de, maxR:de + 2, life:0.02, maxLife:0.3, hit:new Set(), isEcho:false });
+      const hp0 = boss.hp; hitstop = 0; antiTimer = dustTimer = 999; update(1 / 60);
+      out.hit = { hp: boss.hp === hp0 - 1, shrink: e.R < R0 * 0.95 };
+      bhSpin = 0.2; const m1 = realMass(), s0 = entropyNow();
+      while(boss){ companionHit(e); damageBoss(1, e.x, e.y); }
+      const f = lastMerger;
+      out.merge = { m1, m2: f.m2, mf: realMass(), sum: m1 + f.m2, spin: bhSpin, af: f.af, area: f.areaGain, kick: f.kick, S: entropyNow() > s0, n: absorbed.bh, prof: profile.bbhMergers };
+      return out;
+    });
+    await ctx.close();
+    assert(r.spawned && r.stole && r.far, 'phase binaire de trous noirs : ' + JSON.stringify(r));
+    assert(r.hit.hp && r.hit.shrink, 'onde sur le Compagnon : ' + JSON.stringify(r.hit));
+    const m = r.merge;
+    assert(Math.abs(m.m2 - m.m1 * 0.5) < 1e-6 && m.mf < m.sum && m.mf > m.sum * 0.95, 'masse finale : ' + JSON.stringify(m));
+    assert(m.spin === m.af && m.af > 0.5 && m.area > 0 && m.kick > 100 && m.S && m.n === 1 && m.prof === 1, 'fusion : ' + JSON.stringify(m));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Entropie : record en fin de partie et au profil ; bilan de ce qui a été absorbé', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      for(let k = 0; k < 5; k++) collectDust({ dustType:'gold', x:bh.x, y:bh.y });
+      togglePause(); const panel = document.getElementById('pausePhys').textContent; togglePause();
+      lives = 1; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 5, y:bh.y });
+      const over = document.getElementById('overPhys').textContent;
+      renderStats();
+      return { panel, over, best: profile.bestEntropy, cell: document.getElementById('statsEntropy').textContent };
+    });
+    await ctx.close();
+    assert(/Absorbé · Gaz et poussière/.test(r.panel) && /Entropie/.test(r.panel), 'instruments : ' + r.panel);
+    assert(/Entropie .*10.* k_B · ★ record/.test(r.over) && r.best > 1e78 && /10/.test(r.cell), 'record : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Archives : fiches débloquées en jouant, onglet, fiches verrouillées avec un indice', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { horizon: archOwned('horizon'), birthCard: archOwned({ fallback:'fallback', direct:'failed_sn', collapsar:'collapsar' }[birth.id]) };
+      massHit(); out.anti = archOwned('antimatter');
+      out.total = ARCHIVES.length; out.ids = new Set(ARCHIVES.map(a => a.id)).size;
+      out.tags = ARCHIVES.every(a => TAGS[a.tag] && a.law && a.obs && a.game && a.hint);
+      return out;
+    });
+    await page.evaluate(() => { backToMenu(); });
+    await page.click('.mtab[data-tab="archives"]');
+    const ui = await page.evaluate(() => ({ count: +document.getElementById('archCount').textContent, cards: document.querySelectorAll('#archList .arc-card').length,
+      locked: document.querySelectorAll('#archList .arc-card.locked').length, hint: document.querySelector('#archList .arc-card.locked .arc-hint').textContent,
+      epi: document.getElementById('btnEpilogue2').disabled }));
+    await ctx.close();
+    assert(r.horizon && r.birthCard && r.anti && r.total >= 25 && r.ids === r.total && r.tags, 'fiches : ' + JSON.stringify(r));
+    assert(ui.count >= 3 && ui.cards === r.total && ui.locked === r.total - ui.count && ui.hint.length > 5 && ui.epi, 'onglet : ' + JSON.stringify(ui));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissances à débloquer : choix, fusion d\'étoiles à neutrons, primordial qui s\'évapore ; jamais au défi', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, seen: { birthFull: true }, kilonovas: 1, epilogueSeen: true, birthPick: 'nsmerger' } });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = { ns: { id: birth.id, m: realMass(), dust: entities.filter(e => e.type === 'dust').length, card: archOwned('gw170817') } };
+      lastGameWasDaily = true; startGame('classic', true); out.daily = BIRTHS_BASE.includes(birth); lastGameWasDaily = false;
+      out.seedLocked = !birthUnlocked(BIRTHS.find(b => b.id === 'seed'));
+      profile.birthPick = 'primordial'; startGame('simulation', false);   // sans écran de mutation
+      out.pbh = { id: birth.id, hot: PHY.hawkingK(realMass()) > 1e10, life: PHY.lifeYears(realMass()) };
+      togglePause(); out.pbh.panel = document.getElementById('pausePhys').textContent; togglePause();
+      for(let i = 0; i < 60 * 90 && state === 'play'; i++){ antiTimer = dustTimer = 999; entities.length = 0; hitstop = 0; update(1 / 60); }
+      out.end = { state, title: document.getElementById('overTitle').textContent, t: Math.round(elapsed) };
+      return out;
+    });
+    await ctx.close();
+    assert(r.ns.id === 'nsmerger' && Math.abs(r.ns.m - 2.7) < 0.01 && r.ns.dust >= 10 && r.ns.card, 'fusion d\'étoiles à neutrons : ' + JSON.stringify(r.ns));
+    assert(r.daily && r.seedLocked, 'défi / verrou : ' + JSON.stringify(r));
+    assert(r.pbh.id === 'primordial' && r.pbh.hot && r.pbh.life > 1e11 && r.pbh.life < 1e12 && /oui : plus chaud/.test(r.pbh.panel), 'primordial : ' + JSON.stringify(r.pbh));
+    assert(r.end.state === 'over' && r.end.title === 'ÉVAPORÉ' && r.end.t > 20, 'évaporation : ' + JSON.stringify(r.end));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Épilogue « Le long sommeil » : débloqué au palier 5, les étoiles s\'éteignent, l\'horizon s\'évapore, retour au menu', async () => {
+    const { page, ctx, errors } = await open('index.html', { profile: { tutorialDone: true, seen: { birthFull: true }, bestTier: 5, lastBH: { m: 4.3e6, a: 0.5 } } });
+    await page.click('.mtab[data-tab="archives"]');
+    await page.click('#btnEpilogue2');
+    const r = await page.evaluate(() => {
+      const out = { state, titles: [], stars: [], holes: [], text6: '' };
+      for(let k = 0; k < 70 * 20 && state === 'epilogue'; k++){
+        attract = k % 40 < 20; epilogueTick(1 / 20);
+        const t = document.getElementById('bsTitle').textContent;
+        if(out.titles[out.titles.length - 1] !== t){ out.titles.push(t); out.stars.push(+EPI.stars.toFixed(2)); out.holes.push(+EPI.hole.toFixed(3)); if(out.titles.length === 6) out.text6 = document.getElementById('bsText').textContent; }
+        if(k % 25 === 0) renderFrame(1 / 20);
+      }
+      out.end = { state, seen: profile.epilogueSeen, cards: ['hawking', 'future', 'info'].every(archOwned), eaten: EPI.eaten };
+      return out;
+    });
+    await page.waitForTimeout(200);
+    await ctx.close();
+    assert(r.state === 'epilogue' && r.titles.length === 8 && r.titles[7] === 'ET APRÈS ?', 'étapes : ' + r.titles.join(' / '));
+    assert(r.stars[0] === 1 && r.stars[5] < 0.1 && r.holes[4] === 1, 'étoiles / horizon : ' + JSON.stringify(r));
+    assert(/10⁸⁷ ans/.test(r.text6), 'durée de vie pour 4,3×10⁶ M☉ : ' + r.text6);
+    assert(r.end.state === 'menu' && r.end.seen && r.end.cards, 'fin : ' + JSON.stringify(r.end));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Mode Simulation : disponible d\'emblée, une phase toutes les 30 s, pas de vie perdue, pas de mutation', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      renderModeGrid();
+      const card = [...document.querySelectorAll('.mode-card')].find(c => /Simulation/.test(c.textContent));
+      startGame('simulation', false); entities.length = 0;
+      const l0 = lives; invincibleT = 0; hurtT = 0; hitAnti({ x:bh.x + 5, y:bh.y });
+      const out = { open: !!card && !card.classList.contains('locked'), lives: lives === l0, disc: eddRatio() === 0, sim: document.getElementById('hud').classList.contains('sim') };
+      for(let i = 0; i < 60 * 31; i++){ antiTimer = dustTimer = 999; hitstop = 0; if(state === 'play') update(1 / 60); }
+      out.tier = tier; out.state = state; out.anom = activeAnomalies.length;
+      return out;
+    });
+    await ctx.close();
+    assert(r.open && r.lives && r.disc && r.sim, 'mode : ' + JSON.stringify(r));
+    assert(r.tier === 1 && r.state === 'play' && r.anom === 0, 'phases : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Naissances : la même pour tous au défi du jour, effets de départ, légende et instruments', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      const out = {};
+      lastGameWasDaily = true; startGame('classic', true); const d1 = birth.id;
+      startGame('classic', true); out.dailySame = birth.id === d1;
+      const seen = new Set(); for(let k = 0; k < 30; k++){ lastGameWasDaily = false; startGame('classic', false); seen.add(birth.id); }
+      out.kinds = seen.size;
+      pendingBirth = BIRTHS.find(b => b.id === 'direct'); startGame('classic', false);
+      out.direct = { m: realMass(), mass: bhMass, calm: antiTimer > 5, cap: document.getElementById('birthCap').textContent };
+      pendingBirth = BIRTHS.find(b => b.id === 'collapsar'); startGame('classic', false);
+      out.collapsar = shockCharges === getMaxCharges();
+      pendingBirth = BIRTHS.find(b => b.id === 'fallback'); startGame('classic', false); entities.length = 0;
+      const sp = spawnEntity; let n = 0; spawnEntity = (...a) => { if(a[0] === 'dust') n++; return sp(...a); };
+      for(let i = 0; i < 300; i++){ antiTimer = dustTimer = 999; hitstop = 0; update(1 / 60); }
+      spawnEntity = sp; out.fallbackDust = n;   // ∫ 2,2 (1 + t/4)^−5/3 dt sur 5 s ≈ 5,5
+      out.ring = holeK() === 1;
+      syncHUD(); out.chip = document.getElementById('physChip').textContent; out.mass = document.getElementById('massVal').textContent;
+      togglePause(); out.panel = document.getElementById('pausePhys').textContent; togglePause();
+      return out;
+    });
+    await ctx.close();
+    assert(r.dailySame && r.kinds === 3, 'tirage : ' + JSON.stringify(r));
+    assert(Math.abs(r.direct.m - 15) < 0.01 && r.direct.calm && /SUPERNOVA RATÉE/.test(r.direct.cap) && /Rs = 44 km/.test(r.direct.cap), 'supernova ratée : ' + JSON.stringify(r.direct));
+    assert(r.collapsar && r.fallbackDust >= 4 && r.ring, 'collapsar / retombée : ' + JSON.stringify(r));
+    assert(/Rs 24 km · a\* 0,50 · η 8,2 %/.test(r.chip) && /8,0 M☉/.test(r.mass), 'HUD : ' + r.chip + ' · ' + r.mass);
+    assert(/Température de Hawking/.test(r.panel) && /plus froid que le fond cosmologique/.test(r.panel), 'instruments : ' + r.panel);
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1120,8 +1448,27 @@ const inView = (page, id) => page.evaluate(id => {
       return { tier, k: scoreK(false) / k0, banner: waveNameEl.textContent, level: musicWantedLevel(), best: profile.bestTier, chip: (syncHUD(), document.getElementById('tierChip').textContent) };
     });
     await ctx.close();
-    assert(r.tier === 3 && r.banner === 'NAINE ROUGE' && r.best === 3, 'palier : ' + JSON.stringify(r));
+    assert(r.tier === 3 && r.banner === 'BINAIRE X' && r.best === 3, 'palier : ' + JSON.stringify(r));
     assert(r.k > 1.15 && r.level === 3 && /PALIER 3/.test(r.chip), 'effets : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Phases réelles : binaire X (flux de la compagne), rupture de marée, âge réel du trou noir', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay'); await playSetup(page);
+    const r = await page.evaluate(() => {
+      applyWave(WAVES.length - 1); waveTimer = 130; tier = 3; xrbA = 0; xrbT = 0; entities.length = 0;
+      antiTimer = dustTimer = 999; update(1 / 60);
+      const q = xrbPoint(), d = entities.find(e => e.type === 'dust');
+      const out = { phase: phaseId(), stream: !!d && Math.hypot(d.x - q.x, d.y - q.y) < 30, age: realAge() };
+      phaseEnter(5); out.star = starTimer <= 3;
+      out.names = TIER_NAMES.slice(0, 3).join(' / ');
+      return out;
+    });
+    await ctx.close();
+    assert(r.phase === 'xrb' && r.stream, 'binaire X : ' + JSON.stringify(r));
+    assert(r.age > 1e6 && r.age < 1e7, 'âge : ' + r.age);
+    assert(r.star && r.names === 'RETOMBÉE / VAGABOND / BINAIRE X', JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1276,16 +1623,20 @@ const inView = (page, id) => page.evaluate(id => {
       rock.x = bh.x + 5; rock.vx = 0; const l0 = lives; invincibleT = 0; hurtT = 0;
       antiTimer = dustTimer = 999; update(1 / 60); out.hurt = lives === l0 - 1;
       sector = null;
-      const gain = m => { bhMass = m; const a = bhMass; massGain('gold'); return bhMass - a; };
-      out.edd = { low: gain(1.0), high: gain(1.7) };
-      const ms = m => { bhMass = m; return massScore(); };
-      out.peak = ms(1.4) > ms(1.8) && ms(1.4) > ms(1.0);
+      const gain = lam => { bhMass = 1; accRate = lam * EDD_RATE; const a = bhMass; massGain('gold'); return bhMass - a; };
+      out.edd = { low: gain(0.5), high: gain(3) };
+      const ks = lam => { bhMass = 1; accRate = lam * EDD_RATE; return cosmosScore(); };
+      out.peak = ks(1) > ks(0) && ks(3) === ks(1);
+      entities.length = 0; accRate = 3 * EDD_RATE;
+      entities.push({ x:bh.x + 100, y:bh.y, vx:0, vy:0, r:7, type:'dust', dustType:'gold', phase:0, trail:[] });
+      attract = false; antiTimer = dustTimer = 999; update(1 / 60);
+      out.blown = entities[0] && entities[0].vx > 0;
       return out;
     });
     await ctx.close();
     assert(Math.abs(r.mag - 0.7) < 1e-6, 'champ magnétique : ' + r.mag);
     assert(r.rocks === 1 && r.pushed && r.hurt, 'astéroïdes : ' + JSON.stringify(r));
-    assert(r.edd.high < r.edd.low * 0.4 && r.peak, 'Eddington : ' + JSON.stringify(r));
+    assert(r.edd.high < r.edd.low * 0.5 && r.peak && r.blown, 'Eddington (sur le débit) : ' + JSON.stringify(r));
     assert(!errors.length, errors.join('\n'));
   });
 
@@ -1317,7 +1668,7 @@ const inView = (page, id) => page.evaluate(id => {
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
-    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['trou blanc', 60], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60]
+    ['classic', 150], ['classique jusqu\'à la vague infinie', 230], ['trou blanc', 60], ['pulsar', 60], ['chaos', 90], ['pacifist', 90], ['metronome', 90], ['blitz', 40], ['campagne 9', 95], ['défi du jour', 60], ['simulation', 400]
   ];
   for(const [mode, seconds] of SIMS){
     await test('Simulation ' + seconds + ' s : ' + mode, async () => {
@@ -1354,6 +1705,7 @@ const inView = (page, id) => page.evaluate(id => {
       assert(!errors.length, errors.join('\n'));
       if(mode === 'campagne 9') assert(r.state === 'campdone', 'niveau 9 non terminé : ' + JSON.stringify(r));
       if(mode === 'blitz') assert(r.state === 'over', 'le chrono Blitz ne termine pas la partie : ' + r.state);
+      if(mode === 'simulation') assert(r.state === 'merge' && r.anomalies === 0, 'la Simulation doit finir dans Sgr A*, sans mutation : ' + JSON.stringify(r));
       if(mode.startsWith('classique')) assert(r.bosses.includes('pulsar'), 'pas de Pulsar en vague infinie : ' + JSON.stringify(r));
       return r.state + ', ' + r.elapsed + ' s, score ' + r.score + ', vague ' + r.wave + ', boss ' + r.bosses + ', anomalies ' + r.anomalies;
     });

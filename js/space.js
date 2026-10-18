@@ -10,7 +10,8 @@
          secondaire et tertiaire = l'arche au-dessus et sous l'ombre)
        - décalage Doppler + redshift gravitationnel, couleur corps noir
      Loin du trou : déflexion analytique (série en 1/b).
-       - zone de plongée sous l'ISCO (3 Rs) : le gaz quitte le disque et
+       - zone de plongée sous l'ISCO (3 Rs sans rotation, uRin suit le spin de Kerr
+         depuis la 0.23 ; les rayons restent ceux de Schwarzschild) : le gaz quitte le disque et
          tombe en spirale, de plus en plus rougi et éteint vers l'horizon
        - point chaud en orbite près de l'ISCO (comme les sursauts de Sgr A*)
        - entraînement du référentiel (Lense-Thirring) : le ciel lentillé est
@@ -154,7 +155,7 @@ vec3 skyEval(vec3 d){
           + starLayer(d,  46., 31., .34, 0.95, 1.5, 0.)
           + starLayer(d, 105., 77., .20, 0.80, .9, 0.)
           + starLayer(d, 230., 13., .10, 0.70, .6, 0.);
-  return neb + st*uStarGain;
+  return neb*min(1., uStarGain) + st*uStarGain;   /* épilogue : nébuleuses et galaxies s'éteignent aussi */
 }
 `;
 
@@ -194,12 +195,13 @@ uniform float uSceneOn, uSceneGain;
 uniform float uStarGain;
 uniform float uQuality;
 uniform float uInflow, uTwist, uHot;
+uniform float uRin;        /* ISCO en Rs : 3 sans rotation, plus près avec un spin prograde */
 uniform vec3  uTint;
 uniform vec4  uRip[4];
 uniform sampler2D uSky, uScene;
 
 const float PI = 3.14159265;
-const float RIN = 3.0;
+#define RIN uRin
 const float ROUT = 12.5;
 const float BC = 2.598076;
 const float BMAX = 15.5;
@@ -263,7 +265,9 @@ vec4 diskShade(float r, float uc, float vc, float phic, vec3 bn3, vec3 N, vec3 e
   float xin = clamp((r-1.)/(RIN-1.), 0., 1.);
   float ang = atan(q.y, q.x);
   float spiral = .5+.5*sin(2.*ang + 7.*log(r) + uSpin*.9 + n*3.);
-  float tIn = min(RIN/r, 1.);
+  /* température ∝ r^-3/4 en unités absolues : un ISCO plus proche (spin prograde) donne un bord interne plus chaud */
+  float tIn = min(3./r, 3./RIN);
+  float tLum = min(tIn, 1.)*(1.+.6*max(tIn-1., 0.));
   float edgeIn  = mix(smoothstep(RIN-.25, RIN+.45, r), .34*smoothstep(1.1, RIN, r)*(.3+.7*spiral), plunge);
   float edgeOut = 1.-smoothstep(ROUT-4.5, ROUT, r);
   float edge = edgeIn*edgeOut;
@@ -282,7 +286,7 @@ vec4 diskShade(float r, float uc, float vc, float phic, vec3 bn3, vec3 N, vec3 e
   float Te = uTemp*pow(tIn, .60)*(1.+.25*plunge*(1.-xin))*(1.+.35*hot);
   float Tobs = Te*g;
   vec3 col = blackbody(Tobs);
-  float Iem = mix(pow(tIn, 2.1)*(1.+2.3*exp(-(r-RIN)*1.7)), 3.3*pow(xin, 1.5), plunge)*(1.+2.6*hot);
+  float Iem = mix(pow(tLum, 2.1)*(1.+2.3*exp(-(r-RIN)*1.7)), 3.3*pow(xin, 1.5), plunge)*(1.+2.6*hot);
   float lum = Iem*pow(g, uBeam)*dens*uGlow*3.6;
   col = hueRot(col, uHue);
   float l = dot(col, vec3(.299,.587,.114));
@@ -607,7 +611,7 @@ void main(){
       P.sky = program(VERT, FRAG_SKY, []);
       P.main = program(VERT, FRAG_MAIN, ['uCss','uCenter','uShake','uK','uFocal','uTime','uSpin','uDrift','uTilt','uRoll','uSkyBuf','uSkyOrg','uSkySize','uPxCss',
         'uGlow','uTemp','uBeam','uHue','uSat','uLens','uSceneLens','uSceneOn','uSceneGain','uStarGain','uQuality','uTint','uRip','uSky','uScene',
-        'uInflow','uTwist','uHot']);
+        'uInflow','uTwist','uHot','uRin']);
       P.skybuf = program(VERT, FRAG_SKYBUF, ['uCss','uSkyOrg','uSkySize','uFocal','uTime','uPxCss','uStarGain','uTint','uSky']);
       P.bright = program(VERT, FRAG_BRIGHT, ['uTex','uTexel','uThr']);
       P.down = program(VERT, FRAG_DOWN, ['uTex','uTexel']);
@@ -669,6 +673,7 @@ void main(){
     gl.uniform1f(u.uQuality, f.quality);
     gl.uniform1f(u.uInflow, f.inflow || 0);
     gl.uniform1f(u.uTwist, f.twist || 0);
+    gl.uniform1f(u.uRin, f.rin || 3);
     gl.uniform1f(u.uHot, f.hot || 0);
     gl.uniform3f(u.uTint, f.tint[0], f.tint[1], f.tint[2]);
     const rip = new Float32Array(16);

@@ -9,12 +9,14 @@
    ========================================================= */
 const ALIVE = { satiety:0, lastEat:0, flinch:0, jet:0, look:[0, 0], stage:0, eatTimes:[], nextIdle:20, colors:{}, menuPull:0 };
 
-/* Stades : la « masse » vient de ce que le joueur fait, pas du score (gonflable). */
+/* Stades : la « masse » vient de ce que le joueur fait, pas du score (gonflable).
+   Noms réels (0.22) : un trou noir stellaire qui accrète devient une source X, puis un
+   microquasar à jets. « Quasar » est réservé aux trous noirs supermassifs. */
 const STAGES = [
-  { id:'graine',   name:'GRAINE',   at:0,   line:'' },
-  { id:'avaleur',  name:'AVALEUR',  at:40,  line:'Je prends de la place.' },
-  { id:'devoreur', name:'DÉVOREUR', at:120, line:'Plus rien n\'a de forme autour de moi.' },
-  { id:'quasar',   name:'QUASAR',   at:260, line:'Je brille. Moi qui avalais la lumière.' }
+  { id:'nouveau',     name:'NOUVEAU-NÉ',  at:0,   line:'' },
+  { id:'accreteur',   name:'ACCRÉTEUR',   at:40,  line:'Un disque se forme autour de moi.' },
+  { id:'sourcex',     name:'SOURCE X',    at:120, line:'Mon disque brille en rayons X. On me voit de loin.' },
+  { id:'microquasar', name:'MICROQUASAR', at:260, line:'Deux jets jaillissent de mes pôles. Moi qui avalais la lumière.' }
 ];
 function runMass(){ return runDust + parryCount * 3 + runBossesKilled * 20; }
 

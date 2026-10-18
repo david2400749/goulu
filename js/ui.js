@@ -69,7 +69,7 @@ function renderModeGrid(){
   modeGridEl.innerHTML='';
   for(const id in MODES){
     const m = MODES[id];
-    const unlocked = profile.unlockedModes.includes(id);
+    const unlocked = profile.unlockedModes.includes(id) || !m.unlock;
     const selected = profile.selectedMode === id;
     const rec = profile.modeRecords[id] || 0;
     const el = document.createElement('div');
@@ -276,6 +276,8 @@ function renderStats(){
   if(statsAvgEl) statsAvgEl.textContent = avg;
   if(statsWaveEl) statsWaveEl.textContent = profile.bestWave || 0;
   if(statsElemEl) statsElemEl.textContent = profile.elemChains || 0;
+  if($('statsEntropy')) $('statsEntropy').textContent = profile.bestEntropy ? PHY.sci(profile.bestEntropy) : '—';
+  if($('statsMergers')) $('statsMergers').textContent = (profile.kilonovas || 0) + ' / ' + (profile.bbhMergers || 0);
   renderTechniques();
   try{ drawSpark(); }catch(e){}
 }
@@ -291,6 +293,7 @@ document.querySelectorAll('.mtab').forEach(btn=>{
       if(tab==='daily'){ refreshDaily(); renderDailyBoard(); }
       if(tab==='ach') renderAch();
       if(tab==='skins') renderSkins();
+      if(tab==='archives') renderArchives();
       if(tab==='quests') renderQuests();
       if(tab==='stats'){ renderStats(); renderAch(); }
       if(tab==='play') renderModeGrid();
@@ -464,8 +467,21 @@ $('btnPlay').addEventListener('click', e=>{
   try{ initAudio(); updateStreakOnPlay(); }catch(err){}
   lastGameWasDaily = false;
   currentCampaignLevel = null;
-  if(!profile.tutorialDone){ startTutorial(); }
-  else { startGame(profile.selectedMode || 'classic', false); }
+  const go = () => { if(!profile.tutorialDone){ startTutorial(); } else { startGame(profile.selectedMode || 'classic', false); } };
+  /* première fois : la naissance complète, puis la partie commence avec cette naissance */
+  if(!(profile.seen && profile.seen.birthFull)) startBirthCinema(null, b => { pendingBirth = b; go(); });
+  else go();
+});
+$('btnBirth').addEventListener('click', e=>{
+  e.stopPropagation();
+  try{ initAudio(); }catch(err){}
+  startBirthCinema(null, () => backToMenu());
+});
+$('btnSkipBirth').addEventListener('click', e=>{ e.stopPropagation(); if(state === 'epilogue') finishEpilogue(); else finishBirth(); });
+$('btnBirth2').addEventListener('click', e=>{ e.stopPropagation(); try{ initAudio(); }catch(err){} startBirthCinema(null, () => backToMenu()); });
+for(const id of ['btnEpilogue', 'btnEpilogue2']) $(id).addEventListener('click', e=>{
+  e.stopPropagation(); if(!epilogueUnlocked()) return;
+  try{ initAudio(); }catch(err){} startEpilogue();
 });
 $('btnDaily').addEventListener('click', e=>{
   e.stopPropagation();

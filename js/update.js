@@ -18,7 +18,7 @@ function collectDust(e){
     }
   }
   aliveEat(e.dustType);
-  massGain(e.dustType);
+  massGain(e.dustType, e);
   if(e.orbit) orbitEaten();
   if(e.dustType === 'blue'){ slowmoT = 1.0; timeScale = 0.4; flash = Math.max(flash, 0.25); }
   else if(e.dustType === 'red'){
@@ -56,7 +56,8 @@ function hitAnti(e){
   lastDeathContext = { wasAttracting:attract, hadCharges:shockCharges>0, distance:d, parryRange:parryR(), pulsar:!!e.pulsarBeam };
   aliveHurt();
   massHit();
-  lives--; runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
+  if(!currentMode.simulation) lives--;   // Simulation : pas de vies, l'antimatière souffle seulement le disque
+  runHits++; hurtT = (currentMode.useWaves && !currentCampaignLevel && waveIndex >= 5) ? 2.0 : 1.5; pulseStreak = 0; thoughtHit();
   combo=0; comboTimer=0; multiplier=1;
   parryChain=0; parryChainTimer=0; perfectChainFired=false;
   elemChain = { type:null, count:0, timer:0 };
@@ -69,7 +70,7 @@ function hitAnti(e){
 function spawnShockwave(isEcho, pulse){
   const weak = !!(currentMode.beatOnly && !pulse && !isEcho);
   const nova = !!(isEcho && mods.supernova);
-  const maxR = SHOCK_MAX_R * Math.min(SHOCK_CAP, mods.shockRadiusMult * (pulse ? 1.2 : 1) * (nova ? 1.6 : 1)) * (currentMode.noShock ? 0.5 : 1) * (weak ? 0.45 : 1) * shockEnvK();
+  const maxR = SHOCK_MAX_R * Math.min(SHOCK_CAP, mods.shockRadiusMult * (pulse ? 1.2 : 1) * (nova ? 1.6 : 1)) * (currentMode.noShock ? 0.5 : 1) * (weak ? 0.45 : 1) * shockEnvK() * jetK();
   shockwaves.push({
     r:bh.r, maxR,
     life:SHOCK_LIFE, maxLife:SHOCK_LIFE,
@@ -326,6 +327,10 @@ function update(dt){
       }
     }
 
+    if(e.type==='nstar'){
+      if(updateNS(e, gdt)){ nsPlunge(e); entities.splice(i,1); if(state!=='play') break; }
+      continue;
+    }
     if(e.type==='star'){
       if(updateStar(e, gdt, d, ux, uy)){ tidalDisruption(e); entities.splice(i,1); }
       else if(Math.abs(e.x-bh.x)>W/2+260 || Math.abs(e.y-bh.y)>H/2+260) entities.splice(i,1);
@@ -347,6 +352,9 @@ function update(dt){
       if(state!=='play') break;
     } else if(e.whitehole){
       if(boss) updateWhiteHole(e, gdt);
+    } else if(e.companion){
+      if(boss) updateCompanion(e, gdt);
+      if(!boss) continue;
     } else if(e.bossPart && boss && boss.type.id==='eye'){
       e.eyeAngle += gdt*0.35;
       if(attract) e.eyeR = Math.max(bh.r + 62, e.eyeR - gdt*45*PHYS);
@@ -355,7 +363,7 @@ function update(dt){
     } else if(!e.bossPart || (boss && boss.type.id !== 'swarm')){
       let effectiveAttract = ATTRACT_F*PHYS*PHYS*mods.attractMult*massPull();   // a = F/d : F ∝ PHYS² quand d ∝ PHYS
       if(specialization === 'devoreur' && e.type === 'anti') effectiveAttract *= 0.6;
-      if(e.kind === 'sling') effectiveAttract *= 1.9;          // fronde : ta gravité l'accélère
+      if(e.kind === 'sling'){ effectiveAttract *= 1.9; penroseCheck(e, d); }   // fronde : ta gravité l'accélère, l'ergosphère aussi
       else if(e.kind === 'neutron') effectiveAttract *= 0.5;   // étoile à neutrons : très dense, lourde
       const hostileE = (e.type==='anti' || e.bossPart);
       if(e.type==='dust' && boss && boss.type.id==='whitehole') whiteHolePush(e, gdt);
@@ -407,6 +415,7 @@ function update(dt){
           if(sw.pulse && !sw.counted){ sw.counted = true; registerPulse(); }
           const isParry = !sw.weak && d < parryR();
           if(e.bossPart){
+            if(e.companion && !companionHit(e)) continue;   // trop loin : l'onde ne resserre pas l'orbite
             damageBoss(1, e.x, e.y);
             if(boss && boss.type.id === 'consumer'){ e.vx = -ux*420*PHYS; e.vy = -uy*420*PHYS; }
             if(boss && boss.type.id === 'whitehole') e.eyeR = Math.min(e.eyeR0, e.eyeR + 70*PHYS);

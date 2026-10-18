@@ -177,3 +177,77 @@ plus de but (pas de fin), et l'écran était saturé (messages répétés, cercl
   grandissent, mutations dans la colonne de gauche, messages sous la barre de boss.
 - **Variété** : un événement cosmique par palier, un secteur tous les 2 paliers, limite d'Eddington, contrats.
 
+
+## 8. Vraie physique : la naissance (0.22)
+
+Première étape de `docs/PROPOSITION_PHYSIQUE.md`. Principe : les lois sont vraies, seul le temps est accéléré.
+
+- **Naissance** : trois branches réelles tirées au sort (graine de la partie, donc identiques au défi du jour) :
+  supernova avec retombée (8 M☉, débris abondants au début, débit ∝ t^−5/3), supernova ratée (15 M☉, départ calme),
+  collapsar (10 M☉, a* = 0,85, charges pleines). Version courte à chaque partie (implosion, ondes gravitationnelles,
+  ringdown de l'horizon, légende) ; cinématique complète de 8 étapes la première fois, puis depuis le menu.
+- **Phases de vie** à la place des stades d'étoile : chaque palier est une phase réelle avec sa légende et son âge
+  (échelle logarithmique). Effets légers : retombée (poussière dense puis de moins en moins), vagabond (milieu clairsemé),
+  binaire X (flux de la compagne), microquasar (jets en état dur), rupture de marée (étoile annoncée), binaire de trous
+  noirs (ondes gravitationnelles).
+- **Corrections** : plus d'évaporation au jeûne (fausse pour un trou stellaire) ; le disque s'éteint à la place.
+  Eddington porte sur le débit d'accrétion λ = Ṁ/Ṁ_Edd (Ṁ_Edd ∝ M), pas sur la masse : au-delà de 1, la poussière est
+  soufflée et la masse progresse peu. Points : jusqu'à +10 % quand le disque brille près d'Eddington, +15 % par 100 %
+  de croissance. L'antimatière ajoute de la masse et souffle le disque. Stades réels : Nouveau-né → Microquasar.
+- **Instruments** : Rs, ombre, ISCO, η, λ, température du disque et de Hawking, durée de vie, entropie, âge (pause) ;
+  ligne Rs · a* · âge dans le HUD ; masse en M☉. Tests : constantes vérifiées contre les valeurs de référence.
+
+## 9. Trou noir de Kerr (0.23)
+
+- **Spin a\*** signé (sens des orbites), hérité de la naissance. Chaque poussière avalée change a\* selon Bardeen :
+  d(a\*)/d(ln M) = ℓ/E − 2a\*, avec ℓ et E pris sur l'ISCO et pondérés par la **cohérence du disque** (moyenne du moment
+  cinétique de la matière qui arrive) : l'anneau en orbite (cohérence 1) fait monter le spin, la chute radiale (0) le fait
+  baisser (accrétion chaotique), le contre-sens encore plus. Limite de Thorne 0,998. Vérifié : depuis a\* = 0, il faut
+  multiplier la masse par 2,2 pour atteindre 0,998.
+- **Efficacité** η(a\*) de 5,7 % à 32 % : points ×1 → ×1,6 (licence de jeu, ×5,6 en vrai), un peu moins en rétrograde ;
+  la masse gagnée est (1 − η) de la matière avalée.
+- **Charges et jets** : les charges restent (lecture : le flux magnétique apporté par la matière). Chaque onde est un jet de
+  Blandford-Znajek : portée ×0,92 → ×1,22 selon a\*², et elle extrait de l'énergie de rotation à masse irréductible
+  constante (M et a\* baissent). Simulation au robot sur 4 min : le spin se stabilise vers 0,4 à 0,5 entre accrétion et jets ;
+  un premier réglage (8 fois plus coûteux) vidait le spin en 2 min.
+- **Ergosphère** dessinée en pointillés dès a\* ≥ 0,3 ; la fronde qui la traverse repart ×1,4 (processus de Penrose).
+- **Rendu** : l'ISCO du shader (uniform uRin) suit le spin, de 4,5 Rs (rétrograde) à 1,15 Rs ; l'entraînement du référentiel
+  est proportionnel à a\*. Les rayons lumineux restent ceux de Schwarzschild (licence de jeu).
+
+## 10. Absorptions et fusions (0.24)
+
+- **Étoile à neutrons** (matière, à ne pas confondre avec l'ennemi, renommé « anti-étoile à neutrons ») : toutes les
+  85 à 110 s, elle spirale en 13 s (r ∝ (t_c − t)^¼, ondes gravitationnelles au double de la fréquence orbitale). À la chute,
+  l'ajustement de Foucart, Hinderer & Nissanke (2018) donne la masse restée dehors : > 1 % → **kilonova** (éclair qui
+  pulvérise l'antimatière proche, 4 à 14 débris d'or, la masse avalée est 1,4 M☉ moins les éjecta) ; sinon avalée entière
+  (+1,4 M☉, pas de lumière, comme GW200105). L'annonce dit le spin qu'il faudrait : le spin de la 0.23 devient un objectif.
+  En simulation, la masse grimpe vite (26 M☉ à 4 min) : au-delà d'environ 20 M☉, plus de kilonova possible, comme en vrai.
+- **Le Compagnon** (6e boss, et la phase « binaire de trous noirs » le fait venir) : orbite képlérienne qui rétrécit par
+  ondes gravitationnelles (dR/dt ∝ −1/R³), plus vite quand on aspire ; il vole la poussière proche et dévie l'antimatière.
+  Une onde ne resserre l'orbite (−10 %, un PV) que s'il est à moins de 190 px : il faut d'abord l'attirer. 7 PV.
+  Premier réglage (5 PV, sans portée) : battu en 11 s ; réglage retenu : environ 20 s, 1 à 2 coups reçus au robot.
+- **Fusion** : énergie rayonnée (Barausse et al. 2012), spin final (Rezzolla et al. 2008, plus une part du spin initial,
+  approximation), recul (González et al. 2007). Vérifié sur GW150914 : 36 + 29 → 61,9 M☉, 3,07 M☉ en ondes, a* = 0,68.
+  L'aire de l'horizon augmente toujours (théorème de Hawking, confirmé par GW250114).
+- **Masse réelle** : au-delà du plafond de jeu (zone de collision), le surplus est compté à part (massK) ; la chute dans
+  Sagittarius A\* ajoute 4,3 millions de M☉.
+- **Entropie** S ∝ aire ∝ masse irréductible² : record de partie (fin de partie) et de compte (profil), avec le nombre de
+  kilonovas et de fusions. Bilan de ce qui a été absorbé dans les instruments.
+
+## 11. Archives, épilogue, simulation (0.25)
+
+- **Archives** : 28 fiches (naissance, horizon, calvitie, disque, Eddington, antimatière, Bondi, binaire X, microquasar,
+  rupture de marée, Kerr, Blandford-Znajek, Penrose, ondes gravitationnelles, étoile à neutrons, fusion et théorème des aires,
+  entropie, EMRI, Hawking, ères futures, paradoxe de l'information…), débloquées par l'événement lui-même. Chacune : loi, observation
+  datée, « dans le jeu » (y compris les licences), étiquette. Une fiche verrouillée montre comment la débloquer : un objectif de
+  plus, qui apprend quelque chose.
+- **Naissances à débloquer** (choix dans les Archives, jamais au défi du jour) : fusion d'étoiles à neutrons (1 kilonova ;
+  2,7 M☉, nuage d'or au départ), trou noir primordial (épilogue vu ; 5×10¹¹ kg, il s'évapore : dM/dt ∝ −1/M², fin
+  « ÉVAPORÉ » après environ 50 s de jeûne), graine supermassive (chute dans Sgr A* ; 10⁵ M☉).
+- **Épilogue** (palier 5 ou chute dans Sgr A*) : 8 étapes, 49 s, pour la masse réelle du dernier trou noir. Le moment où le fond
+  cosmologique devient plus froid que le trou est calculé (refroidissement en e^(−t/τ), τ = 1/H d'un univers dominé par
+  l'énergie noire, ≈ 17 milliards d'années) ; la durée d'évaporation aussi (formule photons seuls). Le ciel s'éteint
+  (nébuleuses comprises), le disque se vide, l'horizon fond en chauffant, éclair final, puis noir.
+- **Mode Simulation** : une phase toutes les 30 s (Sgr A* à 5 min, chute à 6 min 15), pas de boss tournants (seul le Compagnon
+  de la phase binaire), pas de mutations ni de banque, pas de vies : l'antimatière souffle le disque. Vérifié au robot : la partie
+  va jusqu'à la chute, 0 mutation.

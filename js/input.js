@@ -13,7 +13,8 @@ const inGame = () => state === 'play' || state === 'tutorial' || state === 'resu
 
 function onDown(e){
   if(e && e.target && e.target.closest && e.target.closest('button')) return;
-  if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge') return;
+  if(state==='anomaly' || state==='paused' || state==='revive' || state==='bank' || state==='merge' || state==='birth') return;
+  if(state==='epilogue'){ attract = true; return; }   // dernières miettes
   if(state==='resume'){ attract = true; return; }   // on peut déjà maintenir pendant le décompte
   if(state==='menu'){ initAudio(); return; }
   if(state==='campdone' || state==='victory' || state==='finale') return;
@@ -39,7 +40,7 @@ function onUp(){
     attract = false;
     return;
   }
-  if(state==='resume'){ attract = false; return; }
+  if(state==='resume' || state==='epilogue'){ attract = false; return; }
   if(state!=='play') return;
   if(attract && !dualControls()) fireWave();
   attract=false;
@@ -85,6 +86,7 @@ function fireWave(){
     shockCharges--;
     const pu = isOnBeat();
     spawnShockwave(false, pu);
+    jetFired();                                       // l'onde est un jet : elle coûte de la rotation
     if(resonanceT > 0) pendingEchoes.push({time:0.35});
     if(!pu && currentMode.beatOnly) addToast('HORS TEMPO', '#9aa0c8');
   } else {
@@ -195,6 +197,15 @@ window.addEventListener('keydown',e=>{
     return;
   }
   if(state==='revive'){ if(e.code==='Escape') declineRevive(); return; }
+  if(state==='birth'){   // cinématique de naissance : ESPACE / Entrée / Échap la passent
+    if(e.code==='Escape' || e.code==='Enter' || e.code==='Space'){ e.preventDefault(); if(!e.repeat) finishBirth(); }
+    return;
+  }
+  if(state==='epilogue'){   // épilogue : Échap le passe, ESPACE aspire les dernières miettes
+    if(e.code==='Escape'){ e.preventDefault(); if(!e.repeat) finishEpilogue(); }
+    else if(isHoldKey(e.code)){ e.preventDefault(); attract = true; }
+    return;
+  }
   if(state==='bank'){   // ESPACE / Entrée / Échap : continuer · E : encaisser
     const onBtn = document.activeElement && document.activeElement.tagName === 'BUTTON';
     if(e.code === 'KeyE'){ e.preventDefault(); cashOut(); }
@@ -249,6 +260,7 @@ function togglePause(){
     pauseBossEl.textContent = bossesKilled;
     pauseWaveEl.textContent = currentCampaignLevel ? 'NIVEAU '+currentCampaignLevel.n : (currentMode.useWaves && WAVES[waveIndex] ? 'VAGUE '+(waveIndex+1) : currentMode.label);
     if(tier > 0) pauseWaveEl.textContent += ' · PALIER ' + tier;
+    $('pausePhys').innerHTML = cosmosOn() ? physPanelHTML() : '';
     pauseScreen.classList.remove('hidden');
     if(musicMasterGain && actx){
       musicMasterGain.gain.cancelScheduledValues(actx.currentTime);

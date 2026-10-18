@@ -22,7 +22,7 @@ const SKIN_GFX = {
   pulsar:   { temp:14000,hue:0,     sat:0.90, glow:1.15, flicker:true }
 };
 
-const VIS = { attract:0, spin:0, glow:1, fade:0, tilt:1.29, hurt:0, danger:0, ripple:[] };
+const VIS = { attract:0, spin:0, glow:1, fade:0, tilt:1.29, hurt:0, danger:0, ripple:[], rin:3 };
 const SK_NEUTRAL = '#dce4ff';
 const WAVE_TINTS = [[.9,1,1.3],[1.3,.8,1],[1,.9,1.4],[1.4,.8,.8],[.8,1.1,1.4],[1.3,1,.8],[1.4,.8,1],[.8,1.3,1],[1.5,.8,.8],[1.2,1.2,1.2]];
 const VTINT = [1, 1, 1];
@@ -128,6 +128,8 @@ function drawSceneLayer(t){
   sctx.clearRect(0, 0, W, H);
   sctx.save();
   sctx.translate(cam.dx, cam.dy);
+  if(state === 'birth'){ drawBirthScene(t); sctx.restore(); return; }   // naissance : l'étoile, puis l'horizon
+  if(state === 'epilogue'){ drawEpilogueScene(t); sctx.restore(); return; }
   drawInfall(VIS.attract);
   if(state === 'menu'){ sctx.restore(); return; }
   if(sgr) drawSgr(t);
@@ -170,6 +172,7 @@ function drawEntity(e, t, cb){
   if(s !== 1){ sctx.save(); sctx.translate(e.x, e.y); sctx.scale(s, s); sctx.translate(-e.x, -e.y); }
   if(e.type === 'dust') drawDust(e, t);
   else if(e.type === 'star') drawStar(e, t);
+  else if(e.type === 'nstar') drawNStar(e, t);
   else if(e.type === 'rock') drawRock(e);
   else if(e.bossPart) drawBossPart(e, t);
   else if(e.isProjectile) drawBolt(e, t);
@@ -345,6 +348,7 @@ function drawBolt(e, t){
 function drawBossPart(e, t){
   if(e.pulsar){ drawPulsar(e, t); return; }
   if(e.whitehole){ drawWhiteHole(e, t); return; }
+  if(e.companion){ drawCompanion(e, t); return; }
   const color = boss ? boss.type.color : '#ff2d6f';
   const bid = boss ? boss.type.id : 'consumer';
   const flashAmt = boss && boss.hitFlash > 0 ? boss.hitFlash / 0.18 : 0;
@@ -469,6 +473,16 @@ function drawCosmosMarks(t){
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 2.6, -Math.PI / 2, -Math.PI / 2 + e.tidal * Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,233,163,.9)'; ctx.lineWidth = 2.4; ctx.stroke();
     }
+  }
+  /* ergosphère (spin ≥ 0,3) : ellipse pointillée qui tourne avec le trou, aplatie aux pôles */
+  const sa = Math.abs(bhSpin);
+  if(cosmosOn() && sa >= 0.3 && !reduceFx()){
+    const er = ergoR();
+    ctx.save();
+    ctx.setLineDash([3, 6]); ctx.lineDashOffset = t * 40 * (bhSpin < 0 ? 1 : -1);
+    ctx.strokeStyle = 'rgba(201,156,255,' + (0.12 + 0.25 * (sa - 0.3)).toFixed(3) + ')'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(bh.x, bh.y, er, bh.r + (er - bh.r) * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
   /* poussière en orbite : un fin anneau doré */
   if(orbiters.length){
@@ -628,6 +642,8 @@ function drawOverlay(t, shk){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if(!useGL) drawFallbackWorld(t, shk);
+  if(state === 'birth'){ drawBirthOverlay(); return; }
+  if(state === 'epilogue') return;
   if(state === 'menu' && particles.length){   // menu : gestes avalés par le trou noir
     ctx.save(); ctx.translate(cam.dx, cam.dy); drawParticles(ctx); ctx.restore();
   }
@@ -673,19 +689,23 @@ function makeFallbackBg(){
 function drawFallbackWorld(t, shk){
   if(fbBg) ctx.drawImage(fbBg, 0, 0, W, H);
   const cx = bh.x + cam.dx + shk.x, cy = bh.y + cam.dy + shk.y;
-  const R = bh.r * cam.zoom;
-  const gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 6);
-  gl.addColorStop(0, 'rgba(255,170,80,' + clamp(0.35 * aliveVisual(t).glow, 0.08, 0.7).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
-  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 6, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(1, 0.3);
-  for(let i = 0; i < 4; i++){
-    ctx.beginPath(); ctx.arc(0, 0, R * (2.2 + i * 0.85), 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,' + (190 - i * 30) + ',' + (110 - i * 20) + ',' + (0.55 - i * 0.12) + ')';
-    ctx.lineWidth = 9 - i * 2; ctx.stroke();
+  const R = bh.r * cam.zoom * holeK(), dk = discGlowK();
+  if(R > 0.5 && dk > 0.02){
+    const gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 6);
+    gl.addColorStop(0, 'rgba(255,170,80,' + clamp(0.35 * aliveVisual(t).glow * dk, 0.02, 0.7).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 6, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.13); ctx.scale(1, 0.3); ctx.globalAlpha = dk;
+    for(let i = 0; i < 4; i++){
+      ctx.beginPath(); ctx.arc(0, 0, R * (2.2 + i * 0.85), 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,' + (190 - i * 30) + ',' + (110 - i * 20) + ',' + (0.55 - i * 0.12) + ')';
+      ctx.lineWidth = 9 - i * 2; ctx.stroke();
+    }
+    ctx.restore();
   }
-  ctx.restore();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,160,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+  if(R > 0.5){
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,160,' + (0.8 * dk).toFixed(3) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
   if(state !== 'menu') ctx.drawImage(sceneCanvas, 0, 0, W, H);
 }
 
@@ -721,7 +741,11 @@ function renderFrame(dt){
   const sk = SKIN_GFX[profile.skin] || SKIN_GFX.classic;
   const hue = sk.hue === -1 ? (t * 0.45) % 6.2832 : sk.hue;
   const dilate = playing ? clamp((1 - timeScale) / 0.75, 0, 1) : 0;
-  const radius = bh.r * cam.zoom;
+  const radius = Math.max(1e-3, bh.r * cam.zoom * holeK());   // naissance : l'horizon apparaît et « sonne »
+  /* ISCO de Kerr (en Rs) : le bord interne du disque se rapproche quand le spin prograde augmente */
+  const aRel = state === 'birth' ? (CINE.b ? CINE.b.a : 0) : (state !== 'menu' && cosmosOn() ? spinRel() : 0);
+  VIS.rin += (clamp(PHY.iscoRg(aRel) / 2, 1.15, 4.5) - VIS.rin) * Math.min(1, dt * 3);
+  const drag = state !== 'menu' && state !== 'birth' && cosmosOn() ? (0.6 + 0.7 * Math.abs(bhSpin)) * (bhSpin < 0 ? -1 : 1) : 1;   // Lense-Thirring ∝ a*
   const tint = WAVE_TINTS[waveIndex % WAVE_TINTS.length];
   const wantTint = (state === 'play' && sector) ? sector.tint : ((state === 'play' && currentMode.useWaves && !currentCampaignLevel) ? tint : [1, 1, 1]);
   for(let i = 0; i < 3; i++) VTINT[i] += (wantTint[i] * AV.tint[i] - VTINT[i]) * Math.min(1, dt * 4);
@@ -737,7 +761,7 @@ function renderFrame(dt){
   }
   const flick = sk.flicker && !reduceFx() ? 1 + 0.22 * Math.pow(Math.max(0, Math.sin(t * 5.2)), 12) : 1;   // skin Pulsar : éclats réguliers
   const glow = flick * (state === 'menu' ? 0.95 : 1.0) * sk.glow * (1 + 0.26 * VIS.attract + 0.03 * (multiplier - 1) + 0.28 * kick * (1 + AV.trance) + 0.5 * VIS.hurt + (resonanceT > 0 ? 0.25 : 0)) * AV.glow * (state === 'finale' ? 1 + finaleT * 0.4 : 1)
-    * (1 - 0.65 * darkK()) * (1 + 0.6 * (state === 'play' ? eddK() : 0)) * (state === 'merge' ? 1 + mergeT * 0.8 : 1);
+    * (1 - 0.65 * darkK()) * (1 + 0.6 * (state === 'play' ? eddK() : 0)) * (state === 'merge' ? 1 + mergeT * 0.8 : 1) * discGlowK();
 
   const fbW = glCanvas.width, fbH = glCanvas.height;
   SpaceGL.render({
@@ -752,11 +776,11 @@ function renderFrame(dt){
     lens: 20 * (1 + 0.55 * VIS.attract) * AV.lens, sceneLens: 1.15 * (1 + 0.4 * VIS.attract),
     sceneOn: true, sceneCanvas, sceneGain: 1.18,
     inflow: (state === 'menu' ? 0.45 : 0.35) + 0.9 * VIS.attract + ALIVE.menuPull * 0.5,
-    twist: 0.22 + 0.75 * VIS.attract + ALIVE.menuPull * 0.4,
+    twist: (0.22 + 0.75 * VIS.attract + ALIVE.menuPull * 0.4) * drag, rin: VIS.rin,
     hot: (0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(t * 0.37)), 4)) * (reduceFx() ? 0.5 : 1),
     pull: reduceFx() ? VIS.attract * 0.3 : VIS.attract,
     holeU: (bh.x + cam.dx) / W, holeV: 1 - (bh.y + cam.dy) / H,
-    starGain: 1.0, quality: 1, tint: VTINT, ripples,
+    starGain: state === 'epilogue' ? EPI.stars : 1.0, quality: 1, tint: VTINT, ripples,
     bloomThr: 1.0, bloom: 0.8 + (state === 'play' ? 0.5 * eddK() : 0), exposure: 1.15 * (1 - 0.3 * darkK()),
     vignette: state === 'play' && sector && sector.id === 'nebula' ? 0.95 : 0.5 + 0.3 * darkK(), grain: 0.028,
     aberr: 0.0012 + Math.min(1, shake / 32) * 0.004 + parryFlash * 0.004 + flash * 0.006 + dilate * 0.003,

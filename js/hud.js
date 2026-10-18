@@ -69,7 +69,7 @@ function scoreK(withFm){
   if(!mods) return 1;
   let a = (mods.anomScore || 1) * (withFm ? fm() : 1);
   if(currentMode.id !== 'chaos') a = Math.min(mods.scoreCap || ANOM_SCORE_CAP, a);
-  return mods.scoreMult * a * tierScore() * (cosmosOn() ? massScore() : 1);   // paliers et masse : hors plafond
+  return mods.scoreMult * a * tierScore() * (cosmosOn() ? cosmosScore() : 1);   // paliers, disque et masse : hors plafond
 }
 /* Fenêtre du combo : liée à la fenêtre de chaîne (Réflexe), plus le bonus permanent Combo Long. */
 function comboWindow(){ return mods ? mods.chainWindow*1.2 + (mods.comboBonus||0) : COMBO_MAX; }
@@ -217,23 +217,26 @@ function syncHUD(){
   syncTouchControls();
   updateGhostPace();
 }
-/* Masse du trou noir (évaporation de Hawking) et palier de la partie infinie */
-let lastMassTxt = '', lastTierTxt = '', lastContractTxt = '';
+/* Masse réelle du trou noir, disque d'accrétion (λ = Ṁ / Ṁ_Edd) et palier de la partie infinie */
+let lastMassTxt = '', lastTierTxt = '', lastContractTxt = '', lastPhysTxt = '';
 function syncCosmosHUD(){
   const on = cosmosOn() && state !== 'tutorial';
   const mm = $('massMeter'); if(!mm) return;
   mm.classList.toggle('on', on);
   if(on){
-    const txt = bhMass.toFixed(2).replace('.', ',');
+    const lam = eddRatio();
+    const txt = PHY.msun(realMass()) + '|' + Math.round(Math.min(lam, 1.5) * 20);
     if(txt !== lastMassTxt){
       lastMassTxt = txt;
-      $('massVal').textContent = txt;
-      $('massFill').style.transform = 'scaleX(' + ((bhMass - MASS_MIN) / (MASS_MAX - MASS_MIN)).toFixed(3) + ')';
-      mm.classList.toggle('low', bhMass < 0.75);
-      mm.classList.toggle('high', bhMass > MASS_EDD + 0.05);
-      $('massEdd').classList.toggle('on', bhMass > MASS_EDD + 0.05);
+      $('massVal').textContent = txt.split('|')[0];
+      $('massFill').style.transform = 'scaleX(' + Math.min(1, lam / 1.5).toFixed(3) + ')';   // repère à 2/3 : λ = 1
+      mm.classList.toggle('low', lam < 0.12 && elapsed > 10);
+      mm.classList.toggle('high', lam > 1);
+      $('massEdd').classList.toggle('on', lam > 1);
     }
   }
+  const pt = on ? physLine() : '';
+  if(pt !== lastPhysTxt){ lastPhysTxt = pt; const c = $('physChip'); c.textContent = pt; c.classList.toggle('on', !!pt); }
   const ct = contract ? (contractDone ? '◇ ✓ ' : '◇ ') + contract.name : '';
   if(ct !== lastContractTxt){ lastContractTxt = ct; const c = $('contractChip'); c.textContent = ct; c.classList.toggle('on', !!ct); c.classList.toggle('done', contractDone); }
   const tt = tier > 0 ? 'PALIER ' + tier + ' · ' + tierName(tier) + (sector ? ' · ' + sector.name : '') : '';
