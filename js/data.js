@@ -1,7 +1,7 @@
 /* Version du jeu, affichée dans le menu : 0.x.y tant que le jeu est en
    développement (suffixe « -dev »), 1.0.0 pour la première version officielle.
    package.json doit porter la même valeur (vérifié par les tests). */
-const GAME_VERSION = '0.20.0-dev';
+const GAME_VERSION = '0.21.0-dev';
 
 /* GOULU — données du jeu : campagne, évolutions, modes, vagues, poussières, anomalies, boss, quêtes, succès, skins */
 /* =========================================================
@@ -209,16 +209,16 @@ const SKINS = {
 };
 
 const ANOMALIES = [
-  { id:'force', name:'Force Brute', icon:'🌀', cat:'force', rarity:'common', desc:'<b>+40%</b> force d\'attraction', max:3, apply:(m)=>{ m.attractMult *= 1.4; } },
-  { id:'onde', name:'Onde Large', icon:'💠', cat:'force', rarity:'rare', desc:'Rayon onde <b>+35%</b>', max:2, apply:(m)=>{ m.shockRadiusMult *= 1.35; } },
-  { id:'souffle', name:'Souffle', icon:'🌬️', cat:'force', rarity:'common', desc:'Répulsion <b>+60%</b>', max:2, apply:(m)=>{ m.repelMult *= 1.6; } },
+  { id:'force', name:'Force Brute', icon:'🌀', cat:'force', rarity:'common', desc:'<b>+40 / 25 / 15 %</b> force d\'attraction', max:3, apply:(m,k)=>{ m.attractMult *= [1.4, 1.25, 1.15][k||0]; } },
+  { id:'onde', name:'Onde Large', icon:'💠', cat:'force', rarity:'rare', desc:'Rayon onde <b>+35 / 20 %</b>', max:2, apply:(m,k)=>{ m.shockRadiusMult *= [1.35, 1.2][k||0]; } },
+  { id:'souffle', name:'Souffle', icon:'🌬️', cat:'force', rarity:'common', desc:'Répulsion <b>+60 / 30 %</b>', max:2, apply:(m,k)=>{ m.repelMult *= [1.6, 1.3][k||0]; } },
   { id:'mine', name:'Mine d\'Or', icon:'💰', cat:'eco', rarity:'common', desc:'Chaque poussière vaut <b>+1 pt</b>', max:3, apply:(m)=>{ m.dustValue += 1; } },
   { id:'rendement', name:'Rendement', icon:'⚙️', cat:'eco', rarity:'rare', desc:'<b>-1</b> poussière par charge', max:1, apply:(m)=>{ m.dustPerCharge = Math.max(2, m.dustPerCharge - 1); } },
   { id:'capital', name:'Capital', icon:'📈', cat:'eco', rarity:'rare', desc:'<b>+1</b> charge max', max:2, apply:(m)=>{ m.maxCharges += 1; } },
   { id:'carapace', name:'Carapace', icon:'🛡️', cat:'def', rarity:'rare', desc:'<b>+1</b> vie', max:2, apply:(m)=>{ m.bonusLives += 1; } },
   { id:'vampire', name:'Vampire', icon:'🩸', cat:'def', rarity:'legendary', desc:'Chaque <b>3e parry</b> rend 1 vie', max:1, apply:(m)=>{ m.vampire = true; } },
-  { id:'instinct', name:'Instinct', icon:'👁️', cat:'mob', rarity:'common', desc:'Zone parry <b>+60%</b>', max:2, apply:(m)=>{ m.parryRangeMult *= 1.6; } },
-  { id:'chaine', name:'Chaîne Libre', icon:'⛓️', cat:'mob', rarity:'rare', desc:'Chaîne de parry max <b>×12</b>', max:1, apply:(m)=>{ m.chainCap = Math.max(m.chainCap, 12); } },
+  { id:'instinct', name:'Instinct', icon:'👁️', cat:'mob', rarity:'common', desc:'Zone parry <b>+50 / 25 %</b>', max:2, apply:(m,k)=>{ m.parryRangeMult *= [1.5, 1.25][k||0]; } },
+  { id:'chaine', name:'Chaîne Libre', icon:'⛓️', cat:'mob', rarity:'rare', desc:'Chaîne de parry max <b>×8</b>', max:1, apply:(m)=>{ m.chainCap = Math.max(m.chainCap, 8); } },
   { id:'reflexe', name:'Réflexe', icon:'⚡', cat:'mob', rarity:'common', desc:'Fenêtre de chaîne <b>+1s</b>', max:2, apply:(m)=>{ m.chainWindow += 1; } },
   { id:'fureur', name:'Fureur', icon:'😤', cat:'risk', rarity:'legendary', desc:'5s sans relâcher = <b>×2 score</b>', max:1, apply:(m)=>{ m.fureur = true; } },
   { id:'faim', name:'Faim', icon:'🍖', cat:'risk', rarity:'rare', desc:'Anti <b>+50%</b> mais <b>+80% pts</b>', max:1, apply:(m)=>{ m.antiSpawnMult *= 1.5; m.anomScore *= 1.8; } },
@@ -246,6 +246,39 @@ const FUSIONS = [
 function anomDef(id){ return ANOMALIES.find(x => x.id === id) || FUSIONS.find(x => x.id === id); }
 
 /* 0.20 : paliers de la partie infinie (un toutes les 60 s), nommés d'après la vie des étoiles */
+/* 0.21 : 8 emplacements de mutation (une fusion en libère un), plafonds de portée */
+const MUT_SLOTS = 8;
+const PARRY_CAP = 2.4, SHOCK_CAP = 2.2;   // multiples de la portée de base, tous bonus compris
+
+/* 0.21 : un événement cosmique par palier (à partir du palier 2) */
+const COSMIC_EVENTS = [
+  { id:'comets',   name:'PLUIE DE COMÈTES',     desc:'Les comètes tombent sans arrêt.' },
+  { id:'magnetic', name:'CHAMP MAGNÉTIQUE',     desc:'Zone de parry −30 %.' },
+  { id:'dark',     name:'NUIT NOIRE',           desc:'Le disque n\'éclaire presque plus.' },
+  { id:'gwaves',   name:'ONDES GRAVITATIONNELLES', desc:'Toutes les 5 s, l\'espace se tord et dévie tout.' },
+  { id:'swarm',    name:'ESSAIM',               desc:'L\'antimatière arrive par trois.' },
+  { id:'heavy',    name:'MATIÈRE LOURDE',       desc:'Étoiles à neutrons en masse.' }
+];
+/* 0.21 : secteurs de l'espace, un tous les 2 paliers */
+const SECTORS = [
+  { id:'nebula',   name:'NÉBULEUSE',             desc:'Poussière abondante, on voit moins loin.', tint:[1.35, 0.85, 1.15] },
+  { id:'belt',     name:'CEINTURE D\'ASTÉROÏDES', desc:'Des rochers dérivent : l\'onde les repousse, le contact blesse.', tint:[1.1, 1.0, 0.85] },
+  { id:'cluster',  name:'AMAS D\'ÉTOILES',       desc:'Des étoiles à déchirer partout.', tint:[1.25, 1.15, 0.8] },
+  { id:'magnetar', name:'VOISINAGE D\'UN MAGNÉTAR', desc:'Le champ courbe les trajectoires, ondes −20 %.', tint:[0.8, 1.05, 1.45] }
+];
+/* 0.21 : contrats de partie (un au choix, récompense en éclats) */
+const CONTRACTS = [
+  { id:'tde3',    name:'Déchire 3 étoiles',          reward:3, test:()=>runTde >= 3 },
+  { id:'tier5',   name:'Atteins le palier 5',         reward:3, test:()=>tier >= 5 },
+  { id:'clean3',  name:'Palier 3 sans être touché',   reward:4, test:()=>tier >= 3 && runHits === 0 },
+  { id:'orbit20', name:'Avale 20 poussières en orbite', reward:2, test:()=>runOrbitEaten >= 20 },
+  { id:'parry40', name:'40 parry',                    reward:2, test:()=>parryCount >= 40 },
+  { id:'boss2',   name:'Vaincs 2 boss',               reward:3, test:()=>runBossesKilled >= 2 },
+  { id:'reso2',   name:'2 résonances',                reward:2, test:()=>runResonances >= 2 },
+  { id:'comet5',  name:'Détruis 5 comètes',           reward:2, test:()=>runComets >= 5 },
+  { id:'mass15',  name:'Atteins une masse de 1,50',   reward:2, test:()=>bhMass >= 1.5 }
+];
+
 const TIER_NAMES = ['NÉBULEUSE', 'PROTO-ÉTOILE', 'NAINE ROUGE', 'GÉANTE ROUGE', 'NAINE BLANCHE', 'ÉTOILE À NEUTRONS', 'MAGNÉTAR', 'HYPERNOVA', 'QUASAR', 'SINGULARITÉ'];
 /* PV +1 en 0.12.2 pour compenser Écho et Vampire désormais actifs sur les boss.
    La Nuée a autant d'éclats que de PV. */

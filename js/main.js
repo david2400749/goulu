@@ -36,7 +36,8 @@ function loop(now){
   if(!(dt >= 0)) dt = 0;   // horloge qui recule (onglet réveillé, appel manuel) : pas de pas négatif
   updateCamera(dt);
   perfSample(dt);
-  if(state === 'anomaly' || state === 'paused' || state === 'revive' || state === 'resume'){
+  if(state === 'anomaly' || state === 'paused' || state === 'revive' || state === 'resume' || state === 'bank'){
+    if(state === 'bank') musicTick(dt);   // la musique continue pendant le choix
     /* jeu gelé : le décor continue de vivre */
     if(state === 'revive') tickRevive(dt);
     if(state === 'resume') tickResume(dt);

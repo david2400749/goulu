@@ -149,7 +149,7 @@ let lastScore=-1,lastLives=-1,lastCharges=-1,lastMult=-1,lastProg=-1;
 function syncHUD(){
   if(heartsEl.children.length !== maxLivesRun){ buildHearts(); lastLives = -1; }
   if(score!==lastScore){
-    scoreHudEl.textContent=score; lastScore=score;
+    scoreHudEl.textContent=fmtScore(score); lastScore=score;
     scoreHudEl.classList.remove('bump'); void scoreHudEl.offsetWidth;
     scoreHudEl.classList.add('bump');
     setTimeout(()=>scoreHudEl.classList.remove('bump'),130);
@@ -218,7 +218,7 @@ function syncHUD(){
   updateGhostPace();
 }
 /* Masse du trou noir (évaporation de Hawking) et palier de la partie infinie */
-let lastMassTxt = '', lastTierTxt = '';
+let lastMassTxt = '', lastTierTxt = '', lastContractTxt = '';
 function syncCosmosHUD(){
   const on = cosmosOn() && state !== 'tutorial';
   const mm = $('massMeter'); if(!mm) return;
@@ -230,10 +230,13 @@ function syncCosmosHUD(){
       $('massVal').textContent = txt;
       $('massFill').style.transform = 'scaleX(' + ((bhMass - MASS_MIN) / (MASS_MAX - MASS_MIN)).toFixed(3) + ')';
       mm.classList.toggle('low', bhMass < 0.75);
-      mm.classList.toggle('high', bhMass > 1.45);
+      mm.classList.toggle('high', bhMass > MASS_EDD + 0.05);
+      $('massEdd').classList.toggle('on', bhMass > MASS_EDD + 0.05);
     }
   }
-  const tt = tier > 0 ? 'PALIER ' + tier + ' · ' + tierName(tier) : '';
+  const ct = contract ? (contractDone ? '◇ ✓ ' : '◇ ') + contract.name : '';
+  if(ct !== lastContractTxt){ lastContractTxt = ct; const c = $('contractChip'); c.textContent = ct; c.classList.toggle('on', !!ct); c.classList.toggle('done', contractDone); }
+  const tt = tier > 0 ? 'PALIER ' + tier + ' · ' + tierName(tier) + (sector ? ' · ' + sector.name : '') : '';
   if(tt !== lastTierTxt){ lastTierTxt = tt; const c = $('tierChip'); c.textContent = tt; c.classList.toggle('on', !!tt); }
 }
 /* Boutons tactiles : aspiration en cours, charges restantes sur le bouton ONDE */

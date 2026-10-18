@@ -25,7 +25,7 @@ let ringEatN = 0, ringEatT = 0, evapWarned = false, dropShown = 0, dropOn = fals
 let runTde = 0, runOrbitEaten = 0;
 
 function cosmosReset(){
-  bhMass = 1; tier = 0; starTimer = STAR_FIRST; quasarHold = 0; orbiters = [];
+  bhMass = 1; tier = 0; starTimer = STAR_FIRST; endgameReset(); quasarHold = 0; orbiters = [];
   ringEatN = 0; ringEatT = 0; evapWarned = false; dropShown = 0; dropOn = false; hawkT = 0;
   runTde = 0; runOrbitEaten = 0;
 }
@@ -39,11 +39,15 @@ function seenOnce(key){
 /* ---------- masse ---------- */
 function massR(){ return Math.pow(bhMass, 0.35); }            // rayon de jeu ∝ M^0,35 (jouable), pas ∝ M
 function massPull(){ return bhMass > 1 ? Math.pow(bhMass, 0.5) : 1; }   // maigrir n'affaiblit pas l'attraction : pas de spirale perdante
-function massScore(){ return 0.6 + 0.4 * Math.round(bhMass * 10) / 10; }   // par paliers de 0,1 : lisible, stable
+/* Limite d'Eddington : au-delà de M = 1,4, la lumière du disque repousse la matière qui tombe.
+   La meilleure masse est au milieu, pas au maximum. Score par paliers de 0,1 (lisible, stable). */
+const MASS_EDD = 1.4;
+function massScore(){ const m = Math.round(bhMass * 10) / 10; return 0.6 + 0.4 * Math.min(m, MASS_EDD) - 0.5 * Math.max(0, m - MASS_EDD); }
+function eddK(){ return clamp((bhMass - MASS_EDD) / (MASS_MAX - MASS_EDD), 0, 1); }
 function massGain(dustType){
   if(!cosmosOn()) return;
   const g = { gold:0.008, blue:0.014, red:0.01, white:0.01 }[dustType] || 0.008;
-  bhMass = Math.min(MASS_MAX, bhMass + g);
+  bhMass = Math.min(MASS_MAX, bhMass + g * (1 - eddK()));   // au-delà d'Eddington, on grossit de moins en moins
 }
 function massHit(){ if(cosmosOn()) bhMass = Math.max(MASS_MIN, bhMass - 0.12); }
 
@@ -56,10 +60,12 @@ function tierClock(){
 function tierName(n){ return n <= TIER_NAMES.length ? TIER_NAMES[n - 1] : TIER_NAMES[TIER_NAMES.length - 1] + ' +' + (n - TIER_NAMES.length); }
 function tierSpeed(){ return tier > 1 ? 1 + 0.07 * (tier - 1) : 1; }
 function tierSpawn(){ return tier > 1 ? 1 + 0.1 * (tier - 1) : 1; }
-function tierScore(){ return tier > 1 ? 1 + 0.2 * (tier - 1) : 1; }
+function tierScore(){ return tier > 1 ? 1 + 0.1 * (tier - 1) : 1; }
 function tierUp(n){
+  if(sgr || state === 'merge') return;   // pendant Sagittarius A*, on reste au palier 10
   tier = n;
   if(n > (profile.bestTier || 0)){ profile.bestTier = n; saveP(); }
+  if(n === SGR_TIER){ endgameTier(n); return; }
   waveNumEl.textContent = 'PALIER ' + n;
   waveNameEl.textContent = tierName(n);
   if(waveLoreEl) waveLoreEl.textContent = n > 1 ? 'Antimatière +' + Math.round((tierSpeed() - 1) * 100) + ' % · points ×' + tierScore().toFixed(1).replace('.', ',') : 'Chaque minute, un palier : plus dur, plus payant.';
@@ -67,12 +73,14 @@ function tierUp(n){
   addToast('PALIER ' + n + ' · ' + tierName(n), '#ffd36b', H/2 - 150);
   shake = Math.max(shake, 12);
   if(actx && !audioMuted) [392, 523.25, 659.25, 784].forEach((f, i) => blip(f, 0.3, 'triangle', 0.1, undefined, i * 0.08));
+  endgameTier(n);
 }
 
 /* ---------- nouvelles menaces ---------- */
 function pickAntiKind(){
   if(currentCampaignLevel) return null;
   const r = rng();
+  if(heavyEvent() && r < 0.3) return 'neutron';
   if(elapsed > 35 && r < 0.10) return 'comet';
   if(elapsed > 50 && r < 0.18) return 'neutron';
   if(elapsed > 22 && r < 0.28) return 'sling';
@@ -97,6 +105,10 @@ function spawnAnti(){
     }
   }
   if(kind && seenOnce('kind_' + kind)) addToast(KIND_INTRO[kind][0], KIND_INTRO[kind][1], H/2 + 110);
+  if(swarmEvent() && kind !== 'comet'){   // essaim : deux de plus, juste à côté
+    const e = entities[entities.length - 1];
+    for(let k = 0; k < 2 && entities.length < ENTITY_CAP; k++) spawnEntity('anti', e.x + (k ? 28 : -28), e.y + (k ? -22 : 22));
+  }
 }
 function spawnComet(){
   const p = edgePoint();
@@ -168,7 +180,7 @@ function tidalDisruption(e){
   }
   if(boss && !isPulsar()) damageBoss(1, boss.parts[0] ? boss.parts[0].x : bh.x, boss.parts[0] ? boss.parts[0].y : bh.y);
   combo += n; comboTimer = comboWindow(); if(combo > maxCombo) maxCombo = combo;
-  const pts = Math.round((300 + 25 * n) * multiplier * scoreK(false));
+  const pts = Math.round((300 + 25 * n) * mulK(multiplier * scoreK(false)));
   addScore(pts);
   bhMass = Math.min(MASS_MAX, bhMass + 0.2);
   shockCharges = Math.max(shockCharges, getMaxCharges());
@@ -209,10 +221,10 @@ function orbitEaten(){
   runOrbitEaten++;
   if(ringEatT <= 0) ringEatN = 0;
   ringEatN++; ringEatT = 0.9;
-  if(ringEatN >= 4){
-    const pts = Math.round(20 * ringEatN * multiplier * scoreK(true));
+  if(ringEatN >= 4){   // bonus à partir de la 4e poussière avalée d'affilée, plus fort pour l'anneau complet
+    const pts = Math.round((ringEatN === ORBIT_MAX ? 120 : 30) * mulK(multiplier * scoreK(true)));
     addScore(pts);
-    if(ringEatN === 4 || ringEatN === ORBIT_MAX) addToast('◎ ANNEAU AVALÉ ×' + ringEatN + ' · +' + pts, '#ffcb4d', H/2 - 70);
+    if(ringEatN === 4 || ringEatN === ORBIT_MAX) addToast('◎ ANNEAU AVALÉ ×' + ringEatN + ' · +' + pts, '#ffcb4d', H/2 - 70, 'ring');
   }
 }
 /* Une antimatière qui touche la poussière en orbite s'annihile avec elle. */
@@ -223,7 +235,7 @@ function orbitShield(e){
     if(dx * dx + dy * dy < rr * rr){
       o.dead = true; e.dead = true;
       burst(e.x, e.y, '#ffcb4d', 16, 360); burst(e.x, e.y, '#ff2d6f', 12, 300);
-      addScore(10 * multiplier * scoreK(false));
+      addScore(10 * mulK(multiplier * scoreK(false)));
       combo++; comboTimer = comboWindow(); if(combo > maxCombo) maxCombo = combo;
       if(actx && !audioMuted) blip(760, 0.12, 'triangle', 0.08, 380);
       return true;
@@ -242,7 +254,7 @@ function fireQuasar(){
     if(e.dead) continue;
     const dx = e.x - bh.x, dy = e.y - bh.y;
     if(Math.abs(dx * ay - dy * ax) > 42 * VIS_SCALE + e.r) continue;   // distance à l'axe des jets
-    if(e.type === 'anti'){ e.dead = true; n++; burst(e.x, e.y, '#bfe6ff', 14, 360); addScore(15 * multiplier * scoreK(false)); }
+    if(e.type === 'anti'){ e.dead = true; n++; burst(e.x, e.y, '#bfe6ff', 14, 360); addScore(15 * mulK(multiplier * scoreK(false))); }
     else if(e.bossPart && boss && !isPulsar() && e.isMain){ damageBoss(1, e.x, e.y); }
   }
   shake = Math.max(shake, 16);
@@ -254,7 +266,7 @@ function reactionBlast(){
   for(const e of entities){
     if(e.dead || e.type !== 'anti') continue;
     if(Math.hypot(e.x - bh.x, e.y - bh.y) > R) continue;
-    e.dead = true; burst(e.x, e.y, '#ff5c2d', 14, 380); addScore(12 * multiplier * scoreK(false));
+    e.dead = true; burst(e.x, e.y, '#ff5c2d', 14, 380); addScore(12 * mulK(multiplier * scoreK(false)));
   }
   burst(bh.x, bh.y, '#ff5c2d', 50, 650);
   addToast('☢️ RÉACTION EN CHAÎNE', '#ff8a5c', H/2 - 160);
@@ -313,7 +325,17 @@ function cosmosTick(gdt){
       if(!evapWarned){ evapWarned = true; addToast('ÉVAPORATION DE HAWKING · mange !', '#bfe6ff', H/2 + 70); thoughtOnce('evap', 'Je fonds. Il me faut de la matière.'); }
     } else if(bhMass > 0.9) evapWarned = false;
     /* l'anneau rapporte en continu */
-    if(orbiters.length) addScore(orbiters.length * 0.6 * multiplier * scoreK(true) * gdt);
+    if(orbiters.length) addScore(orbiters.length * 0.6 * mulK(multiplier * scoreK(true)) * gdt);
+    /* au-delà d'Eddington : la pression de radiation repousse la poussière proche */
+    const ek = eddK();
+    if(ek > 0.1){
+      if(!eddWarned){ eddWarned = true; addToast('LIMITE D\'EDDINGTON · ta lumière repousse la matière', '#ffcb4d', H/2 + 70); }
+      for(const e of entities){
+        if(e.type !== 'dust' || e.orbit || e.dead) continue;
+        const dx = e.x - bh.x, dy = e.y - bh.y, d = Math.hypot(dx, dy) || 1;
+        if(d < 220 * PHYS){ const f = 260 * PHYS * ek * gdt; e.vx += dx / d * f; e.vy += dy / d * f; }
+      }
+    } else if(bhMass < 1.3) eddWarned = false;
   }
 
   /* paliers */
@@ -321,10 +343,10 @@ function cosmosTick(gdt){
   if(clk >= 0){ const n = Math.floor(clk / 60); if(n > tier) tierUp(n); }
 
   /* étoile de passage */
-  if(cosmosOn() && !boss){
+  if(cosmosOn() && !boss && !sgr){
     starTimer -= gdt;
     if(starTimer <= 0){
-      starTimer = STAR_EVERY + rng() * 15;
+      starTimer = starEvery() + rng() * 15;
       if(!entities.some(e => e.type === 'star')) spawnStar();
     }
   }
@@ -339,4 +361,5 @@ function cosmosTick(gdt){
   const d = dropActive();
   if(d && !dropOn && dropShown < 2){ dropShown++; addToast('♪ DROP · pulses ×2', '#ff9cf0', H/2 + 40); }
   dropOn = d;
+  endgameTick(gdt);
 }

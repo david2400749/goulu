@@ -210,7 +210,7 @@ function setOverBase(title, modeTxt, nearHtml, nearClose, causeT, causeH, recTxt
 function runSummaryObj(){
   return {
     score, parry:parryCount, maxCombo, time:Math.floor(elapsed), dust:runDust,
-    bosses:runBossesKilled, anomalies:activeAnomalies.length, perfect:runHasPerfect,
+    bosses:runBossesKilled, anomalies:anomalyCount(), perfect:runHasPerfect, tier,
     wasDaily:lastGameWasDaily,
     wave:(currentMode.useWaves && !currentCampaignLevel) ? waveIndex+1 : 0,
     elemChains:runElemChains, elemTypes:elemTypesCollected.size, engaged:isEngaged(),
@@ -224,6 +224,7 @@ function bookkeepRun(run){
   if(run.engaged && run.wave > profile.bestWave) profile.bestWave = run.wave;
   profile.elemChains = (profile.elemChains||0) + run.elemChains;
   lastXp = grantXp(run);
+  if(!currentCampaignLevel) endgameBookkeep();
 }
 function completeCampaignLevel(level){
   if(state !== 'play') return;

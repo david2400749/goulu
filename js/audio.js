@@ -309,7 +309,7 @@ function mBell(time, midi, vol){
 function musicWantedLevel(){
   if(state==='menu') return 0;
   if(state==='tutorial') return 1;
-  if(boss) return 3;
+  if(boss || sgr) return 3;
   if(multiplier>=6 || resonanceT>0 || tier>=3) return 3;
   if(multiplier>=3 || danger>0.45 || elapsed>40 || tier>=1) return 2;
   return 1;
@@ -395,7 +395,7 @@ function musicPlayStep(time,s,stepDur){
     const lv=musicWantedLevel();
     if(lv>music.level && lv>=3 && ci!==0) mNoiseHit(time,'highpass',4000,0.5,0.12,1.6,0.5,0);   // montée en puissance : crash
     music.level=lv;
-    if(ci===0) music.dark=!!boss;
+    if(ci===0) music.dark=!!boss || !!sgr;
   }
   const L=music.level, prog=music.dark?PROG_DARK:PROG_CALM, ch=prog[ci];
   const barDur=stepDur*16;

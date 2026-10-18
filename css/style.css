@@ -618,3 +618,41 @@ body.big-text .evo-upg .nm,body.big-text .ach-name,body.big-text .row .tx{font-s
 /* ---------------- 0.18.1 : commandes ---------------- */
 .tc-wave.deny{animation:waveDeny .32s}
 @keyframes waveDeny{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* ---------- 0.21 : fin de partie ---------- */
+#bankScreen{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(ellipse at 50% 50%,rgba(3,5,12,.6),rgba(2,3,8,.9) 80%);backdrop-filter:blur(3px);animation:fadeIn .3s both}
+.bank-panel{max-width:440px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px;animation:panelIn .4s both}
+.bank-pot{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--ink-2)}
+.bank-pot b{color:var(--gold);font-size:15px}
+.bank-event{font-size:13px;color:#ffb0c0;min-height:1em}
+.bank-next{font-size:12.5px;color:var(--ink-3)}
+.bank-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.bank-btns .btn{flex:1 1 170px}
+.bank-keys{font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:var(--ink-3)}
+body.touch .bank-keys{display:none}
+.over-extra{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-2);text-align:center;max-width:92vw}
+.over-extra:empty{display:none}
+.contract-row{margin:12px 0 4px}
+.contract-label{font-family:var(--f-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);margin-bottom:7px}
+.contract-label span{color:var(--ink-3);letter-spacing:.08em;text-transform:none}
+.contract-opts{display:flex;gap:6px;flex-wrap:wrap}
+.contract-opt{flex:1 1 140px;font:inherit;font-size:12px;text-align:left;padding:8px 10px;border-radius:3px;cursor:pointer;
+  color:var(--ink-2);background:rgba(8,11,19,.55);border:1px solid var(--line)}
+.contract-opt b{color:#7ee7ff;font-weight:600;white-space:nowrap}
+.contract-opt:hover{border-color:rgba(126,231,255,.45)}
+.contract-opt.on{border-color:#7ee7ff;color:var(--ink);background:rgba(126,231,255,.1);box-shadow:0 0 18px -8px rgba(126,231,255,.9)}
+.contract-chip{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;color:#7ee7ff;opacity:0;transition:opacity .3s;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contract-chip.on{opacity:.85}
+.contract-chip.done{color:#4ade80}
+.hud-left .build-bar{grid-column:auto;grid-row:auto;justify-content:flex-start;justify-self:start;padding-top:2px;gap:4px;max-width:120px}
+.hud-left .build-slot{width:22px;height:22px;font-size:12px}
+.hud-left .build-slot .stk{font-size:9px;bottom:-4px;right:-4px}
+.mass-edd{font-size:9px;letter-spacing:.16em;color:var(--gold);display:none}
+.mass-edd.on{display:inline;animation:evapBlink .5s infinite alternate}
+.mass-track{position:relative}
+.mass-track::after{content:'';position:absolute;top:-2px;bottom:-2px;left:66.7%;width:1px;background:rgba(255,203,77,.8)}
+.card.c-replace{border-style:dashed}
+.card-swap{margin-top:8px;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#d9b8ff}
+.card.c-forget .card-rarity{color:#ff8aa0}
+.card.c-back{opacity:.75}
