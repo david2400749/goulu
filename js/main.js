@@ -33,6 +33,7 @@ let lastT = performance.now();
 function loop(now){
   let dt = (now - lastT) / 1000; lastT = now;
   if(dt > 0.05) dt = 0.05;
+  if(!(dt >= 0)) dt = 0;   // horloge qui recule (onglet réveillé, appel manuel) : pas de pas négatif
   updateCamera(dt);
   perfSample(dt);
   if(state === 'anomaly' || state === 'paused' || state === 'revive' || state === 'resume'){
@@ -40,6 +41,7 @@ function loop(now){
     if(state === 'revive') tickRevive(dt);
     if(state === 'resume') tickResume(dt);
   } else if(state === 'tutorial'){
+    musicTick(dt);
     updateTutorial(dt);
     syncTouchControls();
   } else {

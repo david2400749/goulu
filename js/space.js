@@ -10,6 +10,13 @@
          secondaire et tertiaire = l'arche au-dessus et sous l'ombre)
        - décalage Doppler + redshift gravitationnel, couleur corps noir
      Loin du trou : déflexion analytique (série en 1/b).
+       - zone de plongée sous l'ISCO (3 Rs) : le gaz quitte le disque et
+         tombe en spirale, de plus en plus rougi et éteint vers l'horizon
+       - point chaud en orbite près de l'ISCO (comme les sursauts de Sgr A*)
+       - entraînement du référentiel (Lense-Thirring) : le ciel lentillé est
+         tordu autour du trou, d'autant plus qu'on aspire
+       - accrétion de Bondi : gaz interstellaire qui spirale vers le trou,
+         chauffé (T ∝ r^-3/4) puis rougi par le redshift gravitationnel
    • La couche 2D du jeu (poussières, antimatière, boss) est déformée par
      la même lentille puis composée.
    • Post-traitement : bloom 2 niveaux, aberration chromatique, tone
@@ -93,9 +100,29 @@ void main(){
   vec3 neb = vec3(.07,.16,.42)*pow(smoothstep(.38,.9,n1),2.0)
            + vec3(.40,.09,.30)*pow(smoothstep(.45,.95,n2),2.2)
            + vec3(.40,.20,.07)*pow(smoothstep(.5,.95,n3),2.4)*0.8;
-  neb *= 0.17;
+  neb *= 0.21;
 
-  vec3 col = mw + neb + vec3(.0012,.0015,.0032);
+  /* galaxies lointaines : petites taches elliptiques, bulbe doré et disque bleuté */
+  vec3 gal = vec3(0.);
+  for(int k=0;k<2;k++){
+    float sc = k==0 ? 6.5 : 11.;
+    vec3 q = d*sc + float(k)*17.3;
+    vec3 id = floor(q), f = fract(q);
+    vec3 h = hash33(id+5.1);
+    if(h.x < .085){
+      vec3 c = .25+.5*hash33(id+2.7);
+      vec3 v = f-c;
+      vec3 ax = normalize(hash33(id+9.4)-.5);
+      float along = dot(v,ax);
+      float sz = (k==0 ? .055 : .035)*(.6+.8*h.y);
+      float e2 = dot(v,v) + 5.5*h.z*along*along;
+      float disk = exp(-e2/(sz*sz)*1.4);
+      float bulge = exp(-dot(v,v)/(sz*sz)*9.);
+      gal += vec3(.55,.68,1.)*disk*.10 + vec3(1.,.82,.55)*bulge*.30;
+    }
+  }
+
+  vec3 col = mw + neb + gal + vec3(.0012,.0015,.0032);
   oCol = vec4(col,1.);
 }`;
 
@@ -166,6 +193,7 @@ uniform float uLens, uSceneLens;
 uniform float uSceneOn, uSceneGain;
 uniform float uStarGain;
 uniform float uQuality;
+uniform float uInflow, uTwist, uHot;
 uniform vec3  uTint;
 uniform vec4  uRip[4];
 uniform sampler2D uSky, uScene;
@@ -227,22 +255,34 @@ vec4 diskShade(float r, float uc, float vc, float phic, vec3 bn3, vec3 N, vec3 e
   float dop = 1./(gam*(1.+vel*dot(tdir, nback)));
   float g = sqrt(f)*dop;
 
-  float tIn = RIN/r;
-  float edgeIn  = smoothstep(RIN-.25, RIN+.45, r);
+  vec2 q = vec2(dot(P,e1), dot(P,e2));
+  float n = diskNoise(q, r);
+
+  /* sous l'ISCO, plus d'orbite stable : le gaz plonge en spirale vers l'horizon */
+  float plunge = 1.-step(RIN, r);
+  float xin = clamp((r-1.)/(RIN-1.), 0., 1.);
+  float ang = atan(q.y, q.x);
+  float spiral = .5+.5*sin(2.*ang + 7.*log(r) + uSpin*.9 + n*3.);
+  float tIn = min(RIN/r, 1.);
+  float edgeIn  = mix(smoothstep(RIN-.25, RIN+.45, r), .34*smoothstep(1.1, RIN, r)*(.3+.7*spiral), plunge);
   float edgeOut = 1.-smoothstep(ROUT-4.5, ROUT, r);
   float edge = edgeIn*edgeOut;
 
-  vec2 q = vec2(dot(P,e1), dot(P,e2));
-  float n = diskNoise(q, r);
   float lanes = .5+.5*sin(r*6.5 + n*7.);
   float dens = .42 + .95*n;
   dens *= .78 + .22*lanes;
   dens = clamp(dens, .12, 1.7);
 
-  float Te = uTemp*pow(tIn, .60);
+  /* point chaud en orbite képlérienne près de l'ISCO (sursaut) */
+  float omh = 2.3*pow(RIN+1.3, -1.5);
+  float ah = -omh*uSpin;
+  vec2 hp = (RIN+1.3)*vec2(cos(ah), sin(ah));
+  float hot = uHot*exp(-dot(q-hp,q-hp)/.55)*(1.-plunge);
+
+  float Te = uTemp*pow(tIn, .60)*(1.+.25*plunge*(1.-xin))*(1.+.35*hot);
   float Tobs = Te*g;
   vec3 col = blackbody(Tobs);
-  float Iem = pow(tIn, 2.1)*(1.+2.3*exp(-(r-RIN)*1.7));
+  float Iem = mix(pow(tIn, 2.1)*(1.+2.3*exp(-(r-RIN)*1.7)), 3.3*pow(xin, 1.5), plunge)*(1.+2.6*hot);
   float lum = Iem*pow(g, uBeam)*dens*uGlow*3.6;
   col = hueRot(col, uHue);
   float l = dot(col, vec3(.299,.587,.114));
@@ -288,7 +328,7 @@ void traceRay(vec2 bv, out float alpha, out vec3 dcol, out float dtrans, out flo
       float t = clamp((cphi-phi)/h, 0., 1.);
       float uc = mix(u, un, t);
       float vc = mix(v, vn, t);
-      if(uc > 1./(ROUT+1.5) && uc < 1./(RIN-.4)){
+      if(uc > 1./(ROUT+1.5) && uc < 1./1.08){
         float r = 1./uc;
         vec4 e = diskShade(r, uc, vc, cphi, bn3, N, e1, e2);
         dcol += dtrans*e.rgb*e.a;
@@ -309,6 +349,33 @@ void traceRay(vec2 bv, out float alpha, out vec3 dcol, out float dtrans, out flo
   if(alphaOut < 0.){ alpha = (b < BC) ? -1. : 6.; }
   if(!escaped && b >= BC){ alpha = 6.; }
   rim = (b >= BC) ? exp(-(b-BC)*5.5) : 0.;
+}
+
+/* ---- accrétion de Bondi : gaz interstellaire qui tombe en spirale (q en Rs, plan du ciel) ----
+   Advection en deux phases (comme le disque) : le motif tourne à Ω ∝ r^-3/2 et glisse
+   vers le centre ; température T ∝ r^-3/4, puis redshift gravitationnel g = √(1-Rs/r)
+   qui rougit et éteint (∝ g⁴) tout ce qui approche de l'horizon. */
+vec3 inflowGas(vec2 q){
+  float r = length(q);
+  if(r < 1.05 || r > 34. || uInflow < .01) return vec3(0.);
+  float cyc = 7.;
+  float t = uTime*(1.+1.6*uInflow);
+  float pa = fract(t/cyc), pb = fract(t/cyc+.5);
+  float wa = 1.-abs(2.*pa-1.), wb = 1.-abs(2.*pb-1.);
+  float om = 9.*pow(max(r,1.5), -1.5);
+  float aa = -om*pa*cyc, ab = -om*pb*cyc;   /* même sens de rotation que la matière (couche scène) */
+  float sa = exp(.07*pa*cyc*(1.+uInflow)), sb = exp(.07*pb*cyc*(1.+uInflow));
+  vec2 qa = mat2(cos(aa),-sin(aa),sin(aa),cos(aa))*q*sa;
+  vec2 qb = mat2(cos(ab),-sin(ab),sin(ab),cos(ab))*q*sb;
+  float n = wa*fbm2(qa*.3+3.1) + wb*fbm2(qb*.3+11.7);
+  float ang = atan(q.y, q.x);
+  float arms = .55+.45*sin(2.*ang - 3.2*log(r) - t*.35 + n*4.);
+  float dens = smoothstep(.3, .95, n)*arms*arms;
+  dens *= smoothstep(30., 8., r)/(.4+r*.14);
+  float g = sqrt(max(1.-1./r, 0.));
+  float T = 2400.*pow(9./r, .75)*g;
+  float I = dens*g*g*g*g*(.6+1.6*uInflow);
+  return blackbody(T)*I*.2;
 }
 
 void main(){
@@ -335,10 +402,23 @@ void main(){
   float shadowMask = smoothstep(BC-.7/uK*1., BC+.7/uK*1., b);
   float alphaEff = alpha < 0. ? 6. : min(alpha, 6.3);
 
-  /* ciel */
-  vec3 sky = skyAt(uCenter + pr - pdir*(uLens*uK*alphaEff) + uDrift);
+  /* ciel, tordu par l'entraînement du référentiel (rotation ∝ 1/b², plus forte quand on aspire) */
+  vec2 sp = pr - pdir*(uLens*uK*alphaEff);
+  float tw = uTwist*min(1., (BC*BC*1.6)/(b*b+.01));
+  float ctw = cos(tw), stw = sin(tw);
+  sp = vec2(ctw*sp.x - stw*sp.y, stw*sp.x + ctw*sp.y);
+  vec3 sky = skyAt(uCenter + sp + uDrift);
 
   vec3 col = dcol + dtrans*sky*shadowMask;
+
+  /* gaz qui tombe (accrétion de Bondi), vu à travers la lentille */
+  if(b < 40.){
+    float aG = min(alphaEff, 3.4);
+    vec2 pg = pr - pdir*(uSceneLens*uK*aG);
+    col += dtrans*inflowGas(vec2(pg.x, -pg.y)/uK)*shadowMask*uGlow;
+    /* couronne : lueur X diffuse autour de la région interne */
+    col += vec3(.55,.7,1.)*exp(-max(b-BC, 0.)*.55)*.05*uGlow*shadowMask;
+  }
 
   /* anneau de photons : empilement des images d'ordre supérieur */
   if(b >= BC*.98 && b < BMAX){
@@ -403,8 +483,8 @@ precision highp float;
 in vec2 vUv; out vec4 oCol;
 uniform sampler2D uMain, uBloomA, uBloomB;
 uniform float uTime, uAberr, uBloomK, uExposure, uVignette, uGrain;
-uniform float uFlashHurt, uFlashGold, uFreeze, uDanger, uDilate, uFade;
-uniform vec2 uFb;
+uniform float uFlashHurt, uFlashGold, uFreeze, uDanger, uDilate, uFade, uPull;
+uniform vec2 uFb, uHole;
 float hash21(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
 vec3 aces(vec3 x){ return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14), 0., 1.); }
 void main(){
@@ -415,6 +495,14 @@ void main(){
   col.r = texture(uMain, vUv+off).r;
   col.g = texture(uMain, vUv).g;
   col.b = texture(uMain, vUv-off).b;
+  /* aspiration : flou radial vers le trou (la lumière semble tirée vers lui) */
+  if(uPull > .01){
+    vec2 toH = uHole - vUv;
+    float w = uPull*smoothstep(.02, .25, length(toH));
+    vec3 acc = col;
+    for(int i=1;i<6;i++){ acc += texture(uMain, vUv + toH*(float(i)*.0042*w)).rgb; }
+    col = mix(col, acc/6., .6*min(w*2., 1.));
+  }
   vec3 bl = texture(uBloomA, vUv).rgb*.55 + texture(uBloomB, vUv).rgb*.45;
   col += bl*uBloomK;
   col *= uExposure;
@@ -518,13 +606,14 @@ void main(){
 
       P.sky = program(VERT, FRAG_SKY, []);
       P.main = program(VERT, FRAG_MAIN, ['uCss','uCenter','uShake','uK','uFocal','uTime','uSpin','uDrift','uTilt','uRoll','uSkyBuf','uSkyOrg','uSkySize','uPxCss',
-        'uGlow','uTemp','uBeam','uHue','uSat','uLens','uSceneLens','uSceneOn','uSceneGain','uStarGain','uQuality','uTint','uRip','uSky','uScene']);
+        'uGlow','uTemp','uBeam','uHue','uSat','uLens','uSceneLens','uSceneOn','uSceneGain','uStarGain','uQuality','uTint','uRip','uSky','uScene',
+        'uInflow','uTwist','uHot']);
       P.skybuf = program(VERT, FRAG_SKYBUF, ['uCss','uSkyOrg','uSkySize','uFocal','uTime','uPxCss','uStarGain','uTint','uSky']);
       P.bright = program(VERT, FRAG_BRIGHT, ['uTex','uTexel','uThr']);
       P.down = program(VERT, FRAG_DOWN, ['uTex','uTexel']);
       P.blur = program(VERT, FRAG_BLUR, ['uTex','uDir']);
       P.post = program(VERT, FRAG_POST, ['uMain','uBloomA','uBloomB','uTime','uAberr','uBloomK','uExposure','uVignette','uGrain',
-        'uFlashHurt','uFlashGold','uFreeze','uDanger','uDilate','uFade','uFb']);
+        'uFlashHurt','uFlashGold','uFreeze','uDanger','uDilate','uFade','uFb','uPull','uHole']);
       bake();
       texScene = makeTex(2, 2, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, gl.LINEAR);
       ok = true;
@@ -578,6 +667,9 @@ void main(){
     gl.uniform1f(u.uSceneGain, f.sceneGain);
     gl.uniform1f(u.uStarGain, f.starGain);
     gl.uniform1f(u.uQuality, f.quality);
+    gl.uniform1f(u.uInflow, f.inflow || 0);
+    gl.uniform1f(u.uTwist, f.twist || 0);
+    gl.uniform1f(u.uHot, f.hot || 0);
     gl.uniform3f(u.uTint, f.tint[0], f.tint[1], f.tint[2]);
     const rip = new Float32Array(16);
     for(let i=0;i<4;i++){
@@ -702,6 +794,8 @@ void main(){
     gl.uniform1f(u.uDilate, f.dilate);
     gl.uniform1f(u.uFade, f.fade);
     gl.uniform2f(u.uFb, fbW, fbH);
+    gl.uniform1f(u.uPull, f.pull || 0);
+    gl.uniform2f(u.uHole, f.holeU || .5, f.holeV || .5);
     drawQuad();
     gl.activeTexture(gl.TEXTURE0);
     if(q){ gl.endQuery(timerExt.TIME_ELAPSED_EXT); pendingQ = q; }

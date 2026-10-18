@@ -920,6 +920,75 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.19.0 : flèches, musique, trou noir ---------- */
+  await test('Flèches : ← aspire (comme le clic gauche), → lance l\'onde (comme le clic droit), ↑ ne fait rien', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.keyboard.press('ArrowLeft');
+    const menu = await page.evaluate(() => state);
+    await page.click('#btnPlay');
+    await page.evaluate(() => { entities.length = 0; shockCharges = 3; shockwaves.length = 0; });
+    const st = () => page.evaluate(() => ({ attract, waves: shockwaves.length }));
+    const r = {};
+    await page.keyboard.down('ArrowUp'); r.up = await st(); await page.keyboard.up('ArrowUp');
+    await page.keyboard.down('ArrowLeft'); r.leftDown = await st();
+    await page.keyboard.press('ArrowRight'); r.right = await st();
+    await page.keyboard.up('ArrowLeft'); r.leftUp = await st();
+    await ctx.close();
+    assert(menu === 'menu', 'la flèche ← a lancé une partie depuis le menu : ' + menu);
+    const want = { up: { attract: false, waves: 0 }, leftDown: { attract: true, waves: 0 }, right: { attract: true, waves: 1 }, leftUp: { attract: false, waves: 1 } };
+    const diff = Object.keys(want).filter(k => JSON.stringify(want[k]) !== JSON.stringify(r[k])).map(k => k + ' : attendu ' + JSON.stringify(want[k]) + ', obtenu ' + JSON.stringify(r[k]));
+    assert(!diff.length, diff.join('\n'));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Musique : intensité 0 → 3 selon la partie, rendu hors ligne sans erreur ni saturation', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(async () => {
+      const lv = {};
+      state = 'menu'; lv.menu = musicWantedLevel();
+      state = 'play'; multiplier = 1; boss = null; danger = 0; elapsed = 0; resonanceT = 0; lv.start = musicWantedLevel();
+      multiplier = 4; lv.mult4 = musicWantedLevel();
+      multiplier = 1; boss = { type: { id: 'consumer' } }; lv.boss = musicWantedLevel();
+      boss = null; state = 'menu';
+      const SR = 22050, off = new OfflineAudioContext(2, SR * 9, SR);
+      window.AudioContext = function(){ return off; }; off.resume = () => Promise.resolve();
+      actx = null; musicMasterGain = null; initAudio();
+      musicStart('game');
+      musicMasterGain.gain.cancelScheduledValues(0); musicMasterGain.gain.setValueAtTime(MUSIC_GAIN, 0);
+      multiplier = 7; state = 'play';
+      let t = 0.05; const sd = 60 / 128 / 4;
+      for(let i = 0; i < 64; i++){ musicPlayStep(t, music.step, sd); t += sd; music.step = (music.step + 1) % 16; if(music.step === 0) music.bar++; }
+      const level = music.level, kicks = kickTimes.length;
+      music.playing = false; state = 'menu'; multiplier = 1;   // la boucle du jeu ne programme plus rien pendant le rendu
+      const buf = await off.startRendering(), d = buf.getChannelData(0);
+      let pk = 0, ss = 0; for(let k = 0; k < d.length; k++){ pk = Math.max(pk, Math.abs(d[k])); ss += d[k] * d[k]; }
+      return { lv, pk, rms: Math.sqrt(ss / d.length), kicks, level };
+    });
+    await ctx.close();
+    assert(r.lv.menu === 0 && r.lv.start === 1 && r.lv.mult4 === 2 && r.lv.boss === 3, 'intensités : ' + JSON.stringify(r.lv));
+    assert(r.level === 3 && r.kicks > 0, 'arrangement : ' + JSON.stringify(r));
+    assert(r.rms > 0.01 && r.pk < 1, 'niveau audio : rms ' + r.rms.toFixed(4) + ', crête ' + r.pk.toFixed(3));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Matière qui tombe : rotation képlérienne, chute figée près de l\'horizon, plus rapide en aspirant', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    const r = await page.evaluate(() => {
+      updateInfall(0.016, 0);
+      const n = INFALL.length;
+      const m = INFALL[0];
+      const at = (rr, pull) => { m.r = rr; m.age = 5; updateInfall(0.0001, pull); return { vr: m.vr, om: m.om }; };
+      const far = at(20, 0), near = at(3, 0), edge = at(1.15, 0), pulled = at(20, 1);
+      return { n, far, near, edge, pulled };
+    });
+    await ctx.close();
+    assert(r.n > 20, 'pas de matière autour du trou : ' + r.n);
+    assert(r.near.om > r.far.om * 5, 'rotation : ' + JSON.stringify(r));
+    assert(r.edge.vr < r.near.vr * 0.5, 'la chute ne ralentit pas près de l\'horizon : ' + JSON.stringify(r));
+    assert(r.pulled.vr > r.far.vr * 5, 'l\'aspiration n\'accélère pas la chute : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [
