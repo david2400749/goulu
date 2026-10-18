@@ -535,6 +535,22 @@ const inView = (page, id) => page.evaluate(id => {
   });
 
   /* ---------- 0.15 : décompte après une carte, Pulsar, plafond de score ---------- */
+  await test('Toutes les mutations au maximum : pas d\'écran vide, récompense et la partie continue', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    const r = await page.evaluate(() => {
+      for(const c of ANOMALIES) for(let k = 0; k < c.max; k++) addAnomaly(c);
+      lives = 1; shockCharges = 0; toasts.length = 0; const s0 = score;
+      openAnomalyScreen();
+      return { state, hidden: anomalyScreen.classList.contains('hidden'), lives, charges: shockCharges, max: getMaxCharges(),
+        gained: score - s0, toast: toasts.map(t => t.text).join('|') };
+    });
+    await ctx.close();
+    assert(r.state === 'play' && r.hidden, 'écran de mutation ouvert sans carte : ' + JSON.stringify(r));
+    assert(r.lives === 2 && r.charges === r.max && r.gained > 0 && /ÉVOLUTION COMPLÈTE/.test(r.toast), 'récompense : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   await test('Carte choisie : décompte de 1,5 s avant la reprise', async () => {
     const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
     await page.click('#btnPlay');

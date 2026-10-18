@@ -377,7 +377,23 @@ function tickResume(dt){
     if(actx && !audioMuted) blip(990, 0.12, 'sine', 0.09, 1320);
   }
 }
+/* Toutes les mutations au maximum (très longues parties) : plus rien à choisir. Au lieu
+   d'ouvrir un écran vide sans issue, on donne une récompense et la partie continue. */
+function anomaliesExhausted(){
+  const owned={}; for(const a of activeAnomalies) owned[a.id]=a.stacks;
+  return !ANOMALIES.some(c => (owned[c.id]||0) < c.max);
+}
+function evolutionMaxReward(){
+  heal(1);
+  shockCharges = getMaxCharges();
+  const pts = 2000 * Math.max(1, multiplier);
+  addScore(pts);
+  addToast('ÉVOLUTION COMPLÈTE · +1 vie · charges pleines · +' + pts, '#ffd36b');
+  parryFlash = Math.max(parryFlash, 0.5);   // éclat doré (flash est réservé aux dégâts)
+  if(actx && !audioMuted) [660, 880, 1320].forEach((f,i)=>blip(f,0.18,'sine',0.11,undefined,i*0.07));
+}
 function openAnomalyScreen(){
+  if(anomaliesExhausted()){ evolutionMaxReward(); return; }
   state='anomaly'; anomalyScreenOpen=true; attract=false;
   drawAnomalyCards(); syncRerollBtn();
   anomalyScreen.classList.remove('hidden');
