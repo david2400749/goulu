@@ -1,7 +1,7 @@
-# GOULU — analyse de game design (0.13.0-dev)
+# GOULU — analyse de game design (0.14.0-dev)
 
 Ce document répond à trois questions : pourquoi un joueur lance GOULU, pourquoi il y revient,
-et pourquoi il accepterait d'y dépenser de l'argent. Il dit ce qui a été corrigé en 0.13
+et pourquoi il accepterait d'y dépenser de l'argent. Il dit ce qui a été corrigé en 0.14
 et ce qu'il reste à faire, par ordre de priorité.
 
 ---
@@ -10,7 +10,7 @@ et ce qu'il reste à faire, par ordre de priorité.
 
 | Atout | Pourquoi ça marche |
 |---|---|
-| **Un seul geste** : maintenir / relâcher | Compréhensible en 3 secondes, jouable d'un pouce dans le métro. C'est le format des hits mobiles (Flappy Bird, Helix Jump, Stack). |
+| **Deux commandes simples** : maintenir pour aspirer, appuyer pour l'onde (un seul bouton en option) | Compréhensible en quelques secondes, jouable au téléphone dans le métro. C'est la simplicité des hits mobiles (Flappy Bird, Helix Jump, Stack). |
 | **Le visuel** : un vrai trou noir de Schwarzschild en temps réel | C'est le « wow » de la capture d'écran et du clip. Aucun concurrent hyper-casual n'a ça. C'est l'argument marketing n° 1. |
 | **Un fantasme simple** : « tu es un trou noir, tu as faim » | Clair, drôle, mémorisable. Le journal intérieur (« J'ai faim. ») donne une personnalité. |
 | **Gratuit, sans installation** | Un lien suffit. Le lien de défi (« Bats-moi : … ») est un vrai moteur viral. |
@@ -29,7 +29,7 @@ Un joueur reste quand trois boucles tournent en même temps :
    quelque chose.
 3. **La boucle de plusieurs jours (« je reviens demain »)** : une raison concrète de revenir.
 
-### Ce qui manquait (avant 0.13)
+### Ce qui manquait (avant 0.14)
 
 | Problème | Effet sur le joueur |
 |---|---|
@@ -42,7 +42,7 @@ Un joueur reste quand trois boucles tournent en même temps :
 | La série de jours ne rapportait rien | Rien n'encourageait à revenir le lendemain. |
 | Aucun cap visible après la partie | Le joueur ne sait pas quoi viser ensuite. |
 
-### Ce que 0.13 ajoute
+### Ce que 0.14 ajoute
 
 | Ajout | Boucle renforcée | Détail |
 |---|---|---|

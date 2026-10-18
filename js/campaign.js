@@ -2,6 +2,7 @@
 function startTutorial(){
   tutorialActive = true; tutorialStep = 0; tutorialSafetyTimer = 0;
   state = 'tutorial'; cam.menuTarget = 0;
+  if(document.activeElement && document.activeElement !== document.body && document.activeElement.blur) document.activeElement.blur();
   entities.length=0; particles.length=0; shockwaves.length=0; toasts.length=0;
   damageNumbers.length=0;
   score=0; scoreFrac=0; combo=0; comboTimer=0; multiplier=1; lives=3; maxLivesRun=3; hurtT=0;
@@ -20,16 +21,14 @@ function startTutorial(){
 function showTutStep(step){
   tutorialStep = step; tutorialSafetyTimer = 0;
   const scenes = [
-    { title:'Aspire la poussière', desc: IS_TOUCH
-        ? 'Maintiens ton doigt <b>en bas de l\'écran</b> pour <b>attirer</b> la poussière dorée, sans cacher le trou noir.'
-        : 'Maintiens le clic (ou <b>ESPACE</b>) pour <b>attirer</b> la poussière dorée.',
+    { title:'Aspire la poussière', desc: ctl('tut0'),
       ready:()=>{
         spawnEntity('dust', bh.x + 120, bh.y - 80, 'gold');
         spawnEntity('dust', bh.x - 130, bh.y + 70, 'gold');
         spawnEntity('dust', bh.x + 80, bh.y + 130, 'gold');
       }
     },
-    { title:'Détruis l\'antimatière', desc:'Relâche pour déclencher une <b>ONDE DE CHOC</b>.',
+    { title:'Détruis l\'antimatière', desc: ctl('tut1'),
       ready:()=>{
         entities.push({ x: bh.x + 180, y: bh.y, vx: -60, vy: 0, r: R_ANTI, type:'anti', phase: 0, trail:[] });
         spawnEntity('dust', bh.x - 100, bh.y + 60, 'gold');
@@ -38,7 +37,7 @@ function showTutStep(step){
         spawnEntity('dust', bh.x - 60, bh.y - 100, 'gold');
       }
     },
-    { title:'Réalise un PARRY', desc:'Relâche quand l\'antimatière entre dans le <b>cercle</b> pointillé.',
+    { title:'Réalise un PARRY', desc: ctl('tut2'),
       ready:()=>{
         entities.push({ x: bh.x + 150, y: bh.y, vx: -70, vy: 0, r: R_ANTI, type:'anti', phase: 0, trail:[] });
         shockCharges = 1;

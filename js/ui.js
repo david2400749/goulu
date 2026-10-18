@@ -209,6 +209,15 @@ function renderSkins(){
     skinGridEl.appendChild(el);
   }
 }
+/* Applique le mode de commandes : classe CSS (boutons tactiles) et textes d'aide */
+function applyControls(){
+  document.body.classList.toggle('ctrl-dual', dualControls());
+  for(const [id, key] of [['howtoHold','howtoHold'],['howtoWave','howtoWave'],['howtoBeat','howtoBeat'],['howtoBoss','howtoBoss']]){
+    const el = $(id); if(el) el.innerHTML = ctl(key);
+  }
+  if(hintEl) hintEl.textContent = ctl('hint');
+  if(bossHintEl) bossHintEl.textContent = ctl('bossHint');
+}
 function renderTechniques(){
   const grid = $('techGrid'); if(!grid) return;
   grid.innerHTML = '';
@@ -399,6 +408,7 @@ function syncOptionsUI(){
   $('optVibrate').classList.toggle('on', o.vibrate !== false);
   $('optBig').classList.toggle('on', !!o.bigText);
   $('optAssist').classList.toggle('on', !!o.assist);
+  $('optSingle').classList.toggle('on', o.controls === 'single');
   $('optBeat').value = o.beatOffset || 0; $('optBeatVal').textContent = (o.beatOffset || 0) + ' ms';
 }
 $('optSfx').addEventListener('input', e=>{
@@ -424,6 +434,12 @@ $('optColorblind').addEventListener('click', e=>{
   profile.options.colorblind = !profile.options.colorblind;
   e.target.classList.toggle('on', profile.options.colorblind);
   saveP();
+});
+$('optSingle').addEventListener('click', e=>{
+  profile.options.controls = profile.options.controls === 'single' ? 'dual' : 'single';
+  e.currentTarget.classList.toggle('on', profile.options.controls === 'single');
+  attract = false; holdTouches.clear();
+  applyControls(); saveP();
 });
 $('optBeat').addEventListener('input', e=>{ profile.options.beatOffset = +e.target.value; $('optBeatVal').textContent = profile.options.beatOffset + ' ms'; saveP(); });
 [['optReduce','reduceFx'],['optVibrate','vibrate'],['optBig','bigText'],['optAssist','assist']].forEach(([id,key])=>{

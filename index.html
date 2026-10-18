@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#02030a">
 <title>GOULU — Le trou noir affamé</title>
-<meta name="description" content="Incarne un trou noir affamé : aspire la poussière d'étoiles, relâche l'onde de choc au bon moment et survis aux boss. Jeu d'arcade gratuit, sans installation, sur mobile et ordinateur.">
+<meta name="description" content="Incarne un trou noir affamé : aspire la poussière d'étoiles, déclenche l'onde de choc au bon moment et survis aux boss. Jeu d'arcade gratuit, sans installation, sur mobile et ordinateur.">
 <link rel="canonical" href="https://david2400749.github.io/goulu/">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
@@ -19,7 +19,7 @@
 <meta property="og:site_name" content="GOULU">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="GOULU — Le trou noir affamé">
-<meta property="og:description" content="Aspire, relâche, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel. Bats mon score !">
+<meta property="og:description" content="Aspire, frappe, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel. Bats mon score !">
 <meta property="og:url" content="https://david2400749.github.io/goulu/">
 <meta property="og:image" content="https://david2400749.github.io/goulu/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -27,10 +27,10 @@
 <meta property="og:image:alt" content="Le trou noir de GOULU et son disque d'accrétion">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="GOULU — Le trou noir affamé">
-<meta name="twitter:description" content="Aspire, relâche, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel.">
+<meta name="twitter:description" content="Aspire, frappe, survis. Un jeu d'arcade gratuit où tu incarnes un trou noir rendu en temps réel.">
 <meta name="twitter:image" content="https://david2400749.github.io/goulu/assets/og-image.jpg">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"VideoGame","name":"GOULU — Le trou noir affamé","url":"https://david2400749.github.io/goulu/","image":"https://david2400749.github.io/goulu/assets/og-image.jpg","description":"Jeu d'arcade gratuit : incarne un trou noir affamé, aspire la poussière d'étoiles et relâche l'onde de choc au bon moment.","inLanguage":"fr","genre":["Arcade","Rythme"],"gamePlatform":["Navigateur web","Mobile","Ordinateur"],"applicationCategory":"Game","operatingSystem":"Tous","playMode":"SinglePlayer","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
+{"@context":"https://schema.org","@type":"VideoGame","name":"GOULU — Le trou noir affamé","url":"https://david2400749.github.io/goulu/","image":"https://david2400749.github.io/goulu/assets/og-image.jpg","description":"Jeu d'arcade gratuit : incarne un trou noir affamé, aspire la poussière d'étoiles et déclenche l'onde de choc au bon moment.","inLanguage":"fr","genre":["Arcade","Rythme"],"gamePlatform":["Navigateur web","Mobile","Ordinateur"],"applicationCategory":"Game","operatingSystem":"Tous","playMode":"SinglePlayer","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,6 +92,12 @@
     <div class="charges" id="charges"></div>
     <div class="pip-fill" id="pipFill">0%</div>
   </div>
+  <!-- commandes tactiles (mode 2 commandes) : le doigt posé n'importe où aspire,
+       le bouton ONDE déclenche l'onde de choc -->
+  <div class="touch-ctrl">
+    <div class="tc-pad tc-hold" id="btnHold" aria-hidden="true"><span class="tc-ic">◉</span><span class="tc-lb">Aspirer</span><span class="tc-sub">maintiens</span></div>
+    <div class="tc-pad tc-wave" id="btnWave" role="button" aria-label="Onde de choc"><span class="tc-ic">◌</span><span class="tc-lb" id="waveLabel">Onde</span><span class="tc-sub" id="waveSub">0 charge</span></div>
+  </div>
   <div class="ghost-line" id="ghostLine">
     <div class="ghost-line-label">GHOST</div>
     <canvas id="ghostCanvas"></canvas>
@@ -151,10 +157,10 @@
         <div class="howto">
           <h2>Pilotage</h2>
           <div class="row"><div class="ic">◉</div><div class="tx" id="howtoHold"><b>Maintiens</b> le clic / ESPACE : tu aspires tout.</div></div>
-          <div class="row"><div class="ic">◌</div><div class="tx"><b>Relâche</b> : onde de choc qui détruit l'antimatière.</div></div>
+          <div class="row"><div class="ic">◌</div><div class="tx" id="howtoWave"><b>Relâche</b> : onde de choc qui détruit l'antimatière.</div></div>
           <div class="row"><div class="ic">⌖</div><div class="tx"><b>Parry</b> au timing : chaînes ×2, ×4 et <span style="color:var(--gold)">PERFECT CHAIN</span>.</div></div>
-          <div class="row"><div class="ic">♪</div><div class="tx"><b>Relâche sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.</div></div>
-          <div class="row"><div class="ic">◈</div><div class="tx">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
+          <div class="row"><div class="ic">♪</div><div class="tx" id="howtoBeat"><b>Relâche sur le kick</b> : <span style="color:var(--gold)">PULSE</span>, onde +20 %, points ×1,5. 4 pulses = <b>résonance</b>.</div></div>
+          <div class="row"><div class="ic">◈</div><div class="tx" id="howtoBoss">Boss : <b>maintiens</b> pour l'aspirer, <b>relâche</b> près de lui pour frapper.</div></div>
         </div>
         <button class="btn btn-primary cta-sticky" id="btnPlay" style="width:100%">Jouer <span class="arrow">→</span></button>
       </div>
@@ -301,6 +307,8 @@
       <div class="opt-toggle on" id="optVibrate"></div></div>
     <div class="opt-row"><div class="opt-label">Texte large</div>
       <div class="opt-toggle" id="optBig"></div></div>
+    <div class="opt-row"><div class="opt-label">1 seul bouton (ancien mode : relâcher = onde)</div>
+      <div class="opt-toggle" id="optSingle"></div></div>
     <div class="opt-row"><div class="opt-label">Assistance (+2 vies, ennemis plus lents)</div>
       <div class="opt-toggle" id="optAssist"></div></div>
     <div class="opt-row"><div class="opt-label">Calage rythme (Bluetooth)</div>

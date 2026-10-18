@@ -120,6 +120,27 @@ body.touch .icon-btn{width:44px;height:44px}
 body.touch .icon-btn svg{width:18px;height:18px}
 /* bannière de vague sous le HUD : elle ne masque plus la zone de parry au début de la vague */
 body.touch .wave-banner{align-self:start;margin-top:52px}
+/* Commandes tactiles (mode 2 commandes) : repère ASPIRER à gauche, bouton ONDE à droite */
+.touch-ctrl{display:none}
+body.touch.ctrl-dual .touch-ctrl{display:block}
+.tc-pad{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));width:96px;height:96px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  border:1.5px solid var(--line-2);background:rgba(8,11,19,.42);backdrop-filter:blur(6px);
+  font-family:var(--f-mono);color:var(--ink-2);transition:border-color .15s,background .15s,opacity .2s,transform .12s}
+.tc-hold{left:max(22px,env(safe-area-inset-left));pointer-events:none;border-style:dashed}
+.tc-hold.on{border-style:solid;border-color:var(--hot);color:var(--hot);background:rgba(255,160,70,.14)}
+.tc-wave{right:max(22px,env(safe-area-inset-right));pointer-events:auto;cursor:pointer;
+  border-color:rgba(169,220,255,.65);color:var(--ice);background:rgba(60,120,180,.16)}
+.tc-wave.empty{opacity:.42}
+.tc-wave.press{animation:wavePress .22s}
+@keyframes wavePress{0%{transform:scale(.88);background:rgba(169,220,255,.45)}100%{transform:scale(1)}}
+.tc-ic{font-size:20px;line-height:1}
+.tc-lb{font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding-left:.2em}
+.tc-sub{font-size:9.5px;letter-spacing:.08em;color:var(--ink-3)}
+.tc-wave .tc-sub{color:rgba(169,220,255,.8)}
+body.touch.ctrl-dual .hint{display:none}
+body.touch.ctrl-dual .thought{bottom:calc(max(22px,env(safe-area-inset-bottom)) + 112px)}
+body.touch.ctrl-dual #tutorialScreen{padding-bottom:calc(max(22px,env(safe-area-inset-bottom)) + 112px)}
 /* Téléphones : la colonne centrale ne doit plus pousser les boutons hors de l'écran */
 @media (max-width:540px){
   .hud-center{min-width:0}
@@ -446,7 +467,7 @@ body.big-text .stat .l,body.big-text .ach-desc,body.big-text .evo-upg .ds,body.b
 body.big-text .evo-upg .nm,body.big-text .ach-name,body.big-text .row .tx{font-size:13px !important}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 
-/* ---------------- 0.13 : progression de compte ---------------- */
+/* ---------------- 0.14 : progression de compte ---------------- */
 .mbadge.lvl{color:var(--gold);border-color:rgba(255,213,144,.3);display:inline-flex;align-items:center;gap:6px}
 .lvl-bar{display:inline-block;width:34px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
 .lvl-bar i{display:block;height:100%;background:var(--gold);transform-origin:left;transform:scaleX(0)}

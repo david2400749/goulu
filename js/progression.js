@@ -380,7 +380,7 @@ function rerollAnomalies(){
 function analyzeDeath(c){
   if(!c) return {title:'FATALITÉ',text:"L'antimatière t'a eu."};
   if(c.wasAttracting && c.hadCharges && c.distance<c.parryRange*1.5)
-    return {title:'TIMING RATÉ',text:"Tu avais une charge ! Relâche plus tôt pour le <b>PARRY</b>."};
+    return {title:'TIMING RATÉ',text:ctl('deathTiming')};
   if(c.wasAttracting && !c.hadCharges)
     return {title:'SANS DÉFENSE',text:"Plus de charge. Collecte plus de <b>poussière dorée</b>."};
   if(c.wasAttracting)

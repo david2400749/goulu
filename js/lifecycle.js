@@ -8,6 +8,8 @@ function startGame(modeId, isDaily){
   }
   if(modeId !== 'campaign'){ profile.selectedMode = currentMode.id; saveP(); }
   state='play'; cam.menuTarget = 0;
+  /* le bouton du menu cliqué (« Jouer »…) garde le focus une fois caché : ESPACE serait ignorée */
+  if(document.activeElement && document.activeElement !== document.body && document.activeElement.blur) document.activeElement.blur();
   entities.length=0; particles.length=0; shockwaves.length=0; toasts.length=0;
   damageNumbers.length=0;
   score=0; scoreFrac=0; combo=0; comboTimer=0; multiplier=1;

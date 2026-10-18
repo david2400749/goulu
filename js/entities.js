@@ -74,8 +74,8 @@ function spawnBossByName(bossId){
   if(!profile.bossTutorialDone){
     profile.bossTutorialDone = true; saveP();
     setTimeout(() => {
-      addToast('👇 MAINTIENS pour ASPIRER le boss', '#7ee7ff', H/2 - 60);
-      setTimeout(() => { addToast('👆 RELÂCHE pour FRAPPER !', '#ffcb4d', H/2 - 60); }, 2200);
+      addToast(ctl('bossToast1'), '#7ee7ff', H/2 - 60);
+      setTimeout(() => { addToast(ctl('bossToast2'), '#ffcb4d', H/2 - 60); }, 2200);
     }, 800);
   }
 }

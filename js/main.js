@@ -40,6 +40,7 @@ function loop(now){
     if(state === 'revive') tickRevive(dt);
   } else if(state === 'tutorial'){
     updateTutorial(dt);
+    syncTouchControls();
   } else {
     musicTick(dt);
     update(dt);
