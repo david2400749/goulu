@@ -175,8 +175,8 @@ body.touch.ctrl-dual #tutorialScreen{padding-bottom:calc(max(22px,env(safe-area-
 .menu-shell{width:min(500px,100%);display:flex;flex-direction:column;gap:14px;margin-right:auto}
 @media (min-width:900px) and (min-aspect-ratio:11/10){#menu{padding-left:clamp(28px,6vw,110px)}}
 @media (max-aspect-ratio:11/10),(max-width:899px){
-  #menu{justify-content:flex-start;padding-top:min(40vh,420px)}
-  #menu::before{background:linear-gradient(180deg,rgba(2,3,9,0) 0,rgba(2,3,9,0) 30%,rgba(2,3,9,.82) 52%,rgba(2,3,9,.94) 100%)}
+  #menu{justify-content:flex-start;padding-top:min(31vh,330px)}
+  #menu::before{background:linear-gradient(180deg,rgba(2,3,9,0) 0,rgba(2,3,9,0) 22%,rgba(2,3,9,.82) 42%,rgba(2,3,9,.94) 100%)}
   .menu-shell{margin:0 auto}
 }
 .menu-head{display:flex;flex-direction:column;gap:8px}
@@ -545,3 +545,58 @@ body.big-text .evo-upg .nm,body.big-text .ach-name,body.big-text .row .tx{font-s
 .lb-foot:empty{display:none}
 #lbRank:empty{display:none}
 #lbRank{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;color:var(--ice);text-align:center}
+
+
+/* ---------------- 0.18 : interface ---------------- */
+/* en-tête du menu : bouton Options en icône, en haut à droite */
+.menu-head{position:relative}
+.head-opt{position:absolute;top:0;right:0;width:42px;height:42px;border-radius:50%;border:1px solid var(--line-2);background:rgba(8,11,19,.55);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-2);transition:color .2s,border-color .2s,transform .3s;backdrop-filter:blur(8px)}
+.head-opt svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.head-opt:hover{color:#fff;border-color:var(--ink-2);transform:rotate(30deg)}
+.menu-version{opacity:.75}
+/* badges et onglets : une seule ligne qui défile au doigt, sans barre de défilement */
+.menu-badges,.menu-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+.menu-badges::-webkit-scrollbar,.menu-tabs::-webkit-scrollbar{display:none}
+.mbadge{flex-shrink:0;white-space:nowrap}
+.mtab{flex-shrink:0;white-space:nowrap}
+.menu-tabs,.menu-badges{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+@media (min-width:600px){.menu-tabs,.menu-badges{-webkit-mask-image:none;mask-image:none;flex-wrap:wrap}}
+/* voile qui s'épaissit quand on fait défiler le menu : le trou noir ne gêne plus la lecture */
+#menu::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(2,3,9,.86);opacity:var(--veil,0);transition:opacity .15s}
+.mtab.active{text-shadow:0 0 14px rgba(255,150,60,.55)}
+/* cartes plus lisibles */
+.mode-card,.camp-level,.stats-block,.howto,.daily-card{transition:border-color .2s,background .2s,transform .2s}
+.mode-card:not(.locked):hover,.camp-level:not(.locked):hover{transform:translateY(-1px)}
+/* évolution : en-tête de branche avec progression, cartes compactes en grille sur téléphone */
+.evo-prog{margin-left:auto;font-weight:500;color:var(--ink-3);letter-spacing:.08em}
+.evo-branch-ups{display:flex;flex-direction:column;gap:7px}
+@media (max-width:480px){
+  .evo-branch{padding:10px}
+  .evo-branch-ups{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .evo-upg{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"ic nm" "ds ds" "cost cost";column-gap:6px;row-gap:2px;padding:8px}
+  .evo-upg .ic{grid-area:ic}.evo-upg .nm{grid-area:nm;align-self:center}.evo-upg .ds{grid-area:ds}.evo-upg .cost{grid-area:cost}
+}
+/* options : rangées par thème, panneau défilant, bouton Fermer toujours visible */
+.options-panel{max-height:min(92vh,760px);overflow-y:auto;gap:11px;padding:20px 20px 0}
+.opt-section{font-family:var(--f-mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--hot);margin-top:6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.opt-label small{display:block;font-size:10.5px;color:var(--ink-3);margin-top:1px}
+.opt-close{position:sticky;bottom:0;width:100%;margin:6px 0 0;box-shadow:0 -14px 22px 6px rgba(9,12,21,.95)}
+.opt-note{font-size:11.5px;line-height:1.4;color:var(--ink-3)}
+.opt-progress{display:flex;flex-direction:column;gap:9px}
+.opt-progress.hidden{display:none !important}
+.btn-danger{color:#ffd8df;border:1px solid rgba(255,79,110,.55);background:rgba(255,79,110,.08)}
+.btn-danger:hover{background:rgba(255,79,110,.16);border-color:var(--red)}
+/* confirmation d'effacement du profil */
+#resetModal{position:fixed;inset:0;z-index:21;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,2,6,.78);backdrop-filter:blur(5px);animation:fadeIn .2s both}
+#resetModal.hidden{display:none}
+.reset-panel{width:min(360px,100%);display:flex;flex-direction:column;gap:12px;padding:22px 20px;background:var(--panel);border:1px solid rgba(255,79,110,.4);border-top:2px solid var(--red);border-radius:var(--r);animation:panelIn .3s both}
+.reset-title{font-size:20px;font-weight:200;letter-spacing:.36em;padding-left:.36em;color:var(--red-soft);text-align:center}
+.reset-list{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-2)}
+.reset-list li{padding-left:16px;position:relative}
+.reset-list li::before{content:'✕';position:absolute;left:0;color:var(--red);font-size:10px;top:2px}
+.reset-list b{color:#fff}
+.reset-keep{font-size:11.5px;color:var(--green)}
+.btn-hold{overflow:hidden;min-height:52px;touch-action:none;-webkit-user-select:none;user-select:none}
+.hold-fill{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,79,110,.55),rgba(255,140,160,.75));transform:scaleX(0);transform-origin:left;pointer-events:none}
+.hold-txt{position:relative}

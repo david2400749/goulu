@@ -811,6 +811,73 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!real.length, real.join('\n'));
   });
 
+  /* ---------- 0.18 : réinitialiser la progression du profil ---------- */
+  await test('Réinitialisation : relâcher trop tôt n\'efface rien, maintenir efface tout sauf les réglages', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl');   // sans profil injecté : il doit survivre au rechargement
+    await page.evaluate(() => {
+      localStorage.setItem('goulu_profile_v10', JSON.stringify({ tutorialDone: true, bhName: 'Nox', namePromptSeen: true, level: 9, xp: 50, shards: 12,
+        best: 8000, upgrades: { app1: true }, playerId: '11111111-2222-4333-a444-555555555555', options: { sfx: 33, music: 70, shake: false, colorblind: true } }));
+    });
+    await page.reload(); await page.waitForFunction(() => typeof profile !== 'undefined' && profile.level === 9);
+    await page.click('#btnMenuOptions');
+    const shown = await page.evaluate(() => !document.getElementById('optProgress').classList.contains('hidden'));
+    await page.click('#btnReset');
+    const modal = await page.evaluate(() => ({ open: !document.getElementById('resetModal').classList.contains('hidden'), lvl: document.getElementById('rsLevel').textContent }));
+    await page.dispatchEvent('#btnResetHold', 'pointerdown');
+    await page.waitForTimeout(400);
+    await page.dispatchEvent('#btnResetHold', 'pointerup');
+    await page.click('#btnResetHold');                  // un simple clic ne doit rien effacer non plus
+    await page.waitForTimeout(1700);
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('goulu_profile_v10')).level);
+    const nav = page.waitForEvent('load');
+    await page.dispatchEvent('#btnResetHold', 'pointerdown');
+    await nav;
+    await page.waitForFunction(() => typeof profile !== 'undefined');
+    const p = await page.evaluate(() => ({ level: profile.level, shards: profile.shards, best: profile.best, name: profile.bhName, ups: Object.keys(profile.upgrades).length,
+      sfx: profile.options.sfx, cb: profile.options.colorblind, shake: profile.options.shake, pid: profile.playerId, tut: profile.tutorialDone, state, badge: document.getElementById('badgeShards').textContent }));
+    await ctx.close();
+    assert(shown && modal.open && modal.lvl === '9', JSON.stringify({ shown, modal }));
+    assert(kept === 9, 'effacé sans maintenir le bouton jusqu\'au bout');
+    assert(p.level === 1 && p.shards === 0 && p.best === 0 && p.name === '' && p.ups === 0, 'progression : ' + JSON.stringify(p));
+    assert(p.sfx === 33 && p.cb === true && p.shake === false && p.pid === '11111111-2222-4333-a444-555555555555' && p.tut, 'réglages / identité : ' + JSON.stringify(p));
+    assert(p.state === 'menu' && p.badge === '0', JSON.stringify(p));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('Réinitialisation absente des options ouvertes en pleine partie (pause)', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.evaluate(() => togglePause());
+    await page.click('#btnOptions');
+    const hidden = await page.evaluate(() => document.getElementById('optProgress').classList.contains('hidden'));
+    await ctx.close();
+    assert(hidden, 'le bouton d\'effacement est proposé pendant une partie');
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  /* ---------- 0.18 : recommencer la partie depuis la pause ---------- */
+  await test('Pause : « Recommencer » demande confirmation puis relance la même partie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: { tutorialDone: true, campaign: { unlocked: 3, completed: {} } } });
+    await page.click('#btnPlay');
+    await page.evaluate(() => { score = 900; elapsed = 42; lives = 1; togglePause(); });
+    await page.click('#btnRestart');
+    const armed = await page.evaluate(() => ({ state, label: document.getElementById('btnRestart').textContent, score }));
+    await page.click('#btnRestart');
+    const r = await page.evaluate(() => ({ state, score, elapsed: Math.round(elapsed), lives, mode: currentMode.id, paused: !pauseScreen.classList.contains('hidden'), plays: profile.cum.plays }));
+    /* campagne : même chapitre ; défi : même défi, un essai de plus */
+    const camp = await page.evaluate(() => { startCampaignLevel(3); elapsed = 20; togglePause(); restartRun(); return { state, lvl: currentCampaignLevel && currentCampaignLevel.n, elapsed: Math.round(elapsed) }; });
+    const daily = await page.evaluate(() => { lastGameWasDaily = true; currentCampaignLevel = null; startGame('classic', true); const a0 = profile.daily.attempts; togglePause(); restartRun(); return { daily: lastGameWasDaily, attempts: profile.daily.attempts - a0 }; });
+    /* reprendre puis repasser en pause : le bouton n'est plus armé */
+    const disarm = await page.evaluate(() => { document.getElementById('btnRestart').click(); togglePause(); togglePause(); return document.getElementById('btnRestart').textContent; });
+    await ctx.close();
+    assert(armed.state === 'paused' && armed.label === 'CONFIRMER ?' && armed.score === 900, 'un seul appui a relancé : ' + JSON.stringify(armed));
+    assert(r.state === 'play' && r.score === 0 && r.elapsed === 0 && r.lives === 3 && r.mode === 'classic' && !r.paused && r.plays === 0, 'relance : ' + JSON.stringify(r));
+    assert(camp.state === 'play' && camp.lvl === 3 && camp.elapsed === 0, 'campagne : ' + JSON.stringify(camp));
+    assert(daily.daily && daily.attempts === 1, 'défi : ' + JSON.stringify(daily));
+    assert(disarm === 'RECOMMENCER', 'bouton resté armé : ' + disarm);
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [

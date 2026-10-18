@@ -27,13 +27,15 @@ Partage ton score : le lien envoyé met tes amis au défi de le battre.
 Le trou noir est vivant : il a faim, il jubile, il souffre, il regarde la menace, crache des jets
 polaires sur une Perfect Chain et grandit de *Graine* à *Quasar* au fil de la partie. Tu peux le nommer.
 
+Les options (bouton ⚙ du menu) permettent aussi de réinitialiser sa progression ; la pause permet de recommencer la partie en cours.
+
 Le jeu s'installe comme une application depuis le navigateur (« Ajouter à l'écran d'accueil »).
 
 ---
 
 ## Développement
 
-**Version actuelle : 0.17.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
+**Version actuelle : 0.18.0-dev, en développement.** Numérotation : `0.x.y` tant que le jeu est en
 développement (suffixe `-dev` sur la branche de travail), `1.0.0` pour la première version officielle.
 La version est définie dans `js/data.js` (`GAME_VERSION`, affichée dans le menu) et dans `package.json` ;
 les tests vérifient que les deux sont identiques.

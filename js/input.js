@@ -160,6 +160,10 @@ window.addEventListener('keydown',e=>{
     if(e.code === 'Escape') closeNameModal();
     return;
   }
+  if(!$('resetModal').classList.contains('hidden')){       // confirmation d'effacement : Échap annule, le reste est géré par le bouton
+    if(e.code==='Escape') closeResetModal();
+    return;
+  }
   if(!optionsScreen.classList.contains('hidden')){
     if(e.code==='Escape') optionsScreen.classList.add('hidden');
     return;
@@ -198,6 +202,7 @@ window.addEventListener('keyup',e=>{
 function togglePause(){
   if(state==='play'){
     state='paused'; attract=false;
+    disarmRestart(); disarmQuit();
     pauseScoreEl.textContent = score;
     pauseAnomEl.textContent = activeAnomalies.length;
     pauseBossEl.textContent = bossesKilled;
