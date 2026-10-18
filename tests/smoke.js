@@ -878,6 +878,48 @@ const inView = (page, id) => page.evaluate(id => {
     assert(!errors.length, errors.join('\n'));
   });
 
+  /* ---------- 0.18.1 : commandes ---------- */
+  await test('Clavier : après un clic sur un bouton du HUD, ESPACE et F pilotent toujours le jeu', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { profile: PLAYER });
+    await page.click('#btnPlay');
+    await page.click('#soundBtn');                        // le bouton garde le focus après le clic
+    const muted0 = await page.evaluate(() => audioMuted);
+    await page.evaluate(() => { shockCharges = 3; shockwaves.length = 0; });
+    await page.keyboard.down('Space');
+    const held = await page.evaluate(() => ({ attract, muted: audioMuted }));
+    await page.keyboard.press('KeyF');
+    await page.keyboard.up('Space');
+    const r = await page.evaluate(() => ({ attract, waves: shockwaves.length, muted: audioMuted }));
+    await ctx.close();
+    assert(held.attract && held.muted === muted0, 'ESPACE capturé par le bouton : ' + JSON.stringify({ held, muted0 }));
+    assert(!r.attract && r.waves === 1 && r.muted === muted0, JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
+  await test('ONDE sans charge : message clair ; tactile : zone du bouton ONDE élargie', async () => {
+    const { page, ctx, errors } = await open('index.html?nogl', { viewport: { width: 390, height: 844 }, profile: PLAYER, touch: true });
+    await page.tap('#btnPlay');
+    const r = await page.evaluate(() => {
+      shockCharges = 0; dustSinceCharge = 1; toasts.length = 0; fireWave();
+      const toast = toasts.map(t => t.text).join('|'), deny = document.getElementById('btnWave').classList.contains('deny');
+      shockCharges = 2; shockwaves.length = 0; attract = false;
+      const b = document.getElementById('btnWave').getBoundingClientRect();
+      const x = b.left - 12, y = b.top + b.height / 2;          // juste à gauche du cercle dessiné
+      const t = new Touch({ identifier: 7, target: document.body, clientX: x, clientY: y });
+      window.dispatchEvent(new TouchEvent('touchstart', { touches: [t], changedTouches: [t], cancelable: true }));
+      const near = { waves: shockwaves.length, attract };
+      window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [t], cancelable: true }));
+      const far = new Touch({ identifier: 8, target: document.body, clientX: 60, clientY: 500 });
+      window.dispatchEvent(new TouchEvent('touchstart', { touches: [far], changedTouches: [far], cancelable: true }));
+      return { toast, deny, near, farAttract: attract, waves: shockwaves.length };
+    });
+    await ctx.close();
+    assert(/PAS DE CHARGE · avale 3 poussières/.test(r.toast) && r.deny, 'sans charge : ' + JSON.stringify(r));
+    assert(r.near.waves === 1 && !r.near.attract, 'toucher juste à côté du bouton ONDE : ' + JSON.stringify(r.near));
+    assert(r.farAttract && r.waves === 1, 'doigt ailleurs = aspirer : ' + JSON.stringify(r));
+    assert(!errors.length, errors.join('\n'));
+  });
+
   /* Simulation accélérée : aspiration / relâche en boucle, choix automatique des anomalies,
      vies remises à flot pour couvrir vagues, boss et fin de niveau sans dépendre du rendu. */
   const SIMS = [

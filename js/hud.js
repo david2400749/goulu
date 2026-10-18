@@ -29,7 +29,7 @@ const CONTROL_TEXT = {
               'Boss : <b>aspire-le</b>, puis lance l\'<b>onde</b> quand il est proche pour le frapper.',
               'Boss : <b>maintiens</b> pour l\'aspirer, <b>relâche</b> près de lui pour frapper.'],
   hint:      ['ESPACE / clic gauche : aspirer · F / clic droit : onde · Sur le kick = pulse',
-              'Gauche : aspirer · Droite : onde',
+              'Doigt posé : aspirer · Bouton ONDE : onde',
               'Maintiens pour aspirer · Relâche pour l\'onde · Sur le kick = pulse'],
   bossHint:  ['ASPIRE le boss · ONDE près de lui pour frapper',
               'ASPIRE le boss · ONDE près de lui pour frapper',

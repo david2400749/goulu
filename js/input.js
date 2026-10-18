@@ -87,12 +87,26 @@ function fireWave(){
     if(resonanceT > 0) pendingEchoes.push({time:0.35});
     if(!pu && currentMode.beatOnly) addToast('HORS TEMPO', '#9aa0c8');
   } else {
-    blip(150,0.1,'sine',0.05,110);   // plus de charge : petit son « à vide »
+    noChargeFeedback();
   }
+}
+/* ONDE sans charge : en début de partie on n'en a aucune. On le dit clairement au lieu d'un
+   simple petit son, sinon le joueur croit que la commande ne marche pas. */
+let lastNoChargeAt = -99;
+function noChargeFeedback(){
+  blip(150,0.1,'sine',0.05,110);
+  const b = $('btnWave');
+  if(b){ b.classList.remove('deny', 'press'); void b.offsetWidth; b.classList.add('deny'); }
+  vibrate(15);
+  const now = performance.now() / 1000;
+  if(now - lastNoChargeAt < 2.5) return;
+  lastNoChargeAt = now;
+  const n = Math.max(1, getDustPerCharge() - dustSinceCharge);
+  addToast('PAS DE CHARGE · avale ' + n + ' poussière' + (n > 1 ? 's' : ''), '#ffcb4d', H/2 + 70);
 }
 function pressWaveBtn(){
   const b = $('btnWave'); if(!b) return;
-  b.classList.remove('press'); void b.offsetWidth; b.classList.add('press');
+  b.classList.remove('press', 'deny'); void b.offsetWidth; b.classList.add('press');
 }
 
 /* ---------- souris ---------- */
@@ -113,6 +127,12 @@ window.addEventListener('mouseup', e => { if(e.button === 0) onUp(); });
    cesse quand plus aucun de ces doigts n'est posé. Un appui sur ONDE tire l'onde
    sans interrompre l'aspiration de l'autre doigt. */
 const holdTouches = new Set();
+/* Zone tactile du bouton ONDE plus large que le cercle dessiné : un pouce qui tombe juste à côté tire quand même. */
+function waveHitZone(){
+  const b = $('btnWave'); if(!b) return null;
+  const r = b.getBoundingClientRect(); if(!r.width) return null;
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 * 1.45 };
+}
 function enableTouchUI(){ if(!touchUI()){ document.body.classList.add('touch'); applyControls(); } }
 function dropTouches(e){
   for(const t of e.changedTouches) holdTouches.delete(t.identifier);
@@ -126,8 +146,11 @@ window.addEventListener('touchstart', e => {
   if(e.target && e.target.closest && e.target.closest('button')) return;   // pause, son…
   if(e.cancelable) e.preventDefault();
   initAudio();
+  const wr = waveHitZone();
   for(const t of e.changedTouches){
-    if(t.target && t.target.closest && t.target.closest('#btnWave')) fireWave();
+    const onWave = (t.target && t.target.closest && t.target.closest('#btnWave'))
+      || (wr && Math.hypot(t.clientX - wr.x, t.clientY - wr.y) <= wr.r);
+    if(onWave) fireWave();
     else holdTouches.add(t.identifier);
   }
   attract = holdTouches.size > 0;
@@ -176,7 +199,13 @@ window.addEventListener('keydown',e=>{
   }
   if(isHoldKey(e.code) || isWaveKey(e.code)){
     const ae = document.activeElement;
-    if(ae && (ae.tagName==='BUTTON' || ae.getAttribute('role')==='button' || ae.getAttribute('role')==='switch')) return;
+    let fromHudButton = false;
+    if(ae && (ae.tagName==='BUTTON' || ae.getAttribute('role')==='button' || ae.getAttribute('role')==='switch')){
+      /* En partie, un bouton du HUD resté sélectionné après un clic (son, pause, clip) ne doit
+         pas avaler ESPACE / F : on lui retire le focus et la touche pilote le jeu. */
+      if(inGame() && ae.closest && ae.closest('#hud')){ ae.blur(); fromHudButton = true; }
+      else return;
+    }
     e.preventDefault();
     if(state==='menu'){ if(!e.repeat && (e.code==='Space' || e.code==='Enter')) $('btnPlay').click(); return; }
     if(e.repeat) return;
@@ -185,7 +214,7 @@ window.addEventListener('keydown',e=>{
       else if(state==='over') onDown(e);
       return;
     }
-    onDown(e);
+    onDown(fromHudButton ? null : e);   // l'événement vise encore le bouton : onDown l'ignorerait
   }
   if(e.code==='KeyR' && state==='play'){ // shortcut clip
     if(clipRecorderActive) stopClipRecording();
